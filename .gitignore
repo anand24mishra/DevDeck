@@ -1,0 +1,84 @@
+# dependencies and build output
+node_modules/
+dist/
+out/
+build/
+release/
+*.dmg
+*.zip
+
+# test artifacts
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# secrets and certificates
+.env
+.env.*
+!.env.example
+*.p12
+*.pem
+*.cer
+*.provisionprofile
+
+# logs
+*.log
+npm-debug.log*
+
+# OS and editor noise
+.DS_Store
+.idea/
+.eslintcache
+.impeccable/config.local.json
+.vscode/*
+!.vscode/extensions.json
+
+# agent scratch space: chat handoffs live here while a feature is built,
+# the durable record is the PROJECT.md entry
+handoffs/*
+!handoffs/README.md
+
+# agent worktrees and temp files
+.worktrees/
+worktrees/
+*.bak
+*.orig
+*.tmp
+scratch/
+tmp/
+
+# skill installers create folders for tools we don't use
+.agent/
+.aider-desk/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.kiro/
+.opencode/
+
+# reinstallable via npx impeccable install
+.agents/skills/impeccable/scripts/bin/
+.agents/skills/impeccable/scripts/data/
+
+# local tooling config
+.impeccable/
+.vscode/
+
+# agent setup (local only)
+.agents/
+AGENTS.md
+GEMINI.md
+skills-lock.json
+
+# local notes
+PROJECT.md
+handoffs/
+.github/pull_request_template.md
+docs/11-skills-setup.md
+docs/12-orchestration-guide.md
+docs/16-agent-communication.md
+docs/17-spawning-and-skill-discovery.md
+docs/18-skills-registry.md
+docs/19-repo-hygiene.md
