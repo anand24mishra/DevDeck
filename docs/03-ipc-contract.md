@@ -10,7 +10,12 @@ export type ErrorCode = 'DENIED' | 'NOT_FOUND' | 'DOCKER_UNAVAILABLE' | 'INVALID
 export interface Proc {
   pid: number; ppid: number; name: string; command: string   // command may contain secrets: never log
   cpu: number; memMB: number; uptimeSec: number
-  cwd: string | null; project: string; ports: number[]
+  cwd: string | null; project: string; projectPath?: string | null; ports: number[]
+}
+export interface Settings {
+  refreshIntervalSec: 2 | 3 | 5 | 10
+  ignoreList: string[]
+  customAllowlist: string[]
 }
 export interface KillReport { requested: number[]; stopped: number[]; forced: number[]; refused: number[]; stillRunning: number[] }
 export interface Container { id: string; name: string; image: string; state: 'running'|'exited'|'paused'|'restarting'|'created'|'dead'; status: string; project: string | null }

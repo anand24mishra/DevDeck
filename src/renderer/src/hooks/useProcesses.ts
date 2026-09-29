@@ -1,0 +1,127 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Proc, Settings } from '../../../shared/types'
+
+export interface UseProcessesResult {
+  procs: Proc[]
+  settings: Settings
+  loading: boolean
+  error: string | null
+  lastUpdated: Date | null
+  refresh: () => Promise<void>
+  changeInterval: (interval: 2 | 3 | 5 | 10) => Promise<void>
+}
+
+const DEFAULT_SETTINGS: Settings = {
+  refreshIntervalSec: 3,
+  ignoreList: [],
+  customAllowlist: []
+}
+
+export function useProcesses(): UseProcessesResult {
+  const [procs, setProcs] = useState<Proc[]>([])
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
+  const inFlightRef = useRef<boolean>(false)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Fetch settings on mount
+  useEffect(() => {
+    window.api
+      ?.getSettings?.()
+      .then((res) => {
+        if (res.ok) {
+          setSettings(res.data)
+        }
+      })
+      .catch(() => {
+        // Fallback to default
+      })
+  }, [])
+
+  const fetchProcesses = useCallback(async () => {
+    if (inFlightRef.current) return
+    inFlightRef.current = true
+
+    try {
+      const res = await window.api.getProcesses()
+      if (res.ok) {
+        setProcs(res.data)
+        setError(null)
+        setLastUpdated(new Date())
+      } else {
+        setError(res.error.message || 'Failed to list processes')
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Unknown IPC error')
+    } finally {
+      inFlightRef.current = false
+      setLoading(false)
+    }
+  }, [])
+
+  // Manage auto-refresh timer with window visibility awareness
+  useEffect(() => {
+    // Run initial fetch asynchronously after render
+    const timer = setTimeout(() => {
+      void fetchProcesses()
+    }, 0)
+
+    const setupTimer = (): void => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+
+      intervalRef.current = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          fetchProcesses()
+        }
+      }, settings.refreshIntervalSec * 1000)
+    }
+
+    setupTimer()
+
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'visible') {
+        fetchProcesses()
+        setupTimer()
+      } else if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      clearTimeout(timer)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [fetchProcesses, settings.refreshIntervalSec])
+
+  const changeInterval = useCallback(async (interval: 2 | 3 | 5 | 10) => {
+    try {
+      const res = await window.api.updateSettings({ refreshIntervalSec: interval })
+      if (res.ok) {
+        setSettings(res.data)
+      }
+    } catch {
+      // Handle error silently
+    }
+  }, [])
+
+  return {
+    procs,
+    settings,
+    loading,
+    error,
+    lastUpdated,
+    refresh: fetchProcesses,
+    changeInterval
+  }
+}
