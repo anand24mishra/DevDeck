@@ -5,7 +5,10 @@ const api: DevDeckApi = {
   getProcesses: (): Promise<Result<Proc[]>> => ipcRenderer.invoke('procs:list'),
   getSettings: (): Promise<Result<Settings>> => ipcRenderer.invoke('settings:get'),
   updateSettings: (partial: Partial<Settings>): Promise<Result<Settings>> =>
-    ipcRenderer.invoke('settings:set', partial)
+    ipcRenderer.invoke('settings:set', partial),
+  stopProcess: (pid: number) => ipcRenderer.invoke('procs:stop', { pids: [pid] }),
+  stopProject: (project: string) => ipcRenderer.invoke('procs:stopProject', { project }),
+  stopAll: () => ipcRenderer.invoke('procs:stopAll')
 }
 
 if (process.contextIsolated) {

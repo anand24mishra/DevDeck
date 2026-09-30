@@ -9,6 +9,7 @@ interface HeaderProps {
   settings: Settings
   onIntervalChange: (interval: 2 | 3 | 5 | 10) => void
   onRefresh: () => void
+  onStopAll?: () => void
   loading: boolean
 }
 
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   settings,
   onIntervalChange,
   onRefresh,
+  onStopAll,
   loading
 }) => {
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -102,6 +104,17 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-right">
+        {onStopAll && totalCount > 0 && (
+          <button
+            type="button"
+            className="stop-all-btn"
+            onClick={onStopAll}
+            title="Stop all running dev processes"
+          >
+            Stop all
+          </button>
+        )}
+
         <div className="refresh-control">
           <label htmlFor="refresh-select" className="refresh-label">
             Poll:

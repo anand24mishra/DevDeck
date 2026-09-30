@@ -1,6 +1,6 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import { is } from '@electron-toolkit/utils'
-import { Result, Proc, Settings } from '../shared/types'
+import { Result, Proc, Settings, KillReport } from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
 
@@ -79,4 +79,82 @@ export function registerIpcHandlers(): void {
       }
     }
   )
+
+  // procs:stop
+  ipcMain.handle(
+    'procs:stop',
+    async (event, { pids }: { pids: number[] }): Promise<Result<KillReport>> => {
+      if (!isSenderAuthorized(event)) {
+        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      if (
+        !Array.isArray(pids) ||
+        pids.some((p) => !Number.isInteger(p) || p <= 1) ||
+        pids.length > 500
+      ) {
+        return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid PIDs array' } }
+      }
+      try {
+        const { terminate, defaultKillDeps } = await import('./services/kill')
+        const report = await terminate(pids, defaultKillDeps)
+        return { ok: true, data: report }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Termination failed'
+        return { ok: false, error: { code: 'INTERNAL', message } }
+      }
+    }
+  )
+
+  // procs:stopProject
+  ipcMain.handle(
+    'procs:stopProject',
+    async (event, { project }: { project: string }): Promise<Result<KillReport>> => {
+      if (!isSenderAuthorized(event)) {
+        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      if (typeof project !== 'string' || !project.trim()) {
+        return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid project name' } }
+      }
+      try {
+        const settings = settingsService.getSettings()
+        const procs = await processProvider.listProcesses({
+          userIgnoreList: settings.ignoreList,
+          customAllowlist: settings.customAllowlist
+        })
+        const matching = procs.filter(
+          (p) => p.project.toLowerCase() === project.trim().toLowerCase()
+        )
+        const pids = matching.map((p) => p.pid)
+
+        const { terminate, defaultKillDeps } = await import('./services/kill')
+        const report = await terminate(pids, defaultKillDeps)
+        return { ok: true, data: report }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Project stop failed'
+        return { ok: false, error: { code: 'INTERNAL', message } }
+      }
+    }
+  )
+
+  // procs:stopAll
+  ipcMain.handle('procs:stopAll', async (event): Promise<Result<KillReport>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+    }
+    try {
+      const settings = settingsService.getSettings()
+      const procs = await processProvider.listProcesses({
+        userIgnoreList: settings.ignoreList,
+        customAllowlist: settings.customAllowlist
+      })
+      const pids = procs.map((p) => p.pid)
+
+      const { terminate, defaultKillDeps } = await import('./services/kill')
+      const report = await terminate(pids, defaultKillDeps)
+      return { ok: true, data: report }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Stop all failed'
+      return { ok: false, error: { code: 'INTERNAL', message } }
+    }
+  })
 }

@@ -4,9 +4,10 @@ import { formatUptime } from '../utils/format'
 
 interface ProcessRowProps {
   proc: Proc
+  onStop?: (proc: Proc) => void
 }
 
-export const ProcessRow: React.FC<ProcessRowProps> = ({ proc }) => {
+export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
   const [expanded, setExpanded] = useState<boolean>(false)
   const [commandRevealed, setCommandRevealed] = useState<boolean>(false)
   const [copied, setCopied] = useState<boolean>(false)
@@ -80,8 +81,21 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc }) => {
           <span>{formatUptime(proc.uptimeSec)}</span>
         </div>
 
-        {/* Column 7: Disclosure Toggle */}
+        {/* Column 7: Actions & Disclosure */}
         <div className="col col-action">
+          {onStop && (
+            <button
+              type="button"
+              className="row-stop-btn"
+              title={`Stop ${proc.name} (PID ${proc.pid})`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onStop(proc)
+              }}
+            >
+              Stop
+            </button>
+          )}
           <button
             className="details-toggle-btn"
             aria-label={expanded ? 'Hide process details' : 'Show process details'}

@@ -23,8 +23,19 @@ export interface Settings {
   customAllowlist: string[]
 }
 
+export interface KillReport {
+  requested: number[]
+  stopped: number[]
+  forced: number[]
+  refused: number[]
+  stillRunning: number[]
+}
+
 export interface DevDeckApi {
   getProcesses: () => Promise<Result<Proc[]>>
   getSettings: () => Promise<Result<Settings>>
   updateSettings: (partial: Partial<Settings>) => Promise<Result<Settings>>
+  stopProcess: (pid: number) => Promise<Result<KillReport>>
+  stopProject: (project: string) => Promise<Result<KillReport>>
+  stopAll: () => Promise<Result<KillReport>>
 }
