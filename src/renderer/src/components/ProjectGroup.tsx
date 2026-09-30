@@ -6,12 +6,16 @@ interface ProjectGroupProps {
   projectName: string
   projectPath: string | null
   processes: Proc[]
+  onStopProcess?: (proc: Proc) => void
+  onStopProject?: (project: string, procs: Proc[]) => void
 }
 
 export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   projectName,
   projectPath,
-  processes
+  processes,
+  onStopProcess,
+  onStopProject
 }) => {
   return (
     <section className="project-group" aria-label={`Project ${projectName}`}>
@@ -43,6 +47,15 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
           <span className="process-count-badge mono">
             {processes.length} {processes.length === 1 ? 'proc' : 'procs'}
           </span>
+          {onStopProject && processes.length > 0 && (
+            <button
+              type="button"
+              className="project-stop-btn"
+              onClick={() => onStopProject(projectName, processes)}
+            >
+              Stop project
+            </button>
+          )}
         </div>
       </div>
 
@@ -58,7 +71,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
 
       <div className="process-rows-list">
         {processes.map((proc) => (
-          <ProcessRow key={proc.pid} proc={proc} />
+          <ProcessRow key={proc.pid} proc={proc} onStop={onStopProcess} />
         ))}
       </div>
     </section>

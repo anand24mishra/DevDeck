@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Proc, Settings } from '../../../shared/types'
+import { Proc, Settings, Result, KillReport } from '../../../shared/types'
 
 export interface UseProcessesResult {
   procs: Proc[]
@@ -9,6 +9,9 @@ export interface UseProcessesResult {
   lastUpdated: Date | null
   refresh: () => Promise<void>
   changeInterval: (interval: 2 | 3 | 5 | 10) => Promise<void>
+  stopProcess: (pid: number) => Promise<Result<KillReport>>
+  stopProject: (project: string) => Promise<Result<KillReport>>
+  stopAll: () => Promise<Result<KillReport>>
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -115,6 +118,30 @@ export function useProcesses(): UseProcessesResult {
     }
   }, [])
 
+  const stopProcess = useCallback(
+    async (pid: number): Promise<Result<KillReport>> => {
+      const res = await window.api.stopProcess(pid)
+      await fetchProcesses()
+      return res
+    },
+    [fetchProcesses]
+  )
+
+  const stopProject = useCallback(
+    async (project: string): Promise<Result<KillReport>> => {
+      const res = await window.api.stopProject(project)
+      await fetchProcesses()
+      return res
+    },
+    [fetchProcesses]
+  )
+
+  const stopAll = useCallback(async (): Promise<Result<KillReport>> => {
+    const res = await window.api.stopAll()
+    await fetchProcesses()
+    return res
+  }, [fetchProcesses])
+
   return {
     procs,
     settings,
@@ -122,6 +149,9 @@ export function useProcesses(): UseProcessesResult {
     error,
     lastUpdated,
     refresh: fetchProcesses,
-    changeInterval
+    changeInterval,
+    stopProcess,
+    stopProject,
+    stopAll
   }
 }
