@@ -21,7 +21,8 @@ export interface KillDeps {
 }
 
 /**
- * Pure termination escalation flow. Injectable dependencies for unit testing with fake timers.
+ * Pure termination escalation flow with PID-reuse protection.
+ * Injectable dependencies for unit testing with fake timers.
  */
 export async function terminate(pids: number[], deps: KillDeps): Promise<KillReport> {
   const uniquePids = Array.from(new Set(pids)).filter((p) => Number.isInteger(p) && p > 1)
@@ -38,17 +39,41 @@ export async function terminate(pids: number[], deps: KillDeps): Promise<KillRep
   // 3. Grace period (3s)
   await deps.sleep(3000)
 
-  // 4. Send SIGKILL to remaining survivors
-  const survivors = ok.filter((p) => deps.alive(p.pid))
-  survivors.forEach((p) => deps.signal(p.pid, 'SIGKILL'))
+  // 4. Re-check survivors and verify PID + startTime before SIGKILL (PID reuse protection)
+  const initialAlivePids = ok.filter((p) => deps.alive(p.pid)).map((p) => p.pid)
+  const verifiedSurvivors: RevalidatedProcess[] = []
+
+  if (initialAlivePids.length > 0) {
+    const rechecked = await deps.revalidate(initialAlivePids)
+
+    for (const survivor of rechecked.ok) {
+      const original = ok.find((p) => p.pid === survivor.pid)
+      // PID must match and startTime must match (if captured)
+      if (original && (!original.startTime || original.startTime === survivor.startTime)) {
+        verifiedSurvivors.push(survivor)
+      } else {
+        // PID was reused by another process with a different start time!
+        refused.push(survivor.pid)
+      }
+    }
+
+    for (const refusedPid of rechecked.refused) {
+      if (!refused.includes(refusedPid)) {
+        refused.push(refusedPid)
+      }
+    }
+
+    // Only send SIGKILL to verified survivors with matching identity
+    verifiedSurvivors.forEach((p) => deps.signal(p.pid, 'SIGKILL'))
+  }
 
   // 5. Short post-kill settle (300ms)
   await deps.sleep(300)
 
   // 6. Final accounting
-  const stillRunning = survivors.filter((p) => deps.alive(p.pid)).map((p) => p.pid)
-  const forced = survivors.map((p) => p.pid).filter((pid) => !stillRunning.includes(pid))
-  const stopped = ok.map((p) => p.pid).filter((pid) => !survivors.some((s) => s.pid === pid))
+  const stillRunning = verifiedSurvivors.filter((p) => deps.alive(p.pid)).map((p) => p.pid)
+  const forced = verifiedSurvivors.map((p) => p.pid).filter((pid) => !stillRunning.includes(pid))
+  const stopped = ok.map((p) => p.pid).filter((pid) => !initialAlivePids.includes(pid))
 
   return {
     requested: pids,

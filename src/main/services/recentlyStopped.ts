@@ -161,12 +161,56 @@ export class RecentlyStoppedService {
       return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid command' } }
     }
 
+    // Validate working directory safety and existence
+    let targetCwd: string | undefined = process.env.HOME || undefined
+    if (item.cwd) {
+      const trimmedCwd = item.cwd.trim()
+      if (!fs.existsSync(trimmedCwd)) {
+        return {
+          ok: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: `Working directory does not exist: ${trimmedCwd}`
+          }
+        }
+      }
+      try {
+        const stat = fs.statSync(trimmedCwd)
+        if (!stat.isDirectory()) {
+          return {
+            ok: false,
+            error: {
+              code: 'INVALID_INPUT',
+              message: `Working directory is not a directory: ${trimmedCwd}`
+            }
+          }
+        }
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'DENIED', message: `Cannot access working directory: ${trimmedCwd}` }
+        }
+      }
+
+      // Restrict system directory execution
+      if (['/System', '/usr', '/bin', '/sbin'].some((p) => trimmedCwd.startsWith(p))) {
+        return {
+          ok: false,
+          error: {
+            code: 'DENIED',
+            message: `Execution restricted in system directory: ${trimmedCwd}`
+          }
+        }
+      }
+      targetCwd = trimmedCwd
+    }
+
     return new Promise((resolve) => {
       let settled = false
 
       try {
         const child = this.spawnFn(executable, args, {
-          cwd: item.cwd || process.env.HOME || undefined,
+          cwd: targetCwd,
           detached: true,
           stdio: 'ignore',
           env: process.env
@@ -178,6 +222,16 @@ export class RecentlyStoppedService {
             resolve({
               ok: false,
               error: { code: 'INTERNAL', message: `Spawn failed: ${err.message}` }
+            })
+          }
+        })
+
+        child.on('exit', (code) => {
+          if (!settled && code !== null && code !== 0) {
+            settled = true
+            resolve({
+              ok: false,
+              error: { code: 'INTERNAL', message: `Process exited immediately with code ${code}` }
             })
           }
         })

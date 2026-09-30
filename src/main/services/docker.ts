@@ -25,8 +25,11 @@ export function resolveDockerSocket(overridePath?: string): DockerSocketCheck {
   const home = os.homedir()
   const candidates: string[] = []
 
-  if (overridePath && overridePath.trim()) {
-    candidates.push(overridePath.trim())
+  if (overridePath && typeof overridePath === 'string') {
+    const trimmed = overridePath.trim()
+    if (trimmed.length > 0 && path.isAbsolute(trimmed) && !trimmed.includes('\0')) {
+      candidates.push(path.normalize(trimmed))
+    }
   }
 
   const envHost = process.env['DOCKER_HOST']
