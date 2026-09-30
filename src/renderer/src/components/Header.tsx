@@ -2,10 +2,14 @@ import React, { useEffect, useRef } from 'react'
 import { Settings } from '../../../shared/types'
 
 interface HeaderProps {
+  activeTab: 'processes' | 'docker'
+  onTabChange: (tab: 'processes' | 'docker') => void
   searchQuery: string
   onSearchChange: (query: string) => void
   totalCount: number
   projectCount: number
+  dockerRunningCount: number
+  dockerTotalCount: number
   settings: Settings
   onIntervalChange: (interval: 2 | 3 | 5 | 10) => void
   onRefresh: () => void
@@ -14,10 +18,14 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
+  activeTab,
+  onTabChange,
   searchQuery,
   onSearchChange,
   totalCount,
   projectCount,
+  dockerRunningCount,
+  dockerTotalCount,
   settings,
   onIntervalChange,
   onRefresh,
@@ -50,14 +58,45 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="brand-badge">macOS</span>
         </div>
 
+        <div className="header-tabs">
+          <button
+            type="button"
+            className={`tab-btn ${activeTab === 'processes' ? 'active' : ''}`}
+            onClick={() => onTabChange('processes')}
+          >
+            Processes
+            <span className="tab-badge mono">{totalCount}</span>
+          </button>
+          <button
+            type="button"
+            className={`tab-btn ${activeTab === 'docker' ? 'active' : ''}`}
+            onClick={() => onTabChange('docker')}
+          >
+            Docker
+            <span className="tab-badge mono">{dockerRunningCount}</span>
+          </button>
+        </div>
+
         <div className="process-stats mono">
-          <span>
-            {totalCount} {totalCount === 1 ? 'process' : 'processes'}
-          </span>
-          <span className="stats-divider">/</span>
-          <span>
-            {projectCount} {projectCount === 1 ? 'project' : 'projects'}
-          </span>
+          {activeTab === 'processes' ? (
+            <>
+              <span>
+                {totalCount} {totalCount === 1 ? 'process' : 'processes'}
+              </span>
+              <span className="stats-divider">/</span>
+              <span>
+                {projectCount} {projectCount === 1 ? 'project' : 'projects'}
+              </span>
+            </>
+          ) : (
+            <>
+              <span>{dockerRunningCount} running</span>
+              <span className="stats-divider">/</span>
+              <span>
+                {dockerTotalCount} {dockerTotalCount === 1 ? 'container' : 'containers'}
+              </span>
+            </>
+          )}
         </div>
       </div>
 

@@ -1,8 +1,9 @@
-import { ipcMain, IpcMainInvokeEvent } from 'electron'
+import { ipcMain, IpcMainInvokeEvent, BrowserWindow } from 'electron'
 import { is } from '@electron-toolkit/utils'
-import { Result, Proc, Settings, KillReport } from '../shared/types'
+import { Result, Proc, Settings, KillReport, Container } from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
+import { dockerService } from './services/docker'
 
 const processProvider = new DarwinProcessProvider()
 
@@ -156,5 +157,88 @@ export function registerIpcHandlers(): void {
       const message = err instanceof Error ? err.message : 'Stop all failed'
       return { ok: false, error: { code: 'INTERNAL', message } }
     }
+  })
+
+  // docker:list
+  ipcMain.handle('docker:list', async (event): Promise<Result<Container[]>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+    }
+    const settings = settingsService.getSettings()
+    return await dockerService.listContainers(settings.dockerSocketPath)
+  })
+
+  // docker:action
+  ipcMain.handle(
+    'docker:action',
+    async (
+      event,
+      { id, action }: { id: string; action: 'start' | 'stop' | 'restart' }
+    ): Promise<Result<null>> => {
+      if (!isSenderAuthorized(event)) {
+        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      if (!['start', 'stop', 'restart'].includes(action)) {
+        return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid container action' } }
+      }
+      const settings = settingsService.getSettings()
+      return await dockerService.containerAction(id, action, settings.dockerSocketPath)
+    }
+  )
+
+  // docker:stopAll
+  ipcMain.handle('docker:stopAll', async (event): Promise<Result<null>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+    }
+    const settings = settingsService.getSettings()
+    return await dockerService.stopAllContainers(settings.dockerSocketPath)
+  })
+
+  // docker:logs:start
+  ipcMain.handle(
+    'docker:logs:start',
+    async (event, { id }: { id: string }): Promise<Result<null>> => {
+      if (!isSenderAuthorized(event)) {
+        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      const settings = settingsService.getSettings()
+      const sender = event.sender
+
+      // Clean up if sender is destroyed
+      sender.once('destroyed', () => {
+        dockerService.stopContainerLogs(id)
+      })
+
+      return await dockerService.startContainerLogs(
+        id,
+        (text) => {
+          if (!sender.isDestroyed()) {
+            sender.send('docker:log', { id, text })
+          }
+        },
+        settings.dockerSocketPath
+      )
+    }
+  )
+
+  // docker:logs:stop
+  ipcMain.handle(
+    'docker:logs:stop',
+    async (event, { id }: { id: string }): Promise<Result<null>> => {
+      if (!isSenderAuthorized(event)) {
+        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      return dockerService.stopContainerLogs(id)
+    }
+  )
+
+  // Forward docker changes to all open windows
+  dockerService.onDockerChanged(() => {
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('docker:changed')
+      }
+    })
   })
 }

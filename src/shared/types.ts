@@ -21,6 +21,7 @@ export interface Settings {
   refreshIntervalSec: 2 | 3 | 5 | 10
   ignoreList: string[]
   customAllowlist: string[]
+  dockerSocketPath?: string
 }
 
 export interface KillReport {
@@ -31,6 +32,24 @@ export interface KillReport {
   stillRunning: number[]
 }
 
+export type ContainerState = 'running' | 'exited' | 'paused' | 'restarting' | 'created' | 'dead'
+
+export interface Container {
+  id: string
+  name: string
+  image: string
+  state: ContainerState
+  status: string
+  project: string | null
+  ports: number[]
+  created: number
+}
+
+export interface DockerLogMessage {
+  id: string
+  text: string
+}
+
 export interface DevDeckApi {
   getProcesses: () => Promise<Result<Proc[]>>
   getSettings: () => Promise<Result<Settings>>
@@ -38,4 +57,11 @@ export interface DevDeckApi {
   stopProcess: (pid: number) => Promise<Result<KillReport>>
   stopProject: (project: string) => Promise<Result<KillReport>>
   stopAll: () => Promise<Result<KillReport>>
+  listContainers: () => Promise<Result<Container[]>>
+  containerAction: (id: string, action: 'start' | 'stop' | 'restart') => Promise<Result<null>>
+  stopAllContainers: () => Promise<Result<null>>
+  startContainerLogs: (id: string) => Promise<Result<null>>
+  stopContainerLogs: (id: string) => Promise<Result<null>>
+  onDockerLog: (callback: (msg: DockerLogMessage) => void) => () => void
+  onDockerChanged: (callback: () => void) => () => void
 }
