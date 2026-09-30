@@ -23,7 +23,7 @@ describe('RecentlyStoppedService', () => {
     }
   })
 
-  const mockProc = (id: number, name: string, cmd: string, project = 'my-app'): Proc => ({
+  const mockProc = (id: number, name: string, cmd: string, project = 'my-app', cwd = tempDir): Proc => ({
     pid: id,
     ppid: 1,
     name,
@@ -31,9 +31,9 @@ describe('RecentlyStoppedService', () => {
     cpu: 1.0,
     memMB: 50,
     uptimeSec: 100,
-    cwd: '/Users/dev/my-app',
+    cwd,
     project,
-    projectPath: '/Users/dev/my-app',
+    projectPath: cwd,
     ports: [3000]
   })
 
@@ -149,11 +149,25 @@ describe('RecentlyStoppedService', () => {
     expect(spawnedArgs[0].cmd).toBe('node')
     expect(spawnedArgs[0].args).toEqual(['server.js', '--port', '8080'])
     expect(spawnedArgs[0].opts).toMatchObject({
-      cwd: '/Users/dev/my-app',
+      cwd: tempDir,
       detached: true,
       stdio: 'ignore'
     })
     expect(mockChild.unref).toHaveBeenCalled()
+  })
+
+  it('refuses restart if working directory no longer exists', async () => {
+    const service = new RecentlyStoppedService({ filePath: testFilePath })
+    const nonExistentDir = path.join(tempDir, 'deleted-folder')
+    service.recordStopped([mockProc(101, 'node', 'node server.js', 'app', nonExistentDir)], false)
+    const item = service.getItems()[0]
+
+    const result = await service.restart(item.id)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error.code).toBe('INVALID_INPUT')
+      expect(result.error.message).toContain('Working directory does not exist')
+    }
   })
 
   it('clears all items and deletes persistence file if disabled', () => {

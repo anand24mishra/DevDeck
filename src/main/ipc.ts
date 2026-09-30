@@ -244,6 +244,12 @@ export function registerIpcHandlers(): void {
       if (!isSenderAuthorized(event)) {
         return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
       }
+      if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
+        return {
+          ok: false,
+          error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
+        }
+      }
       if (!['start', 'stop', 'restart'].includes(action)) {
         return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid container action' } }
       }
@@ -267,6 +273,12 @@ export function registerIpcHandlers(): void {
     async (event, { id }: { id: string }): Promise<Result<null>> => {
       if (!isSenderAuthorized(event)) {
         return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
+        return {
+          ok: false,
+          error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
+        }
       }
       const settings = settingsService.getSettings()
       const sender = event.sender
@@ -294,6 +306,12 @@ export function registerIpcHandlers(): void {
     async (event, { id }: { id: string }): Promise<Result<null>> => {
       if (!isSenderAuthorized(event)) {
         return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
+        return {
+          ok: false,
+          error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
+        }
       }
       return dockerService.stopContainerLogs(id)
     }

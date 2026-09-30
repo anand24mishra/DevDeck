@@ -68,10 +68,13 @@ export class SettingsService {
       ? r.customAllowlist.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
       : []
 
-    const dockerSocketPath =
-      typeof r.dockerSocketPath === 'string' && r.dockerSocketPath.trim().length > 0
-        ? r.dockerSocketPath.trim()
-        : undefined
+    let dockerSocketPath: string | undefined = undefined
+    if (typeof r.dockerSocketPath === 'string') {
+      const trimmed = r.dockerSocketPath.trim()
+      if (trimmed.length > 0 && path.isAbsolute(trimmed) && !trimmed.includes('\0')) {
+        dockerSocketPath = path.normalize(trimmed)
+      }
+    }
 
     const theme =
       typeof r.theme === 'string' && ['system', 'light', 'dark'].includes(r.theme)

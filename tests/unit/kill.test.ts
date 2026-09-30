@@ -126,4 +126,37 @@ describe('safe process termination escalation', () => {
     expect(report.stopped).toEqual([])
     expect(deps.revalidate).not.toHaveBeenCalled()
   })
+
+  it('prevents SIGKILL and refuses process if PID was reused with different start time during grace period', async () => {
+    const signalsSent: { pid: number; signal: string }[] = []
+
+    const deps: KillDeps = {
+      revalidate: vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: [{ pid: 501, startTime: 'Wed Sep 30 14:00:00 2026', command: 'node original.js' }],
+          refused: []
+        })
+        .mockResolvedValueOnce({
+          ok: [{ pid: 501, startTime: 'Wed Sep 30 14:00:02 2026', command: 'node new-process.js' }],
+          refused: []
+        }),
+      signal: vi.fn((pid, sig) => {
+        signalsSent.push({ pid, signal: sig })
+        return true
+      }),
+      alive: vi.fn().mockReturnValue(true),
+      sleep: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const report = await terminate([501], deps)
+
+    // SIGTERM was sent to original
+    expect(signalsSent).toEqual([{ pid: 501, signal: 'SIGTERM' }])
+    // SIGKILL was NEVER sent to the reused PID
+    expect(signalsSent.some((s) => s.signal === 'SIGKILL')).toBe(false)
+    // Refused because start time mismatched
+    expect(report.refused).toEqual([501])
+    expect(report.forced).toEqual([])
+  })
 })

@@ -83,4 +83,12 @@ describe('SettingsService', () => {
     expect(fileContent.refreshIntervalSec).toBe(5)
     expect(fileContent.theme).toBe('dark')
   })
+
+  it('rejects relative or invalid dockerSocketPath override', () => {
+    const service = new SettingsService(testFilePath)
+    const updated = service.updateSettings({
+      dockerSocketPath: 'relative/path/to/docker.sock'
+    })
+    expect(updated.dockerSocketPath).toBeUndefined()
+  })
 })
