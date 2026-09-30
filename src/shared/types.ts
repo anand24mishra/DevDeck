@@ -22,6 +22,8 @@ export interface Settings {
   ignoreList: string[]
   customAllowlist: string[]
   dockerSocketPath?: string
+  theme: 'system' | 'light' | 'dark'
+  openAtLogin: boolean
 }
 
 export interface KillReport {

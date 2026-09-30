@@ -3,23 +3,34 @@ import path from 'path'
 import { app } from 'electron'
 import { Settings } from '../../shared/types'
 
-const DEFAULT_SETTINGS: Settings = {
+export const DEFAULT_SETTINGS: Settings = {
   refreshIntervalSec: 3,
   ignoreList: [],
-  customAllowlist: []
+  customAllowlist: [],
+  dockerSocketPath: undefined,
+  theme: 'system',
+  openAtLogin: false
 }
 
 export class SettingsService {
   private filePath: string
   private cached: Settings
 
-  constructor() {
-    try {
-      this.filePath = path.join(app.getPath('userData'), 'settings.json')
-    } catch {
-      this.filePath = path.join(process.cwd(), '.settings.json')
+  constructor(customPath?: string) {
+    if (customPath) {
+      this.filePath = customPath
+    } else {
+      try {
+        this.filePath = path.join(app.getPath('userData'), 'settings.json')
+      } catch {
+        this.filePath = path.join(process.cwd(), '.settings.json')
+      }
     }
     this.cached = this.load()
+  }
+
+  public getFilePath(): string {
+    return this.filePath
   }
 
   private load(): Settings {
@@ -27,18 +38,55 @@ export class SettingsService {
       if (fs.existsSync(this.filePath)) {
         const raw = fs.readFileSync(this.filePath, 'utf-8')
         const parsed = JSON.parse(raw)
-        return {
-          refreshIntervalSec: [2, 3, 5, 10].includes(parsed.refreshIntervalSec)
-            ? parsed.refreshIntervalSec
-            : 3,
-          ignoreList: Array.isArray(parsed.ignoreList) ? parsed.ignoreList : [],
-          customAllowlist: Array.isArray(parsed.customAllowlist) ? parsed.customAllowlist : []
-        }
+        return this.validate(parsed)
       }
-    } catch {
-      // Use defaults if load fails
+    } catch (err: unknown) {
+      // Corrupt file or parse failure: log and return defaults
+      console.warn('Failed to load settings file, falling back to defaults:', err)
     }
     return { ...DEFAULT_SETTINGS }
+  }
+
+  public validate(raw: unknown): Settings {
+    if (!raw || typeof raw !== 'object') {
+      return { ...DEFAULT_SETTINGS }
+    }
+
+    const r = raw as Record<string, unknown>
+
+    const refreshIntervalSec =
+      typeof r.refreshIntervalSec === 'number' && [2, 3, 5, 10].includes(r.refreshIntervalSec)
+        ? (r.refreshIntervalSec as 2 | 3 | 5 | 10)
+        : DEFAULT_SETTINGS.refreshIntervalSec
+
+    const ignoreList = Array.isArray(r.ignoreList)
+      ? r.ignoreList.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      : []
+
+    const customAllowlist = Array.isArray(r.customAllowlist)
+      ? r.customAllowlist.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+      : []
+
+    const dockerSocketPath =
+      typeof r.dockerSocketPath === 'string' && r.dockerSocketPath.trim().length > 0
+        ? r.dockerSocketPath.trim()
+        : undefined
+
+    const theme =
+      typeof r.theme === 'string' && ['system', 'light', 'dark'].includes(r.theme)
+        ? (r.theme as 'system' | 'light' | 'dark')
+        : DEFAULT_SETTINGS.theme
+
+    const openAtLogin = typeof r.openAtLogin === 'boolean' ? r.openAtLogin : false
+
+    return {
+      refreshIntervalSec,
+      ignoreList,
+      customAllowlist,
+      dockerSocketPath,
+      theme,
+      openAtLogin
+    }
   }
 
   public getSettings(): Settings {
@@ -46,28 +94,27 @@ export class SettingsService {
   }
 
   public updateSettings(partial: Partial<Settings>): Settings {
-    const updated: Settings = {
+    const merged = {
       ...this.cached,
       ...partial
     }
 
-    // Validate values
-    if (![2, 3, 5, 10].includes(updated.refreshIntervalSec)) {
-      updated.refreshIntervalSec = 3
-    }
-    if (!Array.isArray(updated.ignoreList)) {
-      updated.ignoreList = []
-    }
-    if (!Array.isArray(updated.customAllowlist)) {
-      updated.customAllowlist = []
-    }
-
-    this.cached = updated
+    const validated = this.validate(merged)
+    this.cached = validated
 
     try {
-      fs.writeFileSync(this.filePath, JSON.stringify(updated, null, 2), 'utf-8')
+      fs.writeFileSync(this.filePath, JSON.stringify(validated, null, 2), 'utf-8')
+    } catch (err: unknown) {
+      console.error('Failed to save settings:', err)
+    }
+
+    // Apply login item settings if changed
+    try {
+      if (typeof app?.setLoginItemSettings === 'function') {
+        app.setLoginItemSettings({ openAtLogin: validated.openAtLogin })
+      }
     } catch {
-      // Persist failure is non-fatal in test/memory scenarios
+      // Ignore in headless/test environments
     }
 
     return { ...this.cached }

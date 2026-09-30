@@ -16,6 +16,9 @@ export interface Settings {
   refreshIntervalSec: 2 | 3 | 5 | 10
   ignoreList: string[]
   customAllowlist: string[]
+  dockerSocketPath?: string
+  theme: 'system' | 'light' | 'dark'
+  openAtLogin: boolean
 }
 export interface KillReport { requested: number[]; stopped: number[]; forced: number[]; refused: number[]; stillRunning: number[] }
 export interface Container {
@@ -41,7 +44,7 @@ export interface Container {
 | `docker:stopAll` | – | `Result<null>` | stop all running containers |
 | `docker:logs:start` / `stop` | `{ id: string }` | `Result<null>` | stream via event below |
 | `settings:get` / `set` | partial settings | `Result<Settings>` | validated with a schema |
-Events main → renderer: `docker:log` `{ id: string; text: string }` (batched every 100 ms), `docker:changed`, `procs:changed`.
+Events main → renderer: `docker:log` `{ id: string; text: string }` (batched every 100 ms), `docker:changed`, `procs:changed`, `settings:changed`.
 
 ## Validation rules
 - Sender must be our window's own page. PIDs are integers > 1, at most 500 per call.
