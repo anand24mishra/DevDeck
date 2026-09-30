@@ -9,7 +9,8 @@ export const DEFAULT_SETTINGS: Settings = {
   customAllowlist: [],
   dockerSocketPath: undefined,
   theme: 'system',
-  openAtLogin: false
+  openAtLogin: false,
+  persistRecentlyStopped: false
 }
 
 export class SettingsService {
@@ -78,6 +79,8 @@ export class SettingsService {
         : DEFAULT_SETTINGS.theme
 
     const openAtLogin = typeof r.openAtLogin === 'boolean' ? r.openAtLogin : false
+    const persistRecentlyStopped =
+      typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
       refreshIntervalSec,
@@ -85,7 +88,8 @@ export class SettingsService {
       customAllowlist,
       dockerSocketPath,
       theme,
-      openAtLogin
+      openAtLogin,
+      persistRecentlyStopped
     }
   }
 

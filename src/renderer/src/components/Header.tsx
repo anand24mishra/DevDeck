@@ -10,6 +10,8 @@ interface HeaderProps {
   projectCount: number
   dockerRunningCount: number
   dockerTotalCount: number
+  recentlyStoppedCount?: number
+  onOpenRecentlyStopped?: () => void
   settings: Settings
   onIntervalChange: (interval: 2 | 3 | 5 | 10) => void
   onRefresh: () => void
@@ -27,6 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
   projectCount,
   dockerRunningCount,
   dockerTotalCount,
+  recentlyStoppedCount,
+  onOpenRecentlyStopped,
   settings,
   onIntervalChange,
   onRefresh,
@@ -194,6 +198,21 @@ export const Header: React.FC<HeaderProps> = ({
             <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
           </svg>
         </button>
+
+        {onOpenRecentlyStopped && (
+          <button
+            type="button"
+            className="btn btn-quiet btn-history"
+            onClick={onOpenRecentlyStopped}
+            title="View recently stopped dev processes"
+            aria-label="Recently stopped processes"
+          >
+            History
+            {recentlyStoppedCount !== undefined && recentlyStoppedCount > 0 && (
+              <span className="badge-pill mono">{recentlyStoppedCount}</span>
+            )}
+          </button>
+        )}
 
         {onOpenSettings && (
           <button

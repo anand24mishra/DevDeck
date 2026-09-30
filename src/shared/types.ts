@@ -24,6 +24,7 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  persistRecentlyStopped?: boolean
 }
 
 export interface KillReport {
@@ -47,6 +48,17 @@ export interface Container {
   created: number
 }
 
+export interface RecentlyStoppedItem {
+  id: string
+  name: string
+  command: string
+  args: string[]
+  cwd: string | null
+  project: string
+  stoppedAt: number
+  envKeys?: string[]
+}
+
 export interface DockerLogMessage {
   id: string
   text: string
@@ -59,6 +71,10 @@ export interface DevDeckApi {
   stopProcess: (pid: number) => Promise<Result<KillReport>>
   stopProject: (project: string) => Promise<Result<KillReport>>
   stopAll: () => Promise<Result<KillReport>>
+  getRecentlyStopped: () => Promise<Result<RecentlyStoppedItem[]>>
+  restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
+  clearRecentlyStopped: () => Promise<Result<null>>
+  onRecentlyStoppedChanged: (callback: () => void) => () => void
   listContainers: () => Promise<Result<Container[]>>
   containerAction: (id: string, action: 'start' | 'stop' | 'restart') => Promise<Result<null>>
   stopAllContainers: () => Promise<Result<null>>
