@@ -18,7 +18,16 @@ export interface Settings {
   customAllowlist: string[]
 }
 export interface KillReport { requested: number[]; stopped: number[]; forced: number[]; refused: number[]; stillRunning: number[] }
-export interface Container { id: string; name: string; image: string; state: 'running'|'exited'|'paused'|'restarting'|'created'|'dead'; status: string; project: string | null }
+export interface Container {
+  id: string
+  name: string
+  image: string
+  state: 'running' | 'exited' | 'paused' | 'restarting' | 'created' | 'dead'
+  status: string
+  project: string | null
+  ports: number[]
+  created: number
+}
 ```
 
 ## Channels (v1.0)
@@ -27,11 +36,12 @@ export interface Container { id: string; name: string; image: string; state: 'ru
 | `procs:list` | – | `Result<Proc[]>` | allowlisted processes only |
 | `procs:stop` | `{ pids: number[] }` | `Result<KillReport>` | main re-validates every pid |
 | `procs:stopProject` | `{ project: string }` | `Result<KillReport>` | main resolves pids itself |
-| `docker:list` | – | `Result<Container[]>` | |
-| `docker:action` | `{ id: string; action: 'start'|'stop'|'restart' }` | `Result<null>` | |
-| `docker:logs:start` / `stop` | `{ id }` | `Result<null>` | stream via event below |
+| `docker:list` | – | `Result<Container[]>` | list all containers |
+| `docker:action` | `{ id: string; action: 'start'\|'stop'\|'restart' }` | `Result<null>` | container action |
+| `docker:stopAll` | – | `Result<null>` | stop all running containers |
+| `docker:logs:start` / `stop` | `{ id: string }` | `Result<null>` | stream via event below |
 | `settings:get` / `set` | partial settings | `Result<Settings>` | validated with a schema |
-Events main → renderer: `docker:log` `{ id, text }` (batched every 100 ms), `procs:changed`.
+Events main → renderer: `docker:log` `{ id: string; text: string }` (batched every 100 ms), `docker:changed`, `procs:changed`.
 
 ## Validation rules
 - Sender must be our window's own page. PIDs are integers > 1, at most 500 per call.

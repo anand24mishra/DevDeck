@@ -1,8 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { Proc, KillReport } from '../../shared/types'
+import { Proc, KillReport, Container } from '../../shared/types'
 import { useProcesses } from './hooks/useProcesses'
+import { useDocker } from './hooks/useDocker'
 import { Header } from './components/Header'
 import { ProjectGroup } from './components/ProjectGroup'
+import { DockerProjectGroup } from './components/DockerProjectGroup'
+import { DockerLogViewer } from './components/DockerLogViewer'
 import { EmptyState } from './components/EmptyState'
 import { LoadingState } from './components/LoadingState'
 import { ErrorState } from './components/ErrorState'
@@ -15,6 +18,11 @@ interface GroupedProject {
   processes: Proc[]
 }
 
+interface GroupedDockerProject {
+  name: string
+  containers: Container[]
+}
+
 interface DialogState {
   isOpen: boolean
   title: string
@@ -24,19 +32,33 @@ interface DialogState {
 }
 
 const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'processes' | 'docker'>('processes')
+
   const {
     procs,
     settings,
-    loading,
-    error,
-    refresh,
+    loading: procsLoading,
+    error: procsError,
+    refresh: refreshProcs,
     changeInterval,
     stopProcess,
     stopProject,
     stopAll
   } = useProcesses()
 
+  const {
+    containers,
+    loading: dockerLoading,
+    error: dockerError,
+    errorCode: dockerErrorCode,
+    actionLoadingId,
+    refresh: refreshDocker,
+    containerAction,
+    stopAllContainers
+  } = useDocker(settings.refreshIntervalSec)
+
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [selectedLogContainer, setSelectedLogContainer] = useState<Container | null>(null)
   const [dialogState, setDialogState] = useState<DialogState>({
     isOpen: false,
     title: '',
@@ -45,7 +67,7 @@ const App: React.FC = () => {
   const [isBusy, setIsBusy] = useState<boolean>(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
 
-  // Filter processes based on search query (name, port, project)
+  // 1. Process filtering & grouping
   const filteredProcesses = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return procs
@@ -58,7 +80,6 @@ const App: React.FC = () => {
     })
   }, [procs, searchQuery])
 
-  // Group processes by project
   const groupedProjects = useMemo(() => {
     const map = new Map<string, GroupedProject>()
 
@@ -82,6 +103,41 @@ const App: React.FC = () => {
     return unique.size
   }, [procs])
 
+  // 2. Docker filtering & grouping
+  const filteredContainers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return containers
+
+    return containers.filter((c) => {
+      const matchName = c.name.toLowerCase().includes(q)
+      const matchImage = c.image.toLowerCase().includes(q)
+      const matchProject = c.project?.toLowerCase().includes(q)
+      const matchPorts = c.ports.some((port) => port.toString().includes(q))
+      return matchName || matchImage || matchProject || matchPorts
+    })
+  }, [containers, searchQuery])
+
+  const groupedDockerProjects = useMemo(() => {
+    const map = new Map<string, GroupedDockerProject>()
+
+    for (const c of filteredContainers) {
+      const key = c.project || 'Standalone Containers'
+      if (!map.has(key)) {
+        map.set(key, {
+          name: key,
+          containers: []
+        })
+      }
+      map.get(key)!.containers.push(c)
+    }
+
+    return Array.from(map.values())
+  }, [filteredContainers])
+
+  const dockerRunningCount = useMemo(() => {
+    return containers.filter((c) => c.state === 'running').length
+  }, [containers])
+
   const showReportToast = (report: KillReport): void => {
     const parts: string[] = []
     if (report.stopped.length > 0) parts.push(`Stopped ${report.stopped.length}`)
@@ -93,6 +149,7 @@ const App: React.FC = () => {
     setToast({ id: Date.now().toString(), text, type })
   }
 
+  // Process Actions
   const handleStopProcess = useCallback(
     (proc: Proc) => {
       setDialogState({
@@ -145,7 +202,7 @@ const App: React.FC = () => {
     [stopProject]
   )
 
-  const handleStopAll = useCallback(() => {
+  const handleStopAllProcesses = useCallback(() => {
     setDialogState({
       isOpen: true,
       title: `Stop all ${procs.length} dev processes?`,
@@ -168,45 +225,201 @@ const App: React.FC = () => {
     })
   }, [procs, stopAll])
 
+  // Docker Actions
+  const handleDockerAction = useCallback(
+    (id: string, action: 'start' | 'stop' | 'restart') => {
+      const container = containers.find((c) => c.id === id)
+      const name = container?.name || id
+
+      if (action === 'stop') {
+        setDialogState({
+          isOpen: true,
+          title: `Stop container ${name}?`,
+          description: `This will send a stop signal to the container with a 10s graceful shutdown timeout.`,
+          targetList: [`${name} (${container?.image || 'unknown image'})`],
+          action: async () => {
+            setIsBusy(true)
+            try {
+              const ok = await containerAction(id, 'stop')
+              if (ok) {
+                setToast({
+                  id: Date.now().toString(),
+                  text: `Stopped container ${name}`,
+                  type: 'success'
+                })
+              }
+            } finally {
+              setIsBusy(false)
+              setDialogState((prev) => ({ ...prev, isOpen: false }))
+            }
+          }
+        })
+      } else {
+        containerAction(id, action).then((ok) => {
+          if (ok) {
+            const verb = action === 'start' ? 'Started' : 'Restarted'
+            setToast({
+              id: Date.now().toString(),
+              text: `${verb} container ${name}`,
+              type: 'success'
+            })
+          }
+        })
+      }
+    },
+    [containers, containerAction]
+  )
+
+  const handleStopDockerProject = useCallback(
+    (projectName: string, projectContainers: Container[]) => {
+      const running = projectContainers.filter((c) => c.state === 'running')
+      setDialogState({
+        isOpen: true,
+        title: `Stop ${running.length} container${running.length === 1 ? '' : 's'} in ${projectName}?`,
+        description: `This will stop all running containers in this Compose stack.`,
+        targetList: running.map((c) => `${c.name} (${c.image})`),
+        action: async () => {
+          setIsBusy(true)
+          try {
+            for (const c of running) {
+              await containerAction(c.id, 'stop')
+            }
+            setToast({
+              id: Date.now().toString(),
+              text: `Stopped stack ${projectName}`,
+              type: 'success'
+            })
+          } finally {
+            setIsBusy(false)
+            setDialogState((prev) => ({ ...prev, isOpen: false }))
+          }
+        }
+      })
+    },
+    [containerAction]
+  )
+
+  const handleStopAllContainers = useCallback(() => {
+    const running = containers.filter((c) => c.state === 'running')
+    setDialogState({
+      isOpen: true,
+      title: `Stop all ${running.length} running containers?`,
+      description: `This will stop every running Docker container.`,
+      targetList: running.map((c) => `${c.name} (${c.image})`),
+      action: async () => {
+        setIsBusy(true)
+        try {
+          const ok = await stopAllContainers()
+          if (ok) {
+            setToast({
+              id: Date.now().toString(),
+              text: `Stopped all running containers`,
+              type: 'success'
+            })
+          }
+        } finally {
+          setIsBusy(false)
+          setDialogState((prev) => ({ ...prev, isOpen: false }))
+        }
+      }
+    })
+  }, [containers, stopAllContainers])
+
   return (
     <div className="app-container">
       <Header
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         totalCount={procs.length}
         projectCount={totalProjects}
+        dockerRunningCount={dockerRunningCount}
+        dockerTotalCount={containers.length}
         settings={settings}
         onIntervalChange={changeInterval}
-        onRefresh={refresh}
-        onStopAll={handleStopAll}
-        loading={loading}
+        onRefresh={activeTab === 'processes' ? refreshProcs : refreshDocker}
+        onStopAll={
+          activeTab === 'processes'
+            ? procs.length > 0
+              ? handleStopAllProcesses
+              : undefined
+            : dockerRunningCount > 0
+              ? handleStopAllContainers
+              : undefined
+        }
+        loading={activeTab === 'processes' ? procsLoading : dockerLoading}
       />
 
       <main className="app-content" tabIndex={-1}>
-        {loading && procs.length === 0 ? (
+        {activeTab === 'processes' ? (
+          /* Processes View */
+          procsLoading && procs.length === 0 ? (
+            <LoadingState />
+          ) : procsError && procs.length === 0 ? (
+            <ErrorState message={procsError} onRetry={refreshProcs} />
+          ) : procs.length === 0 ? (
+            <EmptyState />
+          ) : filteredProcesses.length === 0 ? (
+            <EmptyState searchQuery={searchQuery} onClearSearch={() => setSearchQuery('')} />
+          ) : (
+            <div className="project-groups-list">
+              {groupedProjects.map((group) => (
+                <ProjectGroup
+                  key={group.name}
+                  projectName={group.name}
+                  projectPath={group.path}
+                  processes={group.processes}
+                  onStopProcess={handleStopProcess}
+                  onStopProject={handleStopProject}
+                />
+              ))}
+            </div>
+          )
+        ) : /* Docker View */
+        dockerLoading && containers.length === 0 ? (
           <LoadingState />
-        ) : error && procs.length === 0 ? (
-          <ErrorState message={error} onRetry={refresh} />
-        ) : procs.length === 0 ? (
+        ) : dockerError && containers.length === 0 ? (
+          <ErrorState
+            message={
+              dockerErrorCode === 'DOCKER_UNAVAILABLE'
+                ? 'Docker daemon is not running. Start Docker Desktop, OrbStack, or Colima to view containers.'
+                : dockerErrorCode === 'DENIED'
+                  ? 'Permission denied accessing Docker socket.'
+                  : dockerError
+            }
+            onRetry={refreshDocker}
+          />
+        ) : containers.length === 0 ? (
           <EmptyState />
-        ) : filteredProcesses.length === 0 ? (
+        ) : filteredContainers.length === 0 ? (
           <EmptyState searchQuery={searchQuery} onClearSearch={() => setSearchQuery('')} />
         ) : (
           <div className="project-groups-list">
-            {groupedProjects.map((group) => (
-              <ProjectGroup
+            {groupedDockerProjects.map((group) => (
+              <DockerProjectGroup
                 key={group.name}
                 projectName={group.name}
-                projectPath={group.path}
-                processes={group.processes}
-                onStopProcess={handleStopProcess}
-                onStopProject={handleStopProject}
+                containers={group.containers}
+                onAction={handleDockerAction}
+                onStopProject={handleStopDockerProject}
+                onViewLogs={setSelectedLogContainer}
+                actionLoadingId={actionLoadingId}
               />
             ))}
           </div>
         )}
       </main>
 
+      {/* Log Viewer Modal */}
+      {selectedLogContainer && (
+        <DockerLogViewer
+          container={selectedLogContainer}
+          onClose={() => setSelectedLogContainer(null)}
+        />
+      )}
+
+      {/* Confirmation Modal */}
       <ConfirmDialog
         isOpen={dialogState.isOpen}
         title={dialogState.title}
@@ -217,6 +430,7 @@ const App: React.FC = () => {
         onCancel={() => setDialogState((prev) => ({ ...prev, isOpen: false }))}
       />
 
+      {/* Status Toast */}
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </div>
   )
