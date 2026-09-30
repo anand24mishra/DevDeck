@@ -65,9 +65,7 @@ describe('Docker container parser', () => {
           'com.docker.compose.project': 'ecommerce-app',
           'com.docker.compose.service': 'web'
         },
-        Ports: [
-          { IP: '0.0.0.0', PrivatePort: 80, PublicPort: 8080, Type: 'tcp' }
-        ]
+        Ports: [{ IP: '0.0.0.0', PrivatePort: 80, PublicPort: 8080, Type: 'tcp' }]
       },
       {
         Id: '123456abcdef7890fedcba',
@@ -79,9 +77,7 @@ describe('Docker container parser', () => {
         Labels: {
           'com.docker.compose.project': 'ecommerce-app'
         },
-        Ports: [
-          { PrivatePort: 5432, Type: 'tcp' }
-        ]
+        Ports: [{ PrivatePort: 5432, Type: 'tcp' }]
       },
       {
         Id: '987654321000fedcba9876',
@@ -91,9 +87,7 @@ describe('Docker container parser', () => {
         Status: 'Up 1 day',
         Created: 1727500000,
         Labels: {},
-        Ports: [
-          { IP: '127.0.0.1', PrivatePort: 6379, PublicPort: 6379, Type: 'tcp' }
-        ]
+        Ports: [{ IP: '127.0.0.1', PrivatePort: 6379, PublicPort: 6379, Type: 'tcp' }]
       }
     ]
 

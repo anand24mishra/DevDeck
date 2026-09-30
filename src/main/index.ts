@@ -2,12 +2,49 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { registerIpcHandlers } from './ipc'
+import { windowStateManager } from './services/windowState'
+import { trayService } from './services/tray'
+import { DarwinProcessProvider } from './providers/process.darwin'
+import { settingsService } from './services/settings'
 
-function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 960,
-    height: 700,
+// Request single instance lock
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.quit()
+}
+
+let mainWindow: BrowserWindow | null = null
+const processProvider = new DarwinProcessProvider()
+
+async function handleStopAllFromTray(): Promise<void> {
+  try {
+    const settings = settingsService.getSettings()
+    const procs = await processProvider.listProcesses({
+      userIgnoreList: settings.ignoreList,
+      customAllowlist: settings.customAllowlist
+    })
+    const pids = procs.map((p) => p.pid)
+    const { terminate, defaultKillDeps } = await import('./services/kill')
+    await terminate(pids, defaultKillDeps)
+    trayService.updateProcessCount(0)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('procs:changed')
+    }
+  } catch (err: unknown) {
+    console.error('Failed to stop all processes from tray:', err)
+  }
+}
+
+function createWindow(): BrowserWindow {
+  const savedState = windowStateManager.getState()
+
+  // Create the browser window with restored bounds
+  mainWindow = new BrowserWindow({
+    width: savedState.width,
+    height: savedState.height,
+    x: savedState.x,
+    y: savedState.y,
     minWidth: 640,
     minHeight: 480,
     title: 'DevDeck',
@@ -22,8 +59,15 @@ function createWindow(): void {
     }
   })
 
+  if (savedState.isMaximized) {
+    mainWindow.maximize()
+  }
+
+  // Track window bounds
+  windowStateManager.track(mainWindow)
+
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
   })
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
@@ -42,55 +86,61 @@ function createWindow(): void {
   })
 
   // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
+  })
+
+  return mainWindow
 }
 
-import { registerIpcHandlers } from './ipc'
+// Second-instance focus
+app.on('second-instance', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  }
+})
 
-// Request single instance lock
-const gotTheLock = app.requestSingleInstanceLock()
-if (!gotTheLock) {
-  app.quit()
-}
-
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.devdeck.app')
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
   registerIpcHandlers()
 
-  createWindow()
+  const win = createWindow()
+
+  // Initialize menu bar tray
+  trayService.init(win, handleStopAllFromTray)
+
+  // Initial process count check for tray
+  processProvider
+    .listProcesses()
+    .then((procs) => trayService.updateProcessCount(procs.length))
+    .catch(() => {})
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      const newWin = createWindow()
+      trayService.init(newWin, handleStopAllFromTray)
+    } else if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.

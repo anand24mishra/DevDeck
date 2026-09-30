@@ -1,11 +1,12 @@
-import React, { useState, useMemo, useCallback } from 'react'
-import { Proc, KillReport, Container } from '../../shared/types'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
+import { Proc, KillReport, Container, Settings } from '../../shared/types'
 import { useProcesses } from './hooks/useProcesses'
 import { useDocker } from './hooks/useDocker'
 import { Header } from './components/Header'
 import { ProjectGroup } from './components/ProjectGroup'
 import { DockerProjectGroup } from './components/DockerProjectGroup'
 import { DockerLogViewer } from './components/DockerLogViewer'
+import { SettingsModal } from './components/SettingsModal'
 import { EmptyState } from './components/EmptyState'
 import { LoadingState } from './components/LoadingState'
 import { ErrorState } from './components/ErrorState'
@@ -41,6 +42,7 @@ const App: React.FC = () => {
     error: procsError,
     refresh: refreshProcs,
     changeInterval,
+    updateSettings,
     stopProcess,
     stopProject,
     stopAll
@@ -59,6 +61,7 @@ const App: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedLogContainer, setSelectedLogContainer] = useState<Container | null>(null)
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
   const [dialogState, setDialogState] = useState<DialogState>({
     isOpen: false,
     title: '',
@@ -66,6 +69,18 @@ const App: React.FC = () => {
   })
   const [isBusy, setIsBusy] = useState<boolean>(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
+
+  // Synchronize interface theme
+  useEffect(() => {
+    const theme = settings.theme || 'system'
+    if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [settings.theme])
 
   // 1. Process filtering & grouping
   const filteredProcesses = useMemo(() => {
@@ -325,6 +340,18 @@ const App: React.FC = () => {
     })
   }, [containers, stopAllContainers])
 
+  const handleUpdateSettings = useCallback(
+    async (partial: Partial<Settings>): Promise<void> => {
+      const res = await updateSettings(partial)
+      if (res.ok) {
+        if (partial.dockerSocketPath !== undefined) {
+          await refreshDocker()
+        }
+      }
+    },
+    [updateSettings, refreshDocker]
+  )
+
   return (
     <div className="app-container">
       <Header
@@ -348,6 +375,7 @@ const App: React.FC = () => {
               ? handleStopAllContainers
               : undefined
         }
+        onOpenSettings={() => setIsSettingsOpen(true)}
         loading={activeTab === 'processes' ? procsLoading : dockerLoading}
       />
 
@@ -418,6 +446,14 @@ const App: React.FC = () => {
           onClose={() => setSelectedLogContainer(null)}
         />
       )}
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        settings={settings}
+        onClose={() => setIsSettingsOpen(false)}
+        onUpdate={handleUpdateSettings}
+      />
 
       {/* Confirmation Modal */}
       <ConfirmDialog

@@ -9,6 +9,7 @@ export interface UseProcessesResult {
   lastUpdated: Date | null
   refresh: () => Promise<void>
   changeInterval: (interval: 2 | 3 | 5 | 10) => Promise<void>
+  updateSettings: (partial: Partial<Settings>) => Promise<Result<Settings>>
   stopProcess: (pid: number) => Promise<Result<KillReport>>
   stopProject: (project: string) => Promise<Result<KillReport>>
   stopAll: () => Promise<Result<KillReport>>
@@ -17,7 +18,9 @@ export interface UseProcessesResult {
 const DEFAULT_SETTINGS: Settings = {
   refreshIntervalSec: 3,
   ignoreList: [],
-  customAllowlist: []
+  customAllowlist: [],
+  theme: 'system',
+  openAtLogin: false
 }
 
 export function useProcesses(): UseProcessesResult {
@@ -118,6 +121,23 @@ export function useProcesses(): UseProcessesResult {
     }
   }, [])
 
+  const updateSettings = useCallback(
+    async (partial: Partial<Settings>): Promise<Result<Settings>> => {
+      try {
+        const res = await window.api.updateSettings(partial)
+        if (res.ok) {
+          setSettings(res.data)
+          await fetchProcesses()
+        }
+        return res
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to update settings'
+        return { ok: false, error: { code: 'INTERNAL', message } }
+      }
+    },
+    [fetchProcesses]
+  )
+
   const stopProcess = useCallback(
     async (pid: number): Promise<Result<KillReport>> => {
       const res = await window.api.stopProcess(pid)
@@ -150,6 +170,7 @@ export function useProcesses(): UseProcessesResult {
     lastUpdated,
     refresh: fetchProcesses,
     changeInterval,
+    updateSettings,
     stopProcess,
     stopProject,
     stopAll

@@ -33,17 +33,15 @@ describe('allowlist security model', () => {
     expect(isProcessAllowed(2345, appPath).allowed).toBe(false)
 
     // With explicit custom allowlist
-    expect(
-      isProcessAllowed(2345, appPath, { customAllowlist: ['node'] }).allowed
-    ).toBe(true)
+    expect(isProcessAllowed(2345, appPath, { customAllowlist: ['node'] }).allowed).toBe(true)
   })
 
   it('honors user ignore list with priority', () => {
     expect(
       isProcessAllowed(3456, 'node background-worker.js', { userIgnoreList: ['node'] }).allowed
     ).toBe(false)
-    expect(
-      isProcessAllowed(3457, 'python3 test.py', { userIgnoreList: ['test.py'] }).allowed
-    ).toBe(false)
+    expect(isProcessAllowed(3457, 'python3 test.py', { userIgnoreList: ['test.py'] }).allowed).toBe(
+      false
+    )
   })
 })

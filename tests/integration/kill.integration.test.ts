@@ -5,11 +5,9 @@ import { terminate, defaultKillDeps } from '../../src/main/services/kill'
 describe('Terminate Integration Test', () => {
   it('safely terminates a real spawned child dev process', async () => {
     // Spawn a real child process running node
-    const child = spawn(
-      process.execPath,
-      ['-e', 'setInterval(() => {}, 1000)'],
-      { stdio: 'ignore' }
-    )
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      stdio: 'ignore'
+    })
 
     const pid = child.pid
     expect(pid).toBeDefined()
