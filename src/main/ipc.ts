@@ -1,9 +1,10 @@
 import { ipcMain, IpcMainInvokeEvent, BrowserWindow } from 'electron'
 import { is } from '@electron-toolkit/utils'
-import { Result, Proc, Settings, KillReport, Container } from '../shared/types'
+import { Result, Proc, Settings, KillReport, Container, RecentlyStoppedItem } from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
 import { dockerService } from './services/docker'
+import { recentlyStoppedService } from './services/recentlyStopped'
 
 const processProvider = new DarwinProcessProvider()
 
@@ -18,6 +19,10 @@ function isSenderAuthorized(event: IpcMainInvokeEvent): boolean {
 }
 
 export function registerIpcHandlers(): void {
+  // Initialize persistence for recently stopped processes
+  const initialSettings = settingsService.getSettings()
+  recentlyStoppedService.loadIfPersisted(!!initialSettings.persistRecentlyStopped)
+
   // procs:list
   ipcMain.handle('procs:list', async (event): Promise<Result<Proc[]>> => {
     if (!isSenderAuthorized(event)) {
@@ -70,6 +75,9 @@ export function registerIpcHandlers(): void {
           }
         }
         const updated = settingsService.updateSettings(partial)
+        if (partial.persistRecentlyStopped !== undefined) {
+          recentlyStoppedService.saveIfPersisted(!!updated.persistRecentlyStopped)
+        }
         return { ok: true, data: updated }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to update settings'
@@ -96,8 +104,20 @@ export function registerIpcHandlers(): void {
         return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid PIDs array' } }
       }
       try {
+        const settings = settingsService.getSettings()
+        const procs = await processProvider.listProcesses({
+          userIgnoreList: settings.ignoreList,
+          customAllowlist: settings.customAllowlist
+        })
+        const targets = procs.filter((p) => pids.includes(p.pid))
+
         const { terminate, defaultKillDeps } = await import('./services/kill')
         const report = await terminate(pids, defaultKillDeps)
+
+        const stoppedSet = new Set([...report.stopped, ...report.forced])
+        const actuallyStopped = targets.filter((p) => stoppedSet.has(p.pid))
+        recentlyStoppedService.recordStopped(actuallyStopped, !!settings.persistRecentlyStopped)
+
         return { ok: true, data: report }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Termination failed'
@@ -129,6 +149,11 @@ export function registerIpcHandlers(): void {
 
         const { terminate, defaultKillDeps } = await import('./services/kill')
         const report = await terminate(pids, defaultKillDeps)
+
+        const stoppedSet = new Set([...report.stopped, ...report.forced])
+        const actuallyStopped = matching.filter((p) => stoppedSet.has(p.pid))
+        recentlyStoppedService.recordStopped(actuallyStopped, !!settings.persistRecentlyStopped)
+
         return { ok: true, data: report }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Project stop failed'
@@ -152,11 +177,52 @@ export function registerIpcHandlers(): void {
 
       const { terminate, defaultKillDeps } = await import('./services/kill')
       const report = await terminate(pids, defaultKillDeps)
+
+      const stoppedSet = new Set([...report.stopped, ...report.forced])
+      const actuallyStopped = procs.filter((p) => stoppedSet.has(p.pid))
+      recentlyStoppedService.recordStopped(actuallyStopped, !!settings.persistRecentlyStopped)
+
       return { ok: true, data: report }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Stop all failed'
       return { ok: false, error: { code: 'INTERNAL', message } }
     }
+  })
+
+  // recent:list
+  ipcMain.handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+    }
+    return { ok: true, data: recentlyStoppedService.getItems() }
+  })
+
+  // recent:restart
+  ipcMain.handle(
+    'recent:restart',
+    async (event, { id }: { id: string }): Promise<Result<{ pid?: number }>> => {
+      if (!isSenderAuthorized(event)) {
+        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      if (typeof id !== 'string' || !id) {
+        return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid item ID' } }
+      }
+      const settings = settingsService.getSettings()
+      return await recentlyStoppedService.restart(id, {
+        customAllowlist: settings.customAllowlist,
+        userIgnoreList: settings.ignoreList
+      })
+    }
+  )
+
+  // recent:clear
+  ipcMain.handle('recent:clear', async (event): Promise<Result<null>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+    }
+    const settings = settingsService.getSettings()
+    recentlyStoppedService.clear(!!settings.persistRecentlyStopped)
+    return { ok: true, data: null }
   })
 
   // docker:list
@@ -238,6 +304,15 @@ export function registerIpcHandlers(): void {
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed()) {
         win.webContents.send('docker:changed')
+      }
+    })
+  })
+
+  // Forward recent changes to all open windows
+  recentlyStoppedService.onChanged(() => {
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (!win.isDestroyed()) {
+        win.webContents.send('recent:changed')
       }
     })
   })

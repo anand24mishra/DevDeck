@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { DevDeckApi, Result, Proc, Settings } from '../shared/types'
+import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
   getProcesses: (): Promise<Result<Proc[]>> => ipcRenderer.invoke('procs:list'),
@@ -9,6 +9,18 @@ const api: DevDeckApi = {
   stopProcess: (pid: number) => ipcRenderer.invoke('procs:stop', { pids: [pid] }),
   stopProject: (project: string) => ipcRenderer.invoke('procs:stopProject', { project }),
   stopAll: () => ipcRenderer.invoke('procs:stopAll'),
+  getRecentlyStopped: (): Promise<Result<RecentlyStoppedItem[]>> =>
+    ipcRenderer.invoke('recent:list'),
+  restartStopped: (id: string): Promise<Result<{ pid?: number }>> =>
+    ipcRenderer.invoke('recent:restart', { id }),
+  clearRecentlyStopped: (): Promise<Result<null>> => ipcRenderer.invoke('recent:clear'),
+  onRecentlyStoppedChanged: (callback) => {
+    const handler = (): void => callback()
+    ipcRenderer.on('recent:changed', handler)
+    return () => {
+      ipcRenderer.removeListener('recent:changed', handler)
+    }
+  },
   listContainers: () => ipcRenderer.invoke('docker:list'),
   containerAction: (id: string, action: 'start' | 'stop' | 'restart') =>
     ipcRenderer.invoke('docker:action', { id, action }),

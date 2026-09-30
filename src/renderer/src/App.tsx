@@ -2,11 +2,13 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Proc, KillReport, Container, Settings } from '../../shared/types'
 import { useProcesses } from './hooks/useProcesses'
 import { useDocker } from './hooks/useDocker'
+import { useRecentlyStopped } from './hooks/useRecentlyStopped'
 import { Header } from './components/Header'
 import { ProjectGroup } from './components/ProjectGroup'
 import { DockerProjectGroup } from './components/DockerProjectGroup'
 import { DockerLogViewer } from './components/DockerLogViewer'
 import { SettingsModal } from './components/SettingsModal'
+import { RecentlyStoppedDrawer } from './components/RecentlyStoppedDrawer'
 import { EmptyState } from './components/EmptyState'
 import { LoadingState } from './components/LoadingState'
 import { ErrorState } from './components/ErrorState'
@@ -62,6 +64,15 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedLogContainer, setSelectedLogContainer] = useState<Container | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
+  const [isRecentOpen, setIsRecentOpen] = useState<boolean>(false)
+  const {
+    items: recentItems,
+    loading: recentLoading,
+    restartingId,
+    restartItem,
+    clearAll: clearRecent
+  } = useRecentlyStopped()
+
   const [dialogState, setDialogState] = useState<DialogState>({
     isOpen: false,
     title: '',
@@ -69,6 +80,38 @@ const App: React.FC = () => {
   })
   const [isBusy, setIsBusy] = useState<boolean>(false)
   const [toast, setToast] = useState<ToastMessage | null>(null)
+
+  const handleRestartStopped = useCallback(
+    async (id: string): Promise<void> => {
+      const res = await restartItem(id)
+      if (res.ok) {
+        setToast({
+          id: Date.now().toString(),
+          text: `Process restarted${res.data?.pid ? ` (PID ${res.data.pid})` : ''}`,
+          type: 'success'
+        })
+        refreshProcs()
+      } else {
+        setToast({
+          id: Date.now().toString(),
+          text: `Restart failed: ${res.error.message}`,
+          type: 'error'
+        })
+      }
+    },
+    [restartItem, refreshProcs]
+  )
+
+  const handleClearRecent = useCallback(async (): Promise<void> => {
+    const ok = await clearRecent()
+    if (ok) {
+      setToast({
+        id: Date.now().toString(),
+        text: 'Cleared recently stopped processes',
+        type: 'success'
+      })
+    }
+  }, [clearRecent])
 
   // Synchronize interface theme
   useEffect(() => {
@@ -363,6 +406,8 @@ const App: React.FC = () => {
         projectCount={totalProjects}
         dockerRunningCount={dockerRunningCount}
         dockerTotalCount={containers.length}
+        recentlyStoppedCount={recentItems.length}
+        onOpenRecentlyStopped={() => setIsRecentOpen(true)}
         settings={settings}
         onIntervalChange={changeInterval}
         onRefresh={activeTab === 'processes' ? refreshProcs : refreshDocker}
@@ -446,6 +491,17 @@ const App: React.FC = () => {
           onClose={() => setSelectedLogContainer(null)}
         />
       )}
+
+      {/* Recently Stopped Drawer */}
+      <RecentlyStoppedDrawer
+        isOpen={isRecentOpen}
+        items={recentItems}
+        loading={recentLoading}
+        restartingId={restartingId}
+        onClose={() => setIsRecentOpen(false)}
+        onRestart={handleRestartStopped}
+        onClear={handleClearRecent}
+      />
 
       {/* Settings Modal */}
       <SettingsModal

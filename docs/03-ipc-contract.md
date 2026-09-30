@@ -31,20 +31,32 @@ export interface Container {
   ports: number[]
   created: number
 }
+export interface RecentlyStoppedItem {
+  id: string
+  name: string
+  command: string
+  args: string[]
+  cwd: string | null
+  project: string
+  stoppedAt: number
+}
 ```
 
-## Channels (v1.0)
+## Channels (v1.0 & v1.1)
 | Channel | Input | Output | Notes |
 |---|---|---|---|
 | `procs:list` | – | `Result<Proc[]>` | allowlisted processes only |
 | `procs:stop` | `{ pids: number[] }` | `Result<KillReport>` | main re-validates every pid |
 | `procs:stopProject` | `{ project: string }` | `Result<KillReport>` | main resolves pids itself |
+| `recent:list` | – | `Result<RecentlyStoppedItem[]>` | last 20 stopped dev processes |
+| `recent:restart` | `{ id: string }` | `Result<{ pid?: number }>` | re-validates against allowlist |
+| `recent:clear` | – | `Result<null>` | clear stopped memory list |
 | `docker:list` | – | `Result<Container[]>` | list all containers |
 | `docker:action` | `{ id: string; action: 'start'\|'stop'\|'restart' }` | `Result<null>` | container action |
 | `docker:stopAll` | – | `Result<null>` | stop all running containers |
 | `docker:logs:start` / `stop` | `{ id: string }` | `Result<null>` | stream via event below |
 | `settings:get` / `set` | partial settings | `Result<Settings>` | validated with a schema |
-Events main → renderer: `docker:log` `{ id: string; text: string }` (batched every 100 ms), `docker:changed`, `procs:changed`, `settings:changed`.
+Events main → renderer: `docker:log` `{ id: string; text: string }` (batched every 100 ms), `docker:changed`, `procs:changed`, `settings:changed`, `recent:changed`.
 
 ## Validation rules
 - Sender must be our window's own page. PIDs are integers > 1, at most 500 per call.

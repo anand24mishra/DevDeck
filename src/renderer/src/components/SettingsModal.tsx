@@ -167,6 +167,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </label>
               </div>
             </div>
+
+            <div className="setting-row">
+              <div className="setting-info">
+                <span className="setting-label">Remember Stopped Processes</span>
+                <span className="setting-desc">
+                  Persist recently stopped dev processes across app restarts. Commands are encrypted
+                  on disk using macOS Keychain storage.
+                </span>
+              </div>
+              <div className="setting-control">
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={settings.persistRecentlyStopped || false}
+                    onChange={(e) => triggerSave({ persistRecentlyStopped: e.target.checked })}
+                    aria-label="Remember stopped processes across restarts"
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            </div>
           </section>
 
           {/* Section 2: Process Ignore List */}
