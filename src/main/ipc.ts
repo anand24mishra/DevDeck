@@ -251,7 +251,9 @@ export function registerIpcHandlers(): void {
                 target.command === proc.command
             )
         )
-        recentlyStoppedService.recordStopped(actual, !!settings.persistRecentlyStopped)
+        report.undoItems = recentlyStoppedService
+          .recordStopped(actual, !!settings.persistRecentlyStopped)
+          .map(({ id, name }) => ({ id, name }))
         return { ok: true, data: report }
       } catch {
         return {

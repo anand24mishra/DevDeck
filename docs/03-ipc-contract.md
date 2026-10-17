@@ -115,3 +115,9 @@ the existing confirmation handlers; classification never grants signal permissio
 `Settings.hotkey?: string|null` defaults to `Control+Alt+D`; null disables it. `settings:set`
 validates modifier/key syntax and attempts native registration before persisting. Conflicts return
 `DENIED` with a plain message and restore the old shortcut. All shortcuts are removed on quit.
+
+## P1-7 undo
+Stop reports may include `undoItems: {id:string;name:string}[]` for successfully recorded stops.
+The 10-second Undo toast invokes only `recent:restart` IDs from that report, preserving the
+existing allowlist/path checks. Refused processes never receive an Undo ID. No arguments appear
+in the toast. History remains available after the Undo timer expires.

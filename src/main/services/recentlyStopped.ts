@@ -97,8 +97,9 @@ export class RecentlyStoppedService {
     }
   }
 
-  public recordStopped(procs: Proc[], persistEnabled: boolean): void {
-    if (!procs || procs.length === 0) return
+  public recordStopped(procs: Proc[], persistEnabled: boolean): RecentlyStoppedItem[] {
+    if (!procs || procs.length === 0) return []
+    const added = new Set<string>()
 
     const now = Date.now()
     const envKeys = Object.keys(process.env).sort()
@@ -116,6 +117,7 @@ export class RecentlyStoppedService {
         envKeys
       }
 
+      added.add(newItem.id)
       // Prepend and filter duplicate entries with same command and cwd
       this.items = [
         newItem,
@@ -127,6 +129,7 @@ export class RecentlyStoppedService {
 
     this.saveIfPersisted(persistEnabled)
     this.notifyListeners()
+    return this.items.filter((item) => added.has(item.id))
   }
 
   public clear(persistEnabled: boolean): void {

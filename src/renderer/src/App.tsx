@@ -203,16 +203,42 @@ const App: React.FC = () => {
     return containers.filter((c) => c.state === 'running').length
   }, [containers])
 
-  const showReportToast = (report: KillReport): void => {
-    const parts: string[] = []
-    if (report.stopped.length > 0) parts.push(`Stopped ${report.stopped.length}`)
-    if (report.forced.length > 0) parts.push(`forced ${report.forced.length}`)
-    if (report.refused.length > 0) parts.push(`refused ${report.refused.length}`)
+  const showReportToast = useCallback(
+    (report: KillReport): void => {
+      const parts: string[] = []
+      if (report.stopped.length > 0) parts.push(`Stopped ${report.stopped.length}`)
+      if (report.forced.length > 0) parts.push(`forced ${report.forced.length}`)
+      if (report.refused.length > 0) parts.push(`refused ${report.refused.length}`)
 
-    const text = parts.length > 0 ? parts.join(', ') : 'No processes stopped'
-    const type = report.stopped.length > 0 || report.forced.length > 0 ? 'success' : 'warn'
-    setToast({ id: Date.now().toString(), text, type })
-  }
+      const text = parts.length > 0 ? parts.join(', ') : 'No processes stopped'
+      const type = report.stopped.length > 0 || report.forced.length > 0 ? 'success' : 'warn'
+      setToast({
+        id: Date.now().toString(),
+        text,
+        type,
+        expiresAt: report.undoItems?.length ? Date.now() + 10_000 : undefined,
+        action: report.undoItems?.length
+          ? {
+              label: 'Undo',
+              run: async () => {
+                let restored = 0
+                for (const item of report.undoItems || []) {
+                  const result = await restartItem(item.id)
+                  if (result.ok) restored++
+                }
+                setToast({
+                  id: Date.now().toString(),
+                  text: `Restarted ${restored} of ${report.undoItems!.length} processes`,
+                  type: restored ? 'success' : 'warn'
+                })
+                await refreshProcs()
+              }
+            }
+          : undefined
+      })
+    },
+    [restartItem, refreshProcs]
+  )
 
   // Process Actions
   const handleStopProcess = useCallback(
@@ -238,7 +264,7 @@ const App: React.FC = () => {
         }
       })
     },
-    [stopProcess]
+    [stopProcess, showReportToast]
   )
 
   const handleStopProject = useCallback(
@@ -264,7 +290,7 @@ const App: React.FC = () => {
         }
       })
     },
-    [stopProject]
+    [stopProject, showReportToast]
   )
 
   const handleStopAllProcesses = useCallback(() => {
@@ -288,7 +314,7 @@ const App: React.FC = () => {
         }
       }
     })
-  }, [procs, stopAll])
+  }, [procs, stopAll, showReportToast])
 
   // Docker Actions
   const handleDockerAction = useCallback(

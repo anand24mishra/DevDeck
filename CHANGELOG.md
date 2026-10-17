@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P1-7: Successful stops return opaque restart records and a keyboard-accessible 10-second Undo action that reuses the checked restart path and reports partial restart results.
 - P1-6: Registered Control+Alt+D by default, added shortcut capture and disabling in Settings, conflict rollback, and quit cleanup.
 - P1-5: Classified project owners, other projects, Docker published ports, SSH and Kubernetes forwards, tunnels, and protected read-only owners with plain explanations and confirmed suggested actions.
 - P1-4: Added editor, Finder and terminal actions with fixed argv, application detection and preferences, verified active project roots, and disabled unavailable actions.

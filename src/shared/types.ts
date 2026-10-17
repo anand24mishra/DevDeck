@@ -38,6 +38,7 @@ export interface Settings {
 }
 
 export interface KillReport {
+  undoItems?: { id: string; name: string }[]
   refusalReasons?: Record<number, 'identity-changed' | 'not-allowed'>
   requested: number[]
   stopped: number[]
