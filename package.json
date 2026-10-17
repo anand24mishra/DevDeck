@@ -21,7 +21,8 @@
     "build:mac": "npm run build && electron-builder --mac --universal --publish never",
     "build:linux": "electron-vite build && electron-builder --linux",
     "test:e2e": "npm run build && playwright test",
-    "test:docker": "DEVDECK_DOCKER_TEST=1 vitest run tests/integration/docker.integration.test.ts"
+    "test:docker": "DEVDECK_DOCKER_TEST=1 vitest run tests/integration/docker.integration.test.ts",
+    "verify:release": "node packaging/verify-release.cjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",

@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P1-14: Added a release verifier for Developer ID signing, universal architecture, required fuses and the fixed GitHub updater feed; CI invokes it before draft upload. Documented Homebrew and signed update-chain QA.
 - P1-13: Added a persisted three-step welcome guide covering discovery, safety and customization, replay from Settings, and separate process, Docker and search empty states.
 - P1-12: Added clear missing-provider, stopped-daemon, permission and invalid-override states, Check again and detected-provider launch actions, plus hidden-window polling pause and an in-flight guard.
 - P1-11: Added confirmed container removal without deleting volumes, copied IDs and local URLs, and captured-membership Compose start, stop and restart with dependency ordering and per-container reports.

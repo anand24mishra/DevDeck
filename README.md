@@ -69,3 +69,25 @@ DevDeck never uses sudo. Only allowlisted processes belonging to your user can b
 bundles and DevDeck's own tree are protected. Command arguments are masked by default. All process
 and Docker work stays in Electron's main process behind strict IPC validation; the renderer cannot
 run commands. See [SECURITY.md](SECURITY.md) for the actual shipped boundaries and release caveats.
+
+## Distribution verification
+
+The tray's **Check for updates** action checks installed releases. Downloading and restarting each
+require consent. Native signature failures are reported and do not install an unverified copy.
+
+Before distributing a draft, run:
+
+```bash
+npm run verify:release -- release/mac-universal/DevDeck.app
+```
+
+This rejects unsigned/ad-hoc packages, missing Intel or Apple Silicon slices, incorrect fuses and
+an unexpected update feed. CI also validates the notarization ticket and stapled DMG. To verify
+updating end to end: install the previous signed release, publish the reviewed next release, choose
+Check for updates, download, restart, and verify the new version. Repeat with a deliberately invalid
+signature in an isolated QA environment to confirm refusal. This signed update-chain check is pending.
+
+For Homebrew, use `packaging/devdeck.rb` only after replacing VERSION and SHA256 with the published
+universal DMG values (calculate with `shasum -a 256 <downloaded-dmg>`), validating the cask, and
+placing it in a maintained tap. Follow that tap's installation command. No placeholder cask should
+be installed or published. A working public tap is still maintainer-owned distribution work.

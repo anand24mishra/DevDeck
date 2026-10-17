@@ -43,7 +43,7 @@ jobs:
       - name: Verify app and notarize the disk image
         shell: bash
         run: |
-          codesign --verify --deep --strict --verbose=2 release/mac-universal/DevDeck.app
+          npm run verify:release -- release/mac-universal/DevDeck.app
           xcrun stapler validate release/mac-universal/DevDeck.app
           spctl --assess --type execute --verbose=2 release/mac-universal/DevDeck.app
           for image in release/*.dmg; do
