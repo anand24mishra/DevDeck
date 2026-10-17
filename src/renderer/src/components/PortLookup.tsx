@@ -4,11 +4,16 @@ import { parsePortInput } from '../../../shared/ports'
 
 export function PortLookup({
   interval,
-  onStop
+  onStop,
+  onStopContainer,
+  projects
 }: {
   interval: number
   onStop: (proc: Proc) => void
+  onStopContainer: (id: string) => void
+  projects: string[]
 }): React.JSX.Element {
+  const [project, setProject] = useState('')
   const [input, setInput] = useState('')
   const [owners, setOwners] = useState<PortOwner[]>([])
   const [status, setStatus] = useState('')
@@ -31,7 +36,7 @@ export function PortLookup({
       if (!port || inFlight || document.hidden) return
       inFlight = true
       try {
-        const result = await window.api.lookupPort(port)
+        const result = await window.api.lookupPort(port, project || undefined)
         if (!active) return
         setOwners(result.ok ? result.data : [])
         setStatus(
@@ -60,7 +65,7 @@ export function PortLookup({
       clearTimeout(first)
       clearInterval(timer)
     }
-  }, [port, interval])
+  }, [port, interval, project])
   return (
     <section className="port-lookup" aria-label="Free a port">
       <div className="port-field-row">
@@ -75,6 +80,17 @@ export function PortLookup({
           onChange={(event) => setInput(event.target.value)}
           aria-describedby="port-status"
         />
+        <select
+          aria-label="Expected project"
+          className="settings-select"
+          value={project}
+          onChange={(event) => setProject(event.target.value)}
+        >
+          <option value="">Any project</option>
+          {projects.map((name) => (
+            <option key={name}>{name}</option>
+          ))}
+        </select>
         {input && (
           <button className="quiet-btn" onClick={() => setInput('')}>
             Clear
@@ -91,12 +107,20 @@ export function PortLookup({
           .map((owner) => (
             <div className="port-owner" key={`${owner.pid}-${owner.address}`}>
               <span>
-                {owner.process?.name || owner.name} · {owner.process?.project || 'Read-only'}
+                {owner.explanation ||
+                  `${owner.process?.name || owner.name} · ${owner.process?.project || 'Read-only'}`}
               </span>
               <span className="mono">
                 {owner.address}:{port}
               </span>
-              {owner.process ? (
+              {owner.containerId ? (
+                <button
+                  className="row-stop-btn"
+                  onClick={() => onStopContainer(owner.containerId!)}
+                >
+                  Stop container
+                </button>
+              ) : owner.process ? (
                 <button className="row-stop-btn" onClick={() => onStop(owner.process!)}>
                   Stop
                 </button>

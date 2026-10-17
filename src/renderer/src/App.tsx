@@ -432,7 +432,12 @@ const App: React.FC = () => {
       />
 
       {activeTab === 'processes' && (
-        <PortLookup interval={settings.refreshIntervalSec} onStop={handleStopProcess} />
+        <PortLookup
+          interval={settings.refreshIntervalSec}
+          onStop={handleStopProcess}
+          projects={[...new Set(procs.map((proc) => proc.project))]}
+          onStopContainer={(id) => handleDockerAction(id, 'stop')}
+        />
       )}
       <main className="app-content" tabIndex={-1}>
         {activeTab === 'processes' ? (

@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P1-5: Classified project owners, other projects, Docker published ports, SSH and Kubernetes forwards, tunnels, and protected read-only owners with plain explanations and confirmed suggested actions.
 - P1-4: Added editor, Finder and terminal actions with fixed argv, application detection and preferences, verified active project roots, and disabled unavailable actions.
 - P1-3: Added browser and copy actions for listening ports with strict main-process validation of local HTTP URLs.
 - P1-2: Added extensible labels for 39 common tools and cached project npm scripts, with executable-name fallback and masked raw-command details preserved.

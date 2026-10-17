@@ -7,7 +7,8 @@ const api: DevDeckApi = {
   showProjectInFinder: (path) => ipcRenderer.invoke('project:openFinder', { path }),
   openProjectInTerminal: (path) => ipcRenderer.invoke('project:openTerminal', { path }),
   openLocalUrl: (url) => ipcRenderer.invoke('url:open', { url }),
-  lookupPort: (port) => ipcRenderer.invoke('ports:lookup', { port }),
+  lookupPort: (port, project) =>
+    ipcRenderer.invoke('ports:lookup', { port, ...(project ? { project } : {}) }),
   getProcesses: (): Promise<Result<Proc[]>> => ipcRenderer.invoke('procs:list'),
   getSettings: (): Promise<Result<Settings>> => ipcRenderer.invoke('settings:get'),
   updateSettings: (partial: Partial<Settings>): Promise<Result<Settings>> =>

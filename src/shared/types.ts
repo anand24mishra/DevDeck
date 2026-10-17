@@ -80,7 +80,7 @@ export interface DevDeckApi {
   showProjectInFinder: (path: string) => Promise<Result<null>>
   openProjectInTerminal: (path: string) => Promise<Result<null>>
   openLocalUrl: (url: string) => Promise<Result<null>>
-  lookupPort: (port: number) => Promise<Result<PortOwner[]>>
+  lookupPort: (port: number, project?: string) => Promise<Result<PortOwner[]>>
   getProcesses: () => Promise<Result<Proc[]>>
   getSettings: () => Promise<Result<Settings>>
   updateSettings: (partial: Partial<Settings>) => Promise<Result<Settings>>
@@ -108,6 +108,10 @@ export interface ListeningSocket {
 }
 export interface PortOwner extends ListeningSocket {
   process: Proc | null
+  kind?: 'project' | 'other-project' | 'docker' | 'ssh' | 'kubectl' | 'tunnel' | 'readonly'
+  explanation?: string
+  suggestedAction?: 'stop-process' | 'stop-container' | 'none'
+  containerId?: string
 }
 
 export interface InstalledApplication {

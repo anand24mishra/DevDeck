@@ -95,8 +95,6 @@ export function parseDockerContainers(rawContainers: Docker.ContainerInfo[]): Co
       for (const p of raw.Ports) {
         if (p.PublicPort && !ports.includes(p.PublicPort)) {
           ports.push(p.PublicPort)
-        } else if (p.PrivatePort && !ports.includes(p.PrivatePort)) {
-          ports.push(p.PrivatePort)
         }
       }
     }

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { parsePortInput, isLocalUrl } from '../../src/shared/ports'
-import { parseListeners } from '../../src/main/services/ports'
+import { parseListeners, explainPortOwner } from '../../src/main/services/ports'
 import { validIpcInput } from '../../src/main/security/validate'
 
 it('accepts the supported local port forms and rejects arbitrary hosts or shell text', () => {
@@ -33,4 +33,35 @@ it('opens only explicit local HTTP URLs', () => {
     expect(isLocalUrl(value)).toBe(false)
     expect(validIpcInput('url:open', { url: value })).toBe(false)
   }
+})
+
+it('distinguishes project, other project, tunnels, containers and protected owners', () => {
+  const process = {
+    pid: 123,
+    name: 'node',
+    command: 'node server.js',
+    project: 'web'
+  } as import('../../src/shared/types').Proc
+  const owner = { pid: 123, name: 'node', port: 3000, address: '127.0.0.1', process }
+  expect(explainPortOwner(owner, [], 'web').kind).toBe('project')
+  expect(explainPortOwner(owner, [], 'api').kind).toBe('other-project')
+  expect(
+    explainPortOwner({ ...owner, process: { ...process, command: 'ssh -L 3000:host:80 host' } }, [])
+      .kind
+  ).toBe('ssh')
+  expect(
+    explainPortOwner(
+      { ...owner, process: { ...process, command: 'kubectl port-forward pod 3000:80' } },
+      []
+    ).kind
+  ).toBe('kubectl')
+  expect(explainPortOwner({ ...owner, process: null }, []).suggestedAction).toBe('none')
+  const container = {
+    id: 'abc123abc123',
+    name: 'web',
+    image: 'web:latest',
+    state: 'running',
+    ports: [3000]
+  } as import('../../src/shared/types').Container
+  expect(explainPortOwner(owner, [container]).containerId).toBe(container.id)
 })

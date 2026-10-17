@@ -1,3 +1,4 @@
+import { explainPortOwner } from './services/ports'
 import { detectApplications, verifyProjectPath, openWithApplication } from './services/applications'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
@@ -127,14 +128,20 @@ export function registerIpcHandlers(): void {
     return { ok: true, data: null }
   })
 
-  handle('ports:lookup', async (_event, { port }: { port: number }) => {
+  handle('ports:lookup', async (_event, { port, project }: { port: number; project?: string }) => {
     const settings = settingsService.getSettings()
-    return {
-      ok: true,
-      data: await processProvider.lookupPort(port, {
+    const [owners, containers] = await Promise.all([
+      processProvider.lookupPort(port, {
         userIgnoreList: settings.ignoreList,
         customAllowlist: settings.customAllowlist
-      })
+      }),
+      dockerService.listContainers(settings.dockerSocketPath)
+    ])
+    return {
+      ok: true,
+      data: owners.map((owner) =>
+        explainPortOwner(owner, containers.ok ? containers.data : [], project)
+      )
     }
   })
 

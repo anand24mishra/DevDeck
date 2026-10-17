@@ -104,3 +104,9 @@ take `{ path: absolute string }` and return `Result<null>`. Main recomputes acti
 real paths, and requires a project marker before opening. Apps come only from fixed detection
 candidates; fixed argv arrays never interpolate a shell command. Settings add optional
 `preferredEditor`/`preferredTerminal` IDs, default `auto`; unknown IDs are rejected.
+
+## P1-5 port explanations
+`ports:lookup` may also take optional `project: string` (display context only). Owners add
+`kind`, `explanation`, `suggestedAction: stop-process|stop-container|none`, and optional
+`containerId`. Docker matching uses published host ports only. Suggested actions still use
+the existing confirmation handlers; classification never grants signal permission.

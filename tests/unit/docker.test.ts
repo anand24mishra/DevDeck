@@ -108,7 +108,7 @@ describe('Docker container parser', () => {
     expect(containers[1].name).toBe('db-postgres')
     expect(containers[1].state).toBe('exited')
     expect(containers[1].project).toBe('ecommerce-app')
-    expect(containers[1].ports).toEqual([5432])
+    expect(containers[1].ports).toEqual([])
 
     // Third container (standalone)
     expect(containers[2].id).toBe('987654321000')
