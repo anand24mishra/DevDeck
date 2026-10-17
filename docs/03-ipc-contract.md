@@ -155,3 +155,8 @@ input. `docker:launch` takes `{app:desktop|orbstack}` and opens only the matchin
 app path. Invalid socket overrides are `INVALID_INPUT`; unreadable sockets are `DENIED`; missing
 providers or stopped daemons are `DOCKER_UNAVAILABLE`, always with fixed, actionable text.
 Docker polling has an in-flight guard and pauses while hidden.
+
+## P1-13 first run
+`Settings.onboardingComplete?: boolean` defaults false. Completing the three-step guide saves
+true through validated settings IPC. Replay is renderer-only state and does not reset saved
+preferences. Empty states distinguish an empty process list, no containers and search misses.

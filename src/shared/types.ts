@@ -34,6 +34,7 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  onboardingComplete?: boolean
   hintsEnabled?: boolean
   notifications?: NotificationPreferences
   memoryThresholdMb?: number

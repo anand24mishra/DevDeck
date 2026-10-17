@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dockerSocketPath: undefined,
   theme: 'system',
   openAtLogin: false,
+  onboardingComplete: false,
   hintsEnabled: true,
   notifications: { ...DEFAULT_NOTIFICATIONS },
   memoryThresholdMb: 4096,
@@ -94,6 +95,7 @@ export class SettingsService {
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
+      onboardingComplete: r.onboardingComplete === true,
       hintsEnabled: typeof r.hintsEnabled === 'boolean' ? r.hintsEnabled : true,
       notifications: Object.fromEntries(
         Object.entries(DEFAULT_NOTIFICATIONS).map(([key, fallback]) => [

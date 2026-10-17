@@ -5,6 +5,7 @@ interface SettingsModalProps {
   isOpen: boolean
   settings: Settings
   onClose: () => void
+  onReplayOnboarding: () => void
   onUpdate: (partial: Partial<Settings>) => Promise<void>
 }
 
@@ -12,7 +13,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   settings,
   onClose,
-  onUpdate
+  onUpdate,
+  onReplayOnboarding
 }) => {
   const [newIgnoreItem, setNewIgnoreItem] = useState('')
   const [newAllowItem, setNewAllowItem] = useState('')
@@ -119,6 +121,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Section 1: General */}
           <section className="settings-section">
             <h3 className="section-title">General</h3>
+            <button className="quiet-btn" onClick={onReplayOnboarding}>
+              Show the welcome guide
+            </button>
             <label className="setting-row">
               <span>Show possibly idle process hints</span>
               <input

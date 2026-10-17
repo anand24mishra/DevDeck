@@ -1763,3 +1763,21 @@
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--line);
 }
+
+.onboarding {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.onboarding h2 {
+  font-size: inherit;
+  margin-block: 0 var(--space-2);
+}
+.onboarding p {
+  max-width: 65ch;
+}
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

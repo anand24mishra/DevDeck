@@ -1,11 +1,16 @@
 import React from 'react'
 
 interface EmptyStateProps {
+  kind?: 'processes' | 'docker'
   searchQuery?: string
   onClearSearch?: () => void
 }
 
-export const EmptyState: React.FC<EmptyStateProps> = ({ searchQuery, onClearSearch }) => {
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  searchQuery,
+  onClearSearch,
+  kind = 'processes'
+}) => {
   if (searchQuery) {
     return (
       <div className="state-container empty-search-state">
@@ -24,7 +29,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ searchQuery, onClearSear
           <circle cx="11" cy="11" r="8" />
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
-        <p className="state-title">No processes matching &ldquo;{searchQuery}&rdquo;</p>
+        <p className="state-title">Nothing matches your search: &ldquo;{searchQuery}&rdquo;</p>
         <p className="state-description">Check for typos in process name, port, or project name.</p>
         {onClearSearch && (
           <button className="state-btn" onClick={onClearSearch}>
@@ -53,7 +58,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ searchQuery, onClearSear
         <line x1="8" y1="21" x2="16" y2="21" />
         <line x1="12" y1="17" x2="12" y2="21" />
       </svg>
-      <p className="state-title">Nothing running for your projects</p>
+      <p className="state-title">
+        {kind === 'docker' ? 'No containers found' : 'No dev processes running'}
+      </p>
       <p className="state-description">
         Start a dev server (e.g. Node, Vite, Python, Go) or background service, and it will appear
         here automatically.

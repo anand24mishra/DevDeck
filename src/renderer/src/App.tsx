@@ -4,6 +4,7 @@ import { Proc, KillReport, Container, Settings, ProcessIdentity } from '../../sh
 import { useProcesses } from './hooks/useProcesses'
 import { useDocker } from './hooks/useDocker'
 import { useRecentlyStopped } from './hooks/useRecentlyStopped'
+import { Onboarding } from './components/Onboarding'
 import { PortLookup } from './components/PortLookup'
 import { Header } from './components/Header'
 import { ProjectGroup } from './components/ProjectGroup'
@@ -75,6 +76,7 @@ const App: React.FC = () => {
   const [heavyOnly, setHeavyOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedLogContainer, setSelectedLogContainer] = useState<Container | null>(null)
+  const [replayOnboarding, setReplayOnboarding] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
   const [isRecentOpen, setIsRecentOpen] = useState<boolean>(false)
   const {
@@ -522,6 +524,15 @@ const App: React.FC = () => {
         loading={activeTab === 'processes' ? procsLoading : dockerLoading}
       />
 
+      {(!settings.onboardingComplete || replayOnboarding) && (
+        <Onboarding
+          onComplete={async () => {
+            const result = await updateSettings({ onboardingComplete: true })
+            if (result.ok) setReplayOnboarding(false)
+            else setToast({ id: String(Date.now()), text: result.error.message, type: 'error' })
+          }}
+        />
+      )}
       {activeTab === 'processes' && (
         <PortLookup
           interval={settings.refreshIntervalSec}
@@ -604,7 +615,7 @@ const App: React.FC = () => {
         ) : dockerError && containers.length === 0 ? (
           <DockerErrorState message={dockerError} code={dockerErrorCode} onRetry={refreshDocker} />
         ) : containers.length === 0 ? (
-          <EmptyState />
+          <EmptyState kind="docker" />
         ) : filteredContainers.length === 0 ? (
           <EmptyState searchQuery={searchQuery} onClearSearch={() => setSearchQuery('')} />
         ) : (
@@ -652,6 +663,10 @@ const App: React.FC = () => {
         settings={settings}
         onClose={() => setIsSettingsOpen(false)}
         onUpdate={handleUpdateSettings}
+        onReplayOnboarding={() => {
+          setIsSettingsOpen(false)
+          setReplayOnboarding(true)
+        }}
       />
 
       {/* Confirmation Modal */}
