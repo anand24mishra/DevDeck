@@ -160,3 +160,10 @@ Docker polling has an in-flight guard and pauses while hidden.
 `Settings.onboardingComplete?: boolean` defaults false. Completing the three-step guide saves
 true through validated settings IPC. Replay is renderer-only state and does not reset saved
 preferences. Empty states distinguish an empty process list, no containers and search misses.
+
+## P2-1 process tree
+`proc:tree` has no input and returns `Result<ProcessTreeNode[]>` containing allowlisted processes
+and recursive children. `proc:treeStop` takes `{root:ProcessIdentity,targets:ProcessIdentity[]}`;
+the root must be in targets. Main verifies the root identity before any signal, recomputes managed
+descendants, intersects captured identities, and signals children before parents. New descendants
+are excluded. The existing KillReport and Undo recording are preserved.

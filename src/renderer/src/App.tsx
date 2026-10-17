@@ -1,3 +1,4 @@
+import { ProcessTreeView } from './components/ProcessTreeView'
 import { sortProcesses, processTotals, type ProcessSort } from './utils/processes'
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Proc, KillReport, Container, Settings, ProcessIdentity } from '../../shared/types'
@@ -72,6 +73,7 @@ const App: React.FC = () => {
     stopAllContainers
   } = useDocker(settings.refreshIntervalSec)
 
+  const [treeView, setTreeView] = useState(false)
   const [sortBy, setSortBy] = useState<ProcessSort>('name')
   const [heavyOnly, setHeavyOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState<string>('')
@@ -342,6 +344,29 @@ const App: React.FC = () => {
     })
   }, [procs, stopAll, showReportToast])
 
+  const handleStopTree = useCallback(
+    (root: Proc, targets: Proc[]) => {
+      setDialogState({
+        isOpen: true,
+        title: `Stop ${targets.length} processes in the ${root.name} tree?`,
+        targetList: targets.map((proc) => `${proc.name} in ${proc.project}`),
+        action: async () => {
+          setIsBusy(true)
+          try {
+            const result = await window.api.stopProcessTree(identity(root), targets.map(identity))
+            if (result.ok) showReportToast(result.data)
+            else setToast({ id: String(Date.now()), text: result.error.message, type: 'error' })
+            await refreshProcs()
+          } finally {
+            setIsBusy(false)
+            setDialogState((previous) => ({ ...previous, isOpen: false }))
+          }
+        }
+      })
+    },
+    [refreshProcs, showReportToast]
+  )
+
   // Docker Actions
   const handleDockerAction = useCallback(
     (id: string, action: 'start' | 'stop' | 'restart') => {
@@ -543,6 +568,14 @@ const App: React.FC = () => {
       )}
       {activeTab === 'processes' && (
         <div className="process-tools">
+          <label>
+            <input
+              type="checkbox"
+              checked={treeView}
+              onChange={(event) => setTreeView(event.target.checked)}
+            />{' '}
+            Process tree
+          </label>
           <label htmlFor="process-sort">Sort by</label>
           <select
             id="process-sort"
@@ -595,6 +628,13 @@ const App: React.FC = () => {
             <EmptyState />
           ) : filteredProcesses.length === 0 ? (
             <EmptyState searchQuery={searchQuery} onClearSearch={() => setSearchQuery('')} />
+          ) : treeView ? (
+            <ProcessTreeView
+              processes={filteredProcesses}
+              allProcesses={procs}
+              onStop={handleStopProcess}
+              onStopTree={handleStopTree}
+            />
           ) : (
             <div className="project-groups-list">
               {groupedProjects.map((group) => (

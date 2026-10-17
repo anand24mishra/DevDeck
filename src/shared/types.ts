@@ -94,6 +94,11 @@ export interface DevDeckApi {
   openProjectInTerminal: (path: string) => Promise<Result<null>>
   openLocalUrl: (url: string) => Promise<Result<null>>
   lookupPort: (port: number, project?: string) => Promise<Result<PortOwner[]>>
+  getProcessTree: () => Promise<Result<ProcessTreeNode[]>>
+  stopProcessTree: (
+    root: ProcessIdentity,
+    targets: ProcessIdentity[]
+  ) => Promise<Result<KillReport>>
   getProcesses: () => Promise<Result<Proc[]>>
   getSettings: () => Promise<Result<Settings>>
   updateSettings: (partial: Partial<Settings>) => Promise<Result<Settings>>
@@ -175,4 +180,9 @@ export interface DockerDesktopApp {
   id: 'desktop' | 'orbstack'
   name: string
   path: string
+}
+
+export interface ProcessTreeNode {
+  process: Proc
+  children: ProcessTreeNode[]
 }

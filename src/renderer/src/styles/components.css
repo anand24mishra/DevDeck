@@ -1781,3 +1781,15 @@
   align-items: center;
   gap: var(--space-3);
 }
+
+.process-tree {
+  padding: var(--space-3);
+}
+.tree-children {
+  margin-inline-start: var(--space-4);
+  border-inline-start: 1px solid var(--line);
+}
+.process-tree summary {
+  cursor: pointer;
+  padding: var(--space-2);
+}

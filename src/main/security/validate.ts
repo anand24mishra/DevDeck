@@ -72,6 +72,7 @@ export function validIpcInput(channel: string, value: unknown): boolean {
     [
       'docker:apps',
       'project:apps',
+      'proc:tree',
       'procs:list',
       'settings:get',
       'recent:list',
@@ -119,6 +120,13 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       value.ids.length <= 500 &&
       new Set(value.ids).size === value.ids.length &&
       value.ids.every((id) => typeof id === 'string' && /^[a-f0-9]{12,64}$/.test(id))
+    )
+  if (channel === 'proc:treeStop')
+    return (
+      keys(value, ['root', 'targets']) &&
+      validIdentities([value.root]) &&
+      validIdentities(value.targets) &&
+      value.targets.some((target) => target.pid === (value.root as { pid: number }).pid)
     )
   if (channel === 'settings:set') return validSettings(value)
   if (['procs:stop', 'procs:stopAll', 'procs:stopProject'].includes(channel)) {

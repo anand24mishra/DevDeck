@@ -1,3 +1,4 @@
+import { buildProcessTree, descendantsChildrenFirst } from '../shared/processTree'
 import { notificationService } from './services/notifications'
 import { hotkeyService } from './services/hotkey'
 import { explainPortOwner } from './services/ports'
@@ -7,7 +8,15 @@ import { pathToFileURL } from 'url'
 import { isExpectedPage, validIpcInput } from './security/validate'
 import { ipcMain, IpcMainInvokeEvent, BrowserWindow, shell } from 'electron'
 import { is } from '@electron-toolkit/utils'
-import { Result, Proc, Settings, KillReport, Container, RecentlyStoppedItem } from '../shared/types'
+import {
+  Result,
+  Proc,
+  Settings,
+  KillReport,
+  Container,
+  RecentlyStoppedItem,
+  ProcessIdentity
+} from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
 import { dockerService, detectDockerApps } from './services/docker'
@@ -200,13 +209,31 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  for (const channel of ['procs:stop', 'procs:stopProject', 'procs:stopAll']) {
+  handle('proc:tree', async () => {
+    const settings = settingsService.getSettings()
+    return {
+      ok: true,
+      data: buildProcessTree(
+        await processProvider.listProcesses({
+          userIgnoreList: settings.ignoreList,
+          customAllowlist: settings.customAllowlist
+        })
+      )
+    }
+  })
+
+  for (const channel of ['procs:stop', 'procs:stopProject', 'procs:stopAll', 'proc:treeStop']) {
     handle(channel, async (event, input: unknown): Promise<Result<KillReport>> => {
       if (!isSenderAuthorized(event)) {
         return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
       }
       const value = input as Record<string, unknown> | null
-      const keys = channel === 'procs:stopProject' ? 'project,targets' : 'targets'
+      const keys =
+        channel === 'procs:stopProject'
+          ? 'project,targets'
+          : channel === 'proc:treeStop'
+            ? 'root,targets'
+            : 'targets'
       if (
         !value ||
         typeof value !== 'object' ||
@@ -220,16 +247,46 @@ export function registerIpcHandlers(): void {
           error: { code: 'INVALID_INPUT', message: 'Invalid confirmed process identities' }
         }
       }
-      const targets = value.targets
+      let targets = value.targets
       try {
         const settings = settingsService.getSettings()
         const procs = await processProvider.listProcesses({
           userIgnoreList: settings.ignoreList,
           customAllowlist: settings.customAllowlist
         })
+        let treeMembers: Set<number> | undefined
+        if (channel === 'proc:treeStop') {
+          const root = value.root as ProcessIdentity
+          const current = procs.find((proc) => proc.pid === root.pid)
+          if (!current || current.startTime !== root.startTime || current.command !== root.command)
+            return {
+              ok: true,
+              data: {
+                requested: targets.map((target) => target.pid),
+                stopped: [],
+                forced: [],
+                stillRunning: [],
+                refused: targets.map((target) => target.pid),
+                refusalReasons: Object.fromEntries(
+                  targets.map((target) => [target.pid, 'identity-changed' as const])
+                )
+              }
+            }
+          const ordered = descendantsChildrenFirst(procs, root.pid)
+          treeMembers = new Set(ordered.map((proc) => proc.pid))
+          const captured = new Map(targets.map((target) => [target.pid, target]))
+          targets = [
+            ...ordered.flatMap((proc) => (captured.has(proc.pid) ? [captured.get(proc.pid)!] : [])),
+            ...targets.filter((target) => !treeMembers!.has(target.pid))
+          ]
+        }
         const scope = new Map(
           procs
-            .filter((proc) => channel !== 'procs:stopProject' || proc.project === value.project)
+            .filter(
+              (proc) =>
+                (!treeMembers || treeMembers.has(proc.pid)) &&
+                (channel !== 'procs:stopProject' || proc.project === value.project)
+            )
             .map((proc) => [proc.pid, proc])
         )
         const scopedDeps = {
