@@ -1,10 +1,10 @@
 {
   "name": "devdeck",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "See local development processes, ports, and Docker containers by project.",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "Anand Mishra",
+  "homepage": "https://github.com/anand24mishra/DevDeck",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint src",
@@ -48,5 +48,9 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
     "vitest": "^5.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anand24mishra/DevDeck.git"
   }
 }
