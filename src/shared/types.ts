@@ -3,7 +3,13 @@ export type Result<T> =
 
 export type ErrorCode = 'DENIED' | 'NOT_FOUND' | 'DOCKER_UNAVAILABLE' | 'INVALID_INPUT' | 'INTERNAL'
 
-export interface Proc {
+export interface ProcessIdentity {
+  pid: number
+  startTime: string
+  command: string
+}
+
+export interface Proc extends ProcessIdentity {
   pid: number
   ppid: number
   name: string
@@ -28,6 +34,7 @@ export interface Settings {
 }
 
 export interface KillReport {
+  refusalReasons?: Record<number, 'identity-changed' | 'not-allowed'>
   requested: number[]
   stopped: number[]
   forced: number[]
@@ -68,9 +75,9 @@ export interface DevDeckApi {
   getProcesses: () => Promise<Result<Proc[]>>
   getSettings: () => Promise<Result<Settings>>
   updateSettings: (partial: Partial<Settings>) => Promise<Result<Settings>>
-  stopProcess: (pid: number) => Promise<Result<KillReport>>
-  stopProject: (project: string) => Promise<Result<KillReport>>
-  stopAll: () => Promise<Result<KillReport>>
+  stopProcess: (target: ProcessIdentity) => Promise<Result<KillReport>>
+  stopProject: (project: string, targets: ProcessIdentity[]) => Promise<Result<KillReport>>
+  stopAll: (targets: ProcessIdentity[]) => Promise<Result<KillReport>>
   getRecentlyStopped: () => Promise<Result<RecentlyStoppedItem[]>>
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>

@@ -8,7 +8,7 @@ export type Result<T> = { ok: true; data: T } | { ok: false; error: { code: Erro
 export type ErrorCode = 'DENIED' | 'NOT_FOUND' | 'DOCKER_UNAVAILABLE' | 'INVALID_INPUT' | 'INTERNAL'
 
 export interface Proc {
-  pid: number; ppid: number; name: string; command: string   // command may contain secrets: never log
+  pid: number; startTime: string; ppid: number; name: string; command: string   // command may contain secrets: never log
   cpu: number; memMB: number; uptimeSec: number
   cwd: string | null; project: string; projectPath?: string | null; ports: number[]
 }
@@ -20,7 +20,8 @@ export interface Settings {
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
 }
-export interface KillReport { requested: number[]; stopped: number[]; forced: number[]; refused: number[]; stillRunning: number[] }
+export interface ProcessIdentity { pid: number; startTime: string; command: string }
+export interface KillReport { refusalReasons?: Record<number, 'identity-changed' | 'not-allowed'>; requested: number[]; stopped: number[]; forced: number[]; refused: number[]; stillRunning: number[] }
 export interface Container {
   id: string
   name: string
@@ -46,8 +47,8 @@ export interface RecentlyStoppedItem {
 | Channel | Input | Output | Notes |
 |---|---|---|---|
 | `procs:list` | – | `Result<Proc[]>` | allowlisted processes only |
-| `procs:stop` | `{ pids: number[] }` | `Result<KillReport>` | main re-validates every pid |
-| `procs:stopProject` | `{ project: string }` | `Result<KillReport>` | main resolves pids itself |
+| `procs:stop` | `{ targets: ProcessIdentity[] }` | `Result<KillReport>` | main re-validates every pid |
+| `procs:stopProject` | `{ project: string; targets: ProcessIdentity[] }` | `Result<KillReport>` | main resolves pids itself |
 | `recent:list` | – | `Result<RecentlyStoppedItem[]>` | last 20 stopped dev processes |
 | `recent:restart` | `{ id: string }` | `Result<{ pid?: number }>` | re-validates against allowlist |
 | `recent:clear` | – | `Result<null>` | clear stopped memory list |
@@ -66,3 +67,10 @@ Events main → renderer: `docker:log` `{ id: string; text: string }` (batched e
 ## v1.1 / v2 additions (reserve names now)
 `recent:list`, `recent:restart`, `profiles:*`, `ports:whoUses`, `alerts:*`, `docker:exec`, `docker:cleanup:preview`,
 `term:*`, `logs:merged:*`, `hosts:*`, `palette:*`.
+
+### Confirmed process identities (P0-2)
+`procs:stopAll` takes `{ targets: ProcessIdentity[] }` as well. All stop inputs reject extra fields,
+null, missing identities, empty identities, duplicates, and more than 500 targets. Main recomputes
+allowlisted membership, intersects with the confirmed identities, and never adds newly discovered
+processes. PID, start time, and command must all match before **each** signal; mismatches return
+`refusalReasons[pid] = 'identity-changed'`. Commands are compared in memory and never logged.

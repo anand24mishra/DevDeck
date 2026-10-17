@@ -4,6 +4,7 @@ import { Result, Proc, Settings, KillReport, Container, RecentlyStoppedItem } fr
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
 import { dockerService } from './services/docker'
+import { terminate, defaultKillDeps, validIdentities } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
 
 const processProvider = new DarwinProcessProvider()
@@ -89,105 +90,70 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  // procs:stop
-  ipcMain.handle(
-    'procs:stop',
-    async (event, { pids }: { pids: number[] }): Promise<Result<KillReport>> => {
+  for (const channel of ['procs:stop', 'procs:stopProject', 'procs:stopAll']) {
+    ipcMain.handle(channel, async (event, input: unknown): Promise<Result<KillReport>> => {
       if (!isSenderAuthorized(event)) {
         return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
       }
+      const value = input as Record<string, unknown> | null
+      const keys = channel === 'procs:stopProject' ? 'project,targets' : 'targets'
       if (
-        !Array.isArray(pids) ||
-        pids.some((p) => !Number.isInteger(p) || p <= 1) ||
-        pids.length > 500
+        !value ||
+        typeof value !== 'object' ||
+        Object.keys(value).sort().join(',') !== keys ||
+        !validIdentities(value.targets) ||
+        (channel === 'procs:stopProject' &&
+          (typeof value.project !== 'string' || !value.project.trim()))
       ) {
-        return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid PIDs array' } }
+        return {
+          ok: false,
+          error: { code: 'INVALID_INPUT', message: 'Invalid confirmed process identities' }
+        }
       }
+      const targets = value.targets
       try {
         const settings = settingsService.getSettings()
         const procs = await processProvider.listProcesses({
           userIgnoreList: settings.ignoreList,
           customAllowlist: settings.customAllowlist
         })
-        const targets = procs.filter((p) => pids.includes(p.pid))
-
-        const { terminate, defaultKillDeps } = await import('./services/kill')
-        const report = await terminate(pids, defaultKillDeps)
-
-        const stoppedSet = new Set([...report.stopped, ...report.forced])
-        const actuallyStopped = targets.filter((p) => stoppedSet.has(p.pid))
-        recentlyStoppedService.recordStopped(actuallyStopped, !!settings.persistRecentlyStopped)
-
-        return { ok: true, data: report }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Termination failed'
-        return { ok: false, error: { code: 'INTERNAL', message } }
-      }
-    }
-  )
-
-  // procs:stopProject
-  ipcMain.handle(
-    'procs:stopProject',
-    async (event, { project }: { project: string }): Promise<Result<KillReport>> => {
-      if (!isSenderAuthorized(event)) {
-        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-      }
-      if (typeof project !== 'string' || !project.trim()) {
-        return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid project name' } }
-      }
-      try {
-        const settings = settingsService.getSettings()
-        const procs = await processProvider.listProcesses({
-          userIgnoreList: settings.ignoreList,
-          customAllowlist: settings.customAllowlist
-        })
-        const matching = procs.filter(
-          (p) => p.project.toLowerCase() === project.trim().toLowerCase()
+        const scope = new Map(
+          procs
+            .filter((proc) => channel !== 'procs:stopProject' || proc.project === value.project)
+            .map((proc) => [proc.pid, proc])
         )
-        const pids = matching.map((p) => p.pid)
-
-        const { terminate, defaultKillDeps } = await import('./services/kill')
-        const report = await terminate(pids, defaultKillDeps)
-
-        const stoppedSet = new Set([...report.stopped, ...report.forced])
-        const actuallyStopped = matching.filter((p) => stoppedSet.has(p.pid))
-        recentlyStoppedService.recordStopped(actuallyStopped, !!settings.persistRecentlyStopped)
-
+        const scopedDeps = {
+          ...defaultKillDeps,
+          revalidate: async (pids: number[]) => {
+            const result = await defaultKillDeps.revalidate(pids)
+            return {
+              ok: result.ok.filter((proc) => scope.has(proc.pid)),
+              refused: [...result.refused, ...pids.filter((pid) => !scope.has(pid))]
+            }
+          }
+        }
+        const report = await terminate(targets, scopedDeps)
+        const stopped = new Set([...report.stopped, ...report.forced])
+        const actual = procs.filter(
+          (proc) =>
+            stopped.has(proc.pid) &&
+            targets.some(
+              (target) =>
+                target.pid === proc.pid &&
+                target.startTime === proc.startTime &&
+                target.command === proc.command
+            )
+        )
+        recentlyStoppedService.recordStopped(actual, !!settings.persistRecentlyStopped)
         return { ok: true, data: report }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Project stop failed'
-        return { ok: false, error: { code: 'INTERNAL', message } }
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'INTERNAL', message: 'Could not stop processes. Refresh and try again.' }
+        }
       }
-    }
-  )
-
-  // procs:stopAll
-  ipcMain.handle('procs:stopAll', async (event): Promise<Result<KillReport>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
-    try {
-      const settings = settingsService.getSettings()
-      const procs = await processProvider.listProcesses({
-        userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist
-      })
-      const pids = procs.map((p) => p.pid)
-
-      const { terminate, defaultKillDeps } = await import('./services/kill')
-      const report = await terminate(pids, defaultKillDeps)
-
-      const stoppedSet = new Set([...report.stopped, ...report.forced])
-      const actuallyStopped = procs.filter((p) => stoppedSet.has(p.pid))
-      recentlyStoppedService.recordStopped(actuallyStopped, !!settings.persistRecentlyStopped)
-
-      return { ok: true, data: report }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Stop all failed'
-      return { ok: false, error: { code: 'INTERNAL', message } }
-    }
-  })
+    })
+  }
 
   // recent:list
   ipcMain.handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {

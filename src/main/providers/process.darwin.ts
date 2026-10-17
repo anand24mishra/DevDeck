@@ -36,6 +36,7 @@ export function parseEtime(etime: string): number {
 }
 
 interface RawProcess {
+  startTime: string
   pid: number
   ppid: number
   cpu: number
@@ -52,7 +53,7 @@ export class DarwinProcessProvider implements ProcessProvider {
     const user = os.userInfo().username
     const { stdout } = await execFileAsync(
       'ps',
-      ['-U', user, '-o', 'pid=,ppid=,pcpu=,rss=,etime=,command='],
+      ['-U', user, '-o', 'pid=,ppid=,pcpu=,rss=,etime=,lstart=,command='],
       { maxBuffer: 10 * 1024 * 1024 }
     )
 
@@ -64,7 +65,7 @@ export class DarwinProcessProvider implements ProcessProvider {
       if (!trimmed) continue
 
       // Match pid, ppid, pcpu, rss, etime, followed by the rest of the line as command
-      const match = trimmed.match(/^(\d+)\s+(\d+)\s+([\d.]+)\s+(\d+)\s+([\d:-]+)\s+(.+)$/)
+      const match = trimmed.match(/^(\d+)\s+(\d+)\s+([\d.]+)\s+(\d+)\s+([\d:-]+)\s+(.{24})\s+(.+)$/)
       if (match) {
         processes.push({
           pid: parseInt(match[1], 10),
@@ -72,7 +73,8 @@ export class DarwinProcessProvider implements ProcessProvider {
           cpu: parseFloat(match[3]) || 0,
           rssKB: parseInt(match[4], 10) || 0,
           etime: match[5],
-          command: match[6]
+          startTime: match[6].trim(),
+          command: match[7]
         })
       }
     }
@@ -180,6 +182,7 @@ export class DarwinProcessProvider implements ProcessProvider {
 
       return {
         pid: proc.pid,
+        startTime: proc.startTime,
         ppid: proc.ppid,
         name: binaryName || 'unknown',
         command: proc.command,

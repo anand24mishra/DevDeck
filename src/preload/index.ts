@@ -6,9 +6,9 @@ const api: DevDeckApi = {
   getSettings: (): Promise<Result<Settings>> => ipcRenderer.invoke('settings:get'),
   updateSettings: (partial: Partial<Settings>): Promise<Result<Settings>> =>
     ipcRenderer.invoke('settings:set', partial),
-  stopProcess: (pid: number) => ipcRenderer.invoke('procs:stop', { pids: [pid] }),
-  stopProject: (project: string) => ipcRenderer.invoke('procs:stopProject', { project }),
-  stopAll: () => ipcRenderer.invoke('procs:stopAll'),
+  stopProcess: (target) => ipcRenderer.invoke('procs:stop', { targets: [target] }),
+  stopProject: (project, targets) => ipcRenderer.invoke('procs:stopProject', { project, targets }),
+  stopAll: (targets) => ipcRenderer.invoke('procs:stopAll', { targets }),
   getRecentlyStopped: (): Promise<Result<RecentlyStoppedItem[]>> =>
     ipcRenderer.invoke('recent:list'),
   restartStopped: (id: string): Promise<Result<{ pid?: number }>> =>

@@ -23,8 +23,15 @@ describe('RecentlyStoppedService', () => {
     }
   })
 
-  const mockProc = (id: number, name: string, cmd: string, project = 'my-app', cwd = tempDir): Proc => ({
+  const mockProc = (
+    id: number,
+    name: string,
+    cmd: string,
+    project = 'my-app',
+    cwd = tempDir
+  ): Proc => ({
     pid: id,
+    startTime: 'Wed Sep 30 14:00:00 2026',
     ppid: 1,
     name,
     command: cmd,

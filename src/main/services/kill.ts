@@ -1,17 +1,13 @@
 import { execFile } from 'child_process'
 import os from 'os'
 import { promisify } from 'util'
-import { KillReport } from '../../shared/types'
+import { KillReport, ProcessIdentity } from '../../shared/types'
 import { isProcessAllowed } from '../security/allowlist'
 import { settingsService } from './settings'
 
 const execFileAsync = promisify(execFile)
 
-export interface RevalidatedProcess {
-  pid: number
-  startTime?: string
-  command: string
-}
+export type RevalidatedProcess = ProcessIdentity
 
 export interface KillDeps {
   revalidate: (pids: number[]) => Promise<{ ok: RevalidatedProcess[]; refused: number[] }>
@@ -24,64 +20,84 @@ export interface KillDeps {
  * Pure termination escalation flow with PID-reuse protection.
  * Injectable dependencies for unit testing with fake timers.
  */
-export async function terminate(pids: number[], deps: KillDeps): Promise<KillReport> {
-  const uniquePids = Array.from(new Set(pids)).filter((p) => Number.isInteger(p) && p > 1)
-  if (uniquePids.length === 0) {
-    return { requested: pids, stopped: [], forced: [], refused: pids, stillRunning: [] }
+export function validIdentities(value: unknown): value is ProcessIdentity[] {
+  if (!Array.isArray(value) || value.length > 500) return false
+  const seen = new Set<number>()
+  return value.every((target) => {
+    if (!target || typeof target !== 'object' || Array.isArray(target)) return false
+    if (Object.keys(target).sort().join(',') !== 'command,pid,startTime') return false
+    const valid =
+      Number.isSafeInteger(target.pid) &&
+      target.pid > 1 &&
+      !seen.has(target.pid) &&
+      typeof target.startTime === 'string' &&
+      target.startTime.length > 0 &&
+      target.startTime.length <= 64 &&
+      typeof target.command === 'string' &&
+      target.command.length > 0 &&
+      target.command.length <= 131072
+    seen.add(target.pid)
+    return valid
+  })
+}
+
+export async function terminate(targets: ProcessIdentity[], deps: KillDeps): Promise<KillReport> {
+  const report: KillReport = {
+    requested: targets.map((target) => target.pid),
+    stopped: [],
+    forced: [],
+    refused: [],
+    stillRunning: [],
+    refusalReasons: {}
   }
-
-  // 1. Re-validate targets against safety allowlist and identity
-  const { ok, refused } = await deps.revalidate(uniquePids)
-
-  // 2. Send SIGTERM to all valid processes
-  ok.forEach((p) => deps.signal(p.pid, 'SIGTERM'))
-
-  // 3. Grace period (3s)
+  const refuse = (pid: number, reason: 'identity-changed' | 'not-allowed'): void => {
+    if (!report.refused.includes(pid)) report.refused.push(pid)
+    report.refusalReasons![pid] = reason
+  }
+  const verify = async (target: ProcessIdentity): Promise<boolean> => {
+    const current = await deps.revalidate([target.pid])
+    const actual = current.ok.find((candidate) => candidate.pid === target.pid)
+    if (!actual) {
+      refuse(target.pid, 'not-allowed')
+      return false
+    }
+    if (
+      !target.startTime ||
+      actual.startTime !== target.startTime ||
+      actual.command !== target.command
+    ) {
+      refuse(target.pid, 'identity-changed')
+      return false
+    }
+    return true
+  }
+  const signaled: ProcessIdentity[] = []
+  for (const target of targets) {
+    if (report.requested.indexOf(target.pid) !== targets.indexOf(target)) continue
+    if (await verify(target)) {
+      if (deps.signal(target.pid, 'SIGTERM')) signaled.push(target)
+      else report.stillRunning.push(target.pid)
+    }
+  }
+  if (!signaled.length) return report
   await deps.sleep(3000)
-
-  // 4. Re-check survivors and verify PID + startTime before SIGKILL (PID reuse protection)
-  const initialAlivePids = ok.filter((p) => deps.alive(p.pid)).map((p) => p.pid)
-  const verifiedSurvivors: RevalidatedProcess[] = []
-
-  if (initialAlivePids.length > 0) {
-    const rechecked = await deps.revalidate(initialAlivePids)
-
-    for (const survivor of rechecked.ok) {
-      const original = ok.find((p) => p.pid === survivor.pid)
-      // PID must match and startTime must match (if captured)
-      if (original && (!original.startTime || original.startTime === survivor.startTime)) {
-        verifiedSurvivors.push(survivor)
-      } else {
-        // PID was reused by another process with a different start time!
-        refused.push(survivor.pid)
-      }
+  const forced: ProcessIdentity[] = []
+  for (const target of signaled) {
+    if (!deps.alive(target.pid)) {
+      report.stopped.push(target.pid)
+      continue
     }
-
-    for (const refusedPid of rechecked.refused) {
-      if (!refused.includes(refusedPid)) {
-        refused.push(refusedPid)
-      }
+    if (await verify(target)) {
+      if (deps.signal(target.pid, 'SIGKILL')) forced.push(target)
+      else report.stillRunning.push(target.pid)
     }
-
-    // Only send SIGKILL to verified survivors with matching identity
-    verifiedSurvivors.forEach((p) => deps.signal(p.pid, 'SIGKILL'))
   }
-
-  // 5. Short post-kill settle (300ms)
-  await deps.sleep(300)
-
-  // 6. Final accounting
-  const stillRunning = verifiedSurvivors.filter((p) => deps.alive(p.pid)).map((p) => p.pid)
-  const forced = verifiedSurvivors.map((p) => p.pid).filter((pid) => !stillRunning.includes(pid))
-  const stopped = ok.map((p) => p.pid).filter((pid) => !initialAlivePids.includes(pid))
-
-  return {
-    requested: pids,
-    stopped,
-    forced,
-    refused,
-    stillRunning
+  if (forced.length) await deps.sleep(300)
+  for (const target of forced) {
+    if (deps.alive(target.pid)) report.stillRunning.push(target.pid)
+    else report.forced.push(target.pid)
   }
+  return report
 }
 
 /**
@@ -121,12 +137,11 @@ export const defaultKillDeps: KillDeps = {
 
     try {
       const currentUser = os.userInfo().username
-      const { stdout } = await execFileAsync('ps', [
-        '-o',
-        'pid=,user=,lstart=,command=',
-        '-p',
-        pids.join(',')
-      ])
+      const { stdout } = await execFileAsync(
+        'ps',
+        ['-o', 'pid=,user=,lstart=,command=', '-p', pids.join(',')],
+        { timeout: 5000, maxBuffer: 10 * 1024 * 1024 }
+      )
 
       const lines = stdout.split('\n')
       const foundPids = new Set<number>()

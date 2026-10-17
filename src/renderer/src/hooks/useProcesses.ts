@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Proc, Settings, Result, KillReport } from '../../../shared/types'
+import { Proc, Settings, Result, KillReport, ProcessIdentity } from '../../../shared/types'
 
 export interface UseProcessesResult {
   procs: Proc[]
@@ -10,9 +10,9 @@ export interface UseProcessesResult {
   refresh: () => Promise<void>
   changeInterval: (interval: 2 | 3 | 5 | 10) => Promise<void>
   updateSettings: (partial: Partial<Settings>) => Promise<Result<Settings>>
-  stopProcess: (pid: number) => Promise<Result<KillReport>>
-  stopProject: (project: string) => Promise<Result<KillReport>>
-  stopAll: () => Promise<Result<KillReport>>
+  stopProcess: (target: ProcessIdentity) => Promise<Result<KillReport>>
+  stopProject: (project: string, targets: ProcessIdentity[]) => Promise<Result<KillReport>>
+  stopAll: (targets: ProcessIdentity[]) => Promise<Result<KillReport>>
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -139,8 +139,8 @@ export function useProcesses(): UseProcessesResult {
   )
 
   const stopProcess = useCallback(
-    async (pid: number): Promise<Result<KillReport>> => {
-      const res = await window.api.stopProcess(pid)
+    async (target: ProcessIdentity): Promise<Result<KillReport>> => {
+      const res = await window.api.stopProcess(target)
       await fetchProcesses()
       return res
     },
@@ -148,19 +148,22 @@ export function useProcesses(): UseProcessesResult {
   )
 
   const stopProject = useCallback(
-    async (project: string): Promise<Result<KillReport>> => {
-      const res = await window.api.stopProject(project)
+    async (project: string, targets: ProcessIdentity[]): Promise<Result<KillReport>> => {
+      const res = await window.api.stopProject(project, targets)
       await fetchProcesses()
       return res
     },
     [fetchProcesses]
   )
 
-  const stopAll = useCallback(async (): Promise<Result<KillReport>> => {
-    const res = await window.api.stopAll()
-    await fetchProcesses()
-    return res
-  }, [fetchProcesses])
+  const stopAll = useCallback(
+    async (targets: ProcessIdentity[]): Promise<Result<KillReport>> => {
+      const res = await window.api.stopAll(targets)
+      await fetchProcesses()
+      return res
+    },
+    [fetchProcesses]
+  )
 
   return {
     procs,

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
-import { Proc, KillReport, Container, Settings } from '../../shared/types'
+import { Proc, KillReport, Container, Settings, ProcessIdentity } from '../../shared/types'
 import { useProcesses } from './hooks/useProcesses'
 import { useDocker } from './hooks/useDocker'
 import { useRecentlyStopped } from './hooks/useRecentlyStopped'
@@ -33,6 +33,12 @@ interface DialogState {
   targetList?: string[]
   action: () => Promise<void>
 }
+
+const identity = ({ pid, startTime, command }: Proc): ProcessIdentity => ({
+  pid,
+  startTime,
+  command
+})
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'processes' | 'docker'>('processes')
@@ -218,7 +224,7 @@ const App: React.FC = () => {
         action: async () => {
           setIsBusy(true)
           try {
-            const res = await stopProcess(proc.pid)
+            const res = await stopProcess(identity(proc))
             if (res.ok) {
               showReportToast(res.data)
             } else {
@@ -244,7 +250,7 @@ const App: React.FC = () => {
         action: async () => {
           setIsBusy(true)
           try {
-            const res = await stopProject(project)
+            const res = await stopProject(project, projectProcs.map(identity))
             if (res.ok) {
               showReportToast(res.data)
             } else {
@@ -269,7 +275,7 @@ const App: React.FC = () => {
       action: async () => {
         setIsBusy(true)
         try {
-          const res = await stopAll()
+          const res = await stopAll(procs.map(identity))
           if (res.ok) {
             showReportToast(res.data)
           } else {

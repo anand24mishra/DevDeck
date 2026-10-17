@@ -6,6 +6,8 @@ import { registerIpcHandlers } from './ipc'
 import { windowStateManager } from './services/windowState'
 import { trayService, confirmTrayStopAll } from './services/tray'
 import { DarwinProcessProvider } from './providers/process.darwin'
+import { terminate, defaultKillDeps } from './services/kill'
+import { recentlyStoppedService } from './services/recentlyStopped'
 import { settingsService } from './services/settings'
 
 // Request single instance lock
@@ -24,7 +26,6 @@ async function handleStopAllFromTray(): Promise<void> {
       userIgnoreList: settings.ignoreList,
       customAllowlist: settings.customAllowlist
     })
-    const { terminate, defaultKillDeps } = await import('./services/kill')
     const report = await confirmTrayStopAll(
       procs,
       async (message, detail) => {
@@ -41,12 +42,8 @@ async function handleStopAllFromTray(): Promise<void> {
         return answer.response === 1
       },
       async (targets) => {
-        const result = await terminate(
-          targets.map((target) => target.pid),
-          defaultKillDeps
-        )
+        const result = await terminate(targets, defaultKillDeps)
         const stopped = new Set([...result.stopped, ...result.forced])
-        const { recentlyStoppedService } = await import('./services/recentlyStopped')
         recentlyStoppedService.recordStopped(
           targets.filter((target) => stopped.has(target.pid)),
           !!settings.persistRecentlyStopped

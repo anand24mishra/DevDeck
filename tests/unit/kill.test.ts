@@ -1,162 +1,76 @@
 import { describe, it, expect, vi } from 'vitest'
-import { terminate, KillDeps } from '../../src/main/services/kill'
+import { terminate, validIdentities, type KillDeps } from '../../src/main/services/kill'
+import type { ProcessIdentity } from '../../src/shared/types'
 
-describe('safe process termination escalation', () => {
-  it('stops processes gracefully with SIGTERM when they respond', async () => {
-    const signalsSent: { pid: number; signal: string }[] = []
-    const aliveMap = new Map<number, boolean>([
-      [101, true],
-      [102, true]
-    ])
-
-    const deps: KillDeps = {
-      revalidate: vi.fn().mockResolvedValue({
-        ok: [
-          { pid: 101, command: 'node server.js' },
-          { pid: 102, command: 'python3 main.py' }
-        ],
-        refused: []
-      }),
-      signal: vi.fn((pid, sig) => {
-        signalsSent.push({ pid, signal: sig })
-        if (sig === 'SIGTERM') {
-          // Process exits upon SIGTERM
-          aliveMap.set(pid, false)
-        }
-        return true
-      }),
-      alive: vi.fn((pid) => aliveMap.get(pid) ?? false),
-      sleep: vi.fn().mockResolvedValue(undefined)
-    }
-
-    const report = await terminate([101, 102], deps)
-
-    expect(report.stopped).toEqual([101, 102])
-    expect(report.forced).toEqual([])
-    expect(report.stillRunning).toEqual([])
-    expect(report.refused).toEqual([])
-    expect(signalsSent).toEqual([
-      { pid: 101, signal: 'SIGTERM' },
-      { pid: 102, signal: 'SIGTERM' }
-    ])
+const original: ProcessIdentity = {
+  pid: 501,
+  startTime: 'Wed Sep 30 14:00:00 2026',
+  command: 'node server.js'
+}
+function dependencies(): KillDeps {
+  return {
+    revalidate: vi.fn(async () => ({ ok: [original], refused: [] })),
+    signal: vi.fn(() => true),
+    alive: vi.fn(() => false),
+    sleep: vi.fn(async () => {})
+  }
+}
+describe('safe process termination', () => {
+  it('gives a normal stop three seconds before reporting success', async () => {
+    const deps = dependencies()
+    expect((await terminate([original], deps)).stopped).toEqual([501])
+    expect(deps.signal).toHaveBeenCalledExactlyOnceWith(501, 'SIGTERM')
     expect(deps.sleep).toHaveBeenCalledWith(3000)
   })
-
-  it('escalates to SIGKILL if process survives 3s grace period', async () => {
-    const signalsSent: { pid: number; signal: string }[] = []
-    let alive = true
-
-    const deps: KillDeps = {
-      revalidate: vi.fn().mockResolvedValue({
-        ok: [{ pid: 201, command: 'node stubborn.js' }],
-        refused: []
-      }),
-      signal: vi.fn((pid, sig) => {
-        signalsSent.push({ pid, signal: sig })
-        if (sig === 'SIGKILL') {
-          alive = false
-        }
-        return true
-      }),
-      alive: vi.fn(() => alive),
-      sleep: vi.fn().mockResolvedValue(undefined)
+  it.each(['startTime', 'command'] as const)(
+    'refuses a changed %s before any signal',
+    async (field) => {
+      const deps = dependencies()
+      const report = await terminate([{ ...original, [field]: 'different' }], deps)
+      expect(report.refusalReasons?.[501]).toBe('identity-changed')
+      expect(deps.signal).not.toHaveBeenCalled()
     }
-
-    const report = await terminate([201], deps)
-
-    expect(signalsSent).toEqual([
-      { pid: 201, signal: 'SIGTERM' },
-      { pid: 201, signal: 'SIGKILL' }
-    ])
-    expect(report.stopped).toEqual([])
-    expect(report.forced).toEqual([201])
-    expect(report.stillRunning).toEqual([])
-    expect(deps.sleep).toHaveBeenCalledWith(3000)
-    expect(deps.sleep).toHaveBeenCalledWith(300)
+  )
+  it.each(['startTime', 'command'] as const)(
+    'refuses a changed %s during the grace period',
+    async (field) => {
+      const deps = dependencies()
+      vi.mocked(deps.alive).mockReturnValue(true)
+      vi.mocked(deps.revalidate)
+        .mockResolvedValueOnce({ ok: [original], refused: [] })
+        .mockResolvedValue({ ok: [{ ...original, [field]: 'changed' }], refused: [] })
+      const report = await terminate([original], deps)
+      expect(report.refusalReasons?.[501]).toBe('identity-changed')
+      expect(deps.signal).toHaveBeenCalledExactlyOnceWith(501, 'SIGTERM')
+    }
+  )
+  it('force stops only verified survivors and accounts for failed signals', async () => {
+    const deps = dependencies()
+    vi.mocked(deps.alive).mockReturnValueOnce(true).mockReturnValueOnce(false)
+    expect((await terminate([original], deps)).forced).toEqual([501])
+    expect(deps.signal).toHaveBeenLastCalledWith(501, 'SIGKILL')
+    vi.mocked(deps.signal).mockReturnValue(false)
+    expect((await terminate([original], deps)).stillRunning).toEqual([501])
   })
-
-  it('reports unkillable processes in stillRunning if SIGKILL fails to terminate them', async () => {
-    const deps: KillDeps = {
-      revalidate: vi.fn().mockResolvedValue({
-        ok: [{ pid: 301, command: 'node zombie.js' }],
-        refused: []
-      }),
-      signal: vi.fn().mockReturnValue(true),
-      alive: vi.fn().mockReturnValue(true), // Remains alive even after SIGKILL
-      sleep: vi.fn().mockResolvedValue(undefined)
-    }
-
-    const report = await terminate([301], deps)
-
-    expect(report.stopped).toEqual([])
-    expect(report.forced).toEqual([])
-    expect(report.stillRunning).toEqual([301])
+  it('refuses an unmanageable process without signaling', async () => {
+    const deps = dependencies()
+    vi.mocked(deps.revalidate).mockResolvedValue({ ok: [], refused: [501] })
+    expect((await terminate([original], deps)).refused).toEqual([501])
+    expect(deps.signal).not.toHaveBeenCalled()
   })
-
-  it('refuses invalid or unauthorized PIDs without signalling them', async () => {
-    const signalFn = vi.fn()
-    const deps: KillDeps = {
-      revalidate: vi.fn().mockResolvedValue({
-        ok: [{ pid: 401, command: 'node dev.js' }],
-        refused: [1, 9999] // 1 is system, 9999 not found/not allowed
-      }),
-      signal: signalFn,
-      alive: vi.fn().mockReturnValue(false),
-      sleep: vi.fn().mockResolvedValue(undefined)
+  it('rejects malformed IPC identities and extra fields without throwing', () => {
+    for (const invalid of [
+      null,
+      {},
+      [null],
+      [{ pid: 1 }],
+      [{ ...original, extra: true }],
+      [{ ...original, startTime: '' }],
+      [original, original],
+      Array(501).fill(original)
+    ]) {
+      expect(validIdentities(invalid)).toBe(false)
     }
-
-    const report = await terminate([401, 1, 9999], deps)
-
-    expect(report.refused).toEqual([1, 9999])
-    expect(report.stopped).toEqual([401])
-    expect(signalFn).toHaveBeenCalledTimes(1)
-    expect(signalFn).toHaveBeenCalledWith(401, 'SIGTERM')
-  })
-
-  it('handles empty PID list safely', async () => {
-    const deps: KillDeps = {
-      revalidate: vi.fn(),
-      signal: vi.fn(),
-      alive: vi.fn(),
-      sleep: vi.fn()
-    }
-
-    const report = await terminate([], deps)
-    expect(report.requested).toEqual([])
-    expect(report.stopped).toEqual([])
-    expect(deps.revalidate).not.toHaveBeenCalled()
-  })
-
-  it('prevents SIGKILL and refuses process if PID was reused with different start time during grace period', async () => {
-    const signalsSent: { pid: number; signal: string }[] = []
-
-    const deps: KillDeps = {
-      revalidate: vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: [{ pid: 501, startTime: 'Wed Sep 30 14:00:00 2026', command: 'node original.js' }],
-          refused: []
-        })
-        .mockResolvedValueOnce({
-          ok: [{ pid: 501, startTime: 'Wed Sep 30 14:00:02 2026', command: 'node new-process.js' }],
-          refused: []
-        }),
-      signal: vi.fn((pid, sig) => {
-        signalsSent.push({ pid, signal: sig })
-        return true
-      }),
-      alive: vi.fn().mockReturnValue(true),
-      sleep: vi.fn().mockResolvedValue(undefined)
-    }
-
-    const report = await terminate([501], deps)
-
-    // SIGTERM was sent to original
-    expect(signalsSent).toEqual([{ pid: 501, signal: 'SIGTERM' }])
-    // SIGKILL was NEVER sent to the reused PID
-    expect(signalsSent.some((s) => s.signal === 'SIGKILL')).toBe(false)
-    // Refused because start time mismatched
-    expect(report.refused).toEqual([501])
-    expect(report.forced).toEqual([])
+    expect(validIdentities([original])).toBe(true)
   })
 })

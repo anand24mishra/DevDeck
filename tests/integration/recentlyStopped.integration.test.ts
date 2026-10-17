@@ -18,45 +18,45 @@ describe('RecentlyStopped Integration Test', () => {
         stdio: 'ignore'
       })
 
-    const pid = child.pid
-    expect(pid).toBeDefined()
-    if (!pid) return
+      const pid = child.pid
+      expect(pid).toBeDefined()
+      if (!pid) return
 
-    // Allow process to register in OS table
-    await new Promise((r) => setTimeout(r, 200))
-    expect(defaultKillDeps.alive(pid)).toBe(true)
+      // Allow process to register in OS table
+      await new Promise((r) => setTimeout(r, 200))
+      expect(defaultKillDeps.alive(pid)).toBe(true)
 
-    // 2. Fetch proc using DarwinProcessProvider
-    const provider = new DarwinProcessProvider()
-    const procs = await provider.listProcesses()
-    const matching = procs.filter((p) => p.pid === pid)
-    expect(matching.length).toBeGreaterThan(0)
-    const proc = matching[0]
+      // 2. Fetch proc using DarwinProcessProvider
+      const provider = new DarwinProcessProvider()
+      const procs = await provider.listProcesses()
+      const matching = procs.filter((p) => p.pid === pid)
+      expect(matching.length).toBeGreaterThan(0)
+      const proc = matching[0]
 
-    // 3. Terminate process
-    const report = await terminate([pid], defaultKillDeps)
-    expect(report.stopped.includes(pid) || report.forced.includes(pid)).toBe(true)
-    expect(defaultKillDeps.alive(pid)).toBe(false)
+      // 3. Terminate process
+      const report = await terminate([proc], defaultKillDeps)
+      expect(report.stopped.includes(pid) || report.forced.includes(pid)).toBe(true)
+      expect(defaultKillDeps.alive(pid)).toBe(false)
 
-    // 4. Record into RecentlyStoppedService
-    const recentService = new RecentlyStoppedService()
-    recentService.recordStopped([proc], false)
+      // 4. Record into RecentlyStoppedService
+      const recentService = new RecentlyStoppedService()
+      recentService.recordStopped([proc], false)
 
-    const items = recentService.getItems()
-    expect(items.length).toBe(1)
-    expect(items[0].command).toBe(proc.command)
+      const items = recentService.getItems()
+      expect(items.length).toBe(1)
+      expect(items[0].command).toBe(proc.command)
 
-    // 5. Restart process
-    const restartResult = await recentService.restart(items[0].id)
-    expect(restartResult.ok).toBe(true)
-    if (!restartResult.ok || !restartResult.data.pid) return
+      // 5. Restart process
+      const restartResult = await recentService.restart(items[0].id)
+      expect(restartResult.ok).toBe(true)
+      if (!restartResult.ok || !restartResult.data.pid) return
 
-    const restartedPid = restartResult.data.pid
-    expect(defaultKillDeps.alive(restartedPid)).toBe(true)
+      const restartedPid = restartResult.data.pid
+      expect(defaultKillDeps.alive(restartedPid)).toBe(true)
 
-    // 6. Clean up restarted process
-    await terminate([restartedPid], defaultKillDeps)
-    expect(defaultKillDeps.alive(restartedPid)).toBe(false)
+      // 6. Clean up restarted process
+      await terminate((await defaultKillDeps.revalidate([restartedPid])).ok, defaultKillDeps)
+      expect(defaultKillDeps.alive(restartedPid)).toBe(false)
     } finally {
       try {
         fs.unlinkSync(tmpScript)
