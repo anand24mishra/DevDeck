@@ -120,6 +120,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <section className="settings-section">
             <h3 className="section-title">General</h3>
             <div className="setting-row">
+              <label htmlFor="memory-threshold">Memory warning (MB)</label>
+              <input
+                id="memory-threshold"
+                className="settings-input mono"
+                type="number"
+                min={64}
+                max={1048576}
+                defaultValue={settings.memoryThresholdMb || 4096}
+                onBlur={(event) => {
+                  const value = Number(event.target.value)
+                  if (Number.isInteger(value) && value >= 64 && value <= 1048576)
+                    void triggerSave({ memoryThresholdMb: value })
+                }}
+              />
+            </div>
+            <div className="setting-row">
               <label htmlFor="global-hotkey">Global shortcut</label>
               <input
                 id="global-hotkey"

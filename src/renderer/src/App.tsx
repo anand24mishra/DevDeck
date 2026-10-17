@@ -1,3 +1,4 @@
+import { sortProcesses, processTotals, type ProcessSort } from './utils/processes'
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Proc, KillReport, Container, Settings, ProcessIdentity } from '../../shared/types'
 import { useProcesses } from './hooks/useProcesses'
@@ -68,6 +69,8 @@ const App: React.FC = () => {
     stopAllContainers
   } = useDocker(settings.refreshIntervalSec)
 
+  const [sortBy, setSortBy] = useState<ProcessSort>('name')
+  const [heavyOnly, setHeavyOnly] = useState(false)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [selectedLogContainer, setSelectedLogContainer] = useState<Container | null>(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
@@ -133,17 +136,21 @@ const App: React.FC = () => {
   }, [settings.theme])
 
   // 1. Process filtering & grouping
+  const totals = processTotals(procs)
   const filteredProcesses = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return procs
-
-    return procs.filter((proc) => {
-      const matchName = proc.name.toLowerCase().includes(q)
-      const matchProject = proc.project.toLowerCase().includes(q)
-      const matchPorts = proc.ports.some((port) => port.toString().includes(q))
-      return matchName || matchProject || matchPorts
-    })
-  }, [procs, searchQuery])
+    return sortProcesses(
+      procs.filter(
+        (proc) =>
+          (!heavyOnly || proc.cpu >= 50 || proc.memMB >= 512) &&
+          (!q ||
+            proc.name.toLowerCase().includes(q) ||
+            proc.project.toLowerCase().includes(q) ||
+            proc.ports.some((port) => String(port).includes(q)))
+      ),
+      sortBy
+    )
+  }, [procs, searchQuery, sortBy, heavyOnly])
 
   const groupedProjects = useMemo(() => {
     const map = new Map<string, GroupedProject>()
@@ -465,6 +472,49 @@ const App: React.FC = () => {
           projects={[...new Set(procs.map((proc) => proc.project))]}
           onStopContainer={(id) => handleDockerAction(id, 'stop')}
         />
+      )}
+      {activeTab === 'processes' && (
+        <div className="process-tools">
+          <label htmlFor="process-sort">Sort by</label>
+          <select
+            id="process-sort"
+            className="settings-select"
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as ProcessSort)}
+          >
+            {(['name', 'memory', 'cpu', 'uptime', 'port'] as const).map((key) => (
+              <option value={key} key={key}>
+                {key === 'cpu' ? 'CPU' : key[0].toUpperCase() + key.slice(1)}
+              </option>
+            ))}
+          </select>
+          <label title="At least 50% CPU or 512 MB memory">
+            <input
+              type="checkbox"
+              checked={heavyOnly}
+              onChange={(event) => setHeavyOnly(event.target.checked)}
+            />{' '}
+            Heavy only
+          </label>
+          <span className="mono">
+            {totals.memMB} MB total · {totals.cpu.toFixed(1)}% CPU
+          </span>
+          {totals.memMB > (settings.memoryThresholdMb || 4096) && (
+            <span role="status">
+              Development processes are using more than {settings.memoryThresholdMb || 4096} MB.
+              <button
+                className="quiet-btn"
+                onClick={() => {
+                  setSortBy('memory')
+                  setHeavyOnly(false)
+                  setSearchQuery('')
+                }}
+              >
+                Review
+              </button>
+            </span>
+          )}
+        </div>
       )}
       <main className="app-content" tabIndex={-1}>
         {activeTab === 'processes' ? (

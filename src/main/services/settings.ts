@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dockerSocketPath: undefined,
   theme: 'system',
   openAtLogin: false,
+  memoryThresholdMb: 4096,
   hotkey: DEFAULT_HOTKEY,
   preferredEditor: 'auto',
   preferredTerminal: 'auto',
@@ -91,6 +92,12 @@ export class SettingsService {
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
+      memoryThresholdMb:
+        Number.isInteger(r.memoryThresholdMb) &&
+        Number(r.memoryThresholdMb) >= 64 &&
+        Number(r.memoryThresholdMb) <= 1048576
+          ? Number(r.memoryThresholdMb)
+          : 4096,
       hotkey: validHotkey(r.hotkey) ? r.hotkey : DEFAULT_HOTKEY,
       refreshIntervalSec,
       ignoreList,

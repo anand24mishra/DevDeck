@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P1-8: Added stable name, CPU, memory, uptime and port sorts, Heavy-only filter, per-project totals, and a configurable total-memory warning with Review action.
 - P1-7: Successful stops return opaque restart records and a keyboard-accessible 10-second Undo action that reuses the checked restart path and reports partial restart results.
 - P1-6: Registered Control+Alt+D by default, added shortcut capture and disabling in Settings, conflict rollback, and quit cleanup.
 - P1-5: Classified project owners, other projects, Docker published ports, SSH and Kubernetes forwards, tunnels, and protected read-only owners with plain explanations and confirmed suggested actions.

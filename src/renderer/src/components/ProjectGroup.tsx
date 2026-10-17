@@ -1,3 +1,4 @@
+import { processTotals } from '../utils/processes'
 import React from 'react'
 import { Proc } from '../../../shared/types'
 import { ProjectActions } from './ProjectActions'
@@ -18,6 +19,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   onStopProcess,
   onStopProject
 }) => {
+  const totals = processTotals(processes)
   return (
     <section className="project-group" aria-label={`Project ${projectName}`}>
       <div className="project-group-header">
@@ -45,6 +47,9 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
         </div>
 
         <div className="project-meta">
+          <span className="mono">
+            {totals.memMB} MB · {totals.cpu.toFixed(1)}% CPU
+          </span>
           {projectPath && <ProjectActions path={projectPath} />}
           <span className="process-count-badge mono">
             {processes.length} {processes.length === 1 ? 'proc' : 'procs'}

@@ -121,3 +121,8 @@ Stop reports may include `undoItems: {id:string;name:string}[]` for successfully
 The 10-second Undo toast invokes only `recent:restart` IDs from that report, preserving the
 existing allowlist/path checks. Refused processes never receive an Undo ID. No arguments appear
 in the toast. History remains available after the Undo timer expires.
+
+## P1-8 memory threshold
+`Settings.memoryThresholdMb?: number` defaults to 4096 and accepts finite integer MB from 64
+to 1048576. Resource sorting/filtering and project totals run on the existing process snapshot;
+no additional privileged requests are needed.
