@@ -9,6 +9,7 @@ import {
   protectedProcessTree,
   ProcessContext
 } from '../security/allowlist'
+import { labelProcess } from '../services/labeler'
 import { parseListeners } from '../services/ports'
 import { resolveProjectFromCwd } from '../services/project'
 
@@ -192,7 +193,7 @@ export class DarwinProcessProvider implements ProcessProvider {
         pid: proc.pid,
         startTime: proc.startTime,
         ppid: proc.ppid,
-        name: binaryName || 'unknown',
+        name: labelProcess(binaryName || 'unknown', proc.command, project.root),
         command: proc.command,
         cpu: proc.cpu,
         memMB: Math.round(proc.rssKB / 1024),

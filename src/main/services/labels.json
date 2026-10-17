@@ -1,0 +1,158 @@
+[
+  {
+    "label": "Vite dev server",
+    "pattern": "\\bvite\\b"
+  },
+  {
+    "label": "Next.js",
+    "pattern": "\\bnext(?:/dist/[^ ]*)?\\s+(?:dev|start)\\b"
+  },
+  {
+    "label": "Nuxt",
+    "pattern": "\\bnuxt\\b"
+  },
+  {
+    "label": "Remix",
+    "pattern": "\\bremix\\b"
+  },
+  {
+    "label": "Astro",
+    "pattern": "\\bastro\\b"
+  },
+  {
+    "label": "Webpack",
+    "pattern": "\\bwebpack\\b"
+  },
+  {
+    "label": "Parcel",
+    "pattern": "\\bparcel\\b"
+  },
+  {
+    "label": "Metro",
+    "pattern": "\\bmetro\\b"
+  },
+  {
+    "label": "Storybook",
+    "pattern": "\\bstorybook\\b"
+  },
+  {
+    "label": "Vitest",
+    "pattern": "\\bvitest\\b"
+  },
+  {
+    "label": "Jest",
+    "pattern": "\\bjest\\b"
+  },
+  {
+    "label": "TypeScript watcher",
+    "pattern": "\\btsc\\b.*(?:--watch|-w)\\b"
+  },
+  {
+    "label": "TypeScript language server",
+    "pattern": "\\btsserver\\b"
+  },
+  {
+    "label": "esbuild",
+    "pattern": "\\besbuild\\b"
+  },
+  {
+    "label": "Django",
+    "pattern": "\\bmanage\\.py\\s+runserver\\b"
+  },
+  {
+    "label": "Flask",
+    "pattern": "\\bflask\\s+run\\b"
+  },
+  {
+    "label": "FastAPI / Uvicorn",
+    "pattern": "\\buvicorn\\b"
+  },
+  {
+    "label": "Gunicorn",
+    "pattern": "\\bgunicorn\\b"
+  },
+  {
+    "label": "Rails",
+    "pattern": "\\brails\\s+(?:s|server)\\b"
+  },
+  {
+    "label": "Puma",
+    "pattern": "\\bpuma\\b"
+  },
+  {
+    "label": "Spring Boot",
+    "pattern": "(?:spring-boot|org\\.springframework\\.boot)"
+  },
+  {
+    "label": "Gradle daemon",
+    "pattern": "(?:GradleDaemon|\\bgradle.*--daemon)"
+  },
+  {
+    "label": "Kotlin daemon",
+    "pattern": "KotlinCompileDaemon"
+  },
+  {
+    "label": "Postgres",
+    "pattern": "\\bpostgres(?:ql)?\\b"
+  },
+  {
+    "label": "MySQL",
+    "pattern": "\\bmysqld\\b"
+  },
+  {
+    "label": "Redis",
+    "pattern": "\\bredis-server\\b"
+  },
+  {
+    "label": "MongoDB",
+    "pattern": "\\bmongod\\b"
+  },
+  {
+    "label": "Kafka",
+    "pattern": "\\bkafka\\.Kafka\\b"
+  },
+  {
+    "label": "RabbitMQ",
+    "pattern": "\\brabbitmq\\b"
+  },
+  {
+    "label": "Elasticsearch",
+    "pattern": "\\belasticsearch\\b"
+  },
+  {
+    "label": "MinIO",
+    "pattern": "\\bminio\\b"
+  },
+  {
+    "label": "Mailpit",
+    "pattern": "\\bmailpit\\b"
+  },
+  {
+    "label": "MailHog",
+    "pattern": "\\bmailhog\\b"
+  },
+  {
+    "label": "ngrok tunnel",
+    "pattern": "\\bngrok\\b"
+  },
+  {
+    "label": "Cloudflare tunnel",
+    "pattern": "\\bcloudflared\\b"
+  },
+  {
+    "label": "Go live reload",
+    "pattern": "(?:^|/)air(?:\\s|$)"
+  },
+  {
+    "label": "Rust watcher",
+    "pattern": "\\bcargo\\s+watch\\b"
+  },
+  {
+    "label": "Laravel",
+    "pattern": "\\bartisan\\s+serve\\b"
+  },
+  {
+    "label": "Watchman",
+    "pattern": "\\bwatchman\\b"
+  }
+]
