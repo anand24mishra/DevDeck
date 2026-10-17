@@ -31,12 +31,14 @@ src/renderer/src/     components/  screens/  hooks/  styles/tokens.css  motion/
 
 ## Rules of the road
 - Interface first: `ProcessProvider` is defined on day one so Windows/Linux (v2) is an addition, not a rewrite.
-- Polling lives in main with an in-flight guard; the renderer subscribes and never polls the OS.
-- Polling pauses when the window is hidden (tray keeps a slow heartbeat only if alerts are enabled).
+- Polling is scheduled in renderer hooks (`useProcesses`, `useDocker`), with in-flight guards.
+  Each tick invokes a fixed IPC method; only main executes `ps`, `lsof`, or Docker API calls.
+- Renderer polling pauses while the window is hidden. The tray takes an initial count and refreshes
+  after tray actions; there is currently no background alerts heartbeat.
 - All errors cross IPC as `{ ok: false, error: { code, message } }`, never as thrown stack traces.
 - Settings persisted with a tiny JSON store in `app.getPath('userData')`; validated on load.
 
 ## Data flow example: "Stop project"
-UI click → confirm dialog → `api.stopProject(root)` → main re-lists processes → filters by allowlist and
-project → `kill.terminate(pids)` (SIGTERM, wait, SIGKILL if alive) → returns result → UI shows toast +
+UI click → confirm dialog → `api.stopProject(name, confirmedIdentities)` → main re-lists processes → filters by allowlist and
+project → `kill.terminate(confirmedIdentities)` (SIGTERM, wait, SIGKILL if alive) → returns result → UI shows toast +
 refreshes list.

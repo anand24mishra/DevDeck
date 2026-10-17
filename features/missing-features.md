@@ -21,8 +21,9 @@ P0-1–P0-6: implemented and locally checked. P0-7: test implemented; daemon run
 P0-8: pipeline, updater, and hardening implemented; unsigned arm64 package inspected. Signing,
 notarization, clean-Mac and signed-update acceptance are blocked on maintainer-owned credentials
 and external QA. Repository secret-name inspection returned no configured secrets.
-P0-9, P1–P3, and P4 design notes: **not yet implemented**. Work pauses at P0-8 as requested by
-this spec's final instruction for Apple account/secret dependencies. See `docs/testing/release-matrix.md`.
+P0-9 documentation is reconciled. P1–P3 implementation and P4 design notes are in progress.
+The maintainer requested continuing all features with signed-release verification deferred.
+See `docs/testing/release-matrix.md` for external checks.
 Checkboxes below remain unchecked because these local changes have not been merged.
 
 ## 0. How to work on this file

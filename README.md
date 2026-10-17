@@ -4,7 +4,7 @@ A small macOS app that shows your dev processes, ports and Docker containers, gr
 
 ## Run it
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -44,3 +44,28 @@ No tap or working `brew install` command is claimed yet.
 
 References: [Electron fuses](https://www.electronjs.org/docs/latest/tutorial/fuses),
 [electron-builder macOS packaging](https://www.electron.build/v26/docs/mac/).
+
+## Current feature status
+
+| Area | Implementation | Verification |
+|---|---|---|
+| Process/project list, search, CPU, memory and ports | Implemented | Unit tests and real-server Electron smoke |
+| Confirmed safe stop, self-tree protection | Implemented | Identity/refusal tests and real-child tests |
+| Docker lifecycle and live logs | Implemented | Parser tests; real daemon matrix pending |
+| Tray, settings and recently stopped restart | Implemented | Unit/integration tests; manual visual matrix pending |
+| Signed universal release and updates | Prepared | Credentials, clean-Mac and signed update chain pending |
+| Additional P1–P3 capabilities | In progress | See `features/missing-features.md` |
+
+Download a verified DMG from the repository's published Releases when available, drag DevDeck into
+Applications, then open it. No published release or Homebrew tap is asserted by this source checkout.
+For a local development copy, use the source commands above. Requires macOS and Node 22 or later.
+
+The window is a compact project table with Processes and Docker tabs, a search field, Stop actions,
+and expandable details. Release screenshots will be captured from a verified build; test captures
+are kept out of Git. For test evidence and outstanding provider/accessibility/hardware checks, see
+[the release matrix](docs/testing/release-matrix.md).
+
+DevDeck never uses sudo. Only allowlisted processes belonging to your user can be stopped; app
+bundles and DevDeck's own tree are protected. Command arguments are masked by default. All process
+and Docker work stays in Electron's main process behind strict IPC validation; the renderer cannot
+run commands. See [SECURITY.md](SECURITY.md) for the actual shipped boundaries and release caveats.
