@@ -126,3 +126,11 @@ in the toast. History remains available after the Undo timer expires.
 `Settings.memoryThresholdMb?: number` defaults to 4096 and accepts finite integer MB from 64
 to 1048576. Resource sorting/filtering and project totals run on the existing process snapshot;
 no additional privileged requests are needed.
+
+## P1-9 notifications and focus
+Settings add `notifications` with exact boolean fields `serverStopped`, `memory`,
+`actionResults`, `networkExposure`; only actionResults defaults on. Notifications are silent.
+`app:focus` is a main-to-renderer event with `FocusTarget {pid?, project?, port?}` and a fixed
+preload `onFocusTarget` subscription; notification clicks show the window and focus that row.
+Unexpected-server and threshold detection runs on existing visible-window scans, with crossing
+deduplication and expected-stop suppression. No background process polling is added.

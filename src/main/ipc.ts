@@ -1,3 +1,4 @@
+import { notificationService } from './services/notifications'
 import { hotkeyService } from './services/hotkey'
 import { explainPortOwner } from './services/ports'
 import { detectApplications, verifyProjectPath, openWithApplication } from './services/applications'
@@ -71,6 +72,7 @@ export function registerIpcHandlers(): void {
         userIgnoreList: settings.ignoreList,
         customAllowlist: settings.customAllowlist
       })
+      notificationService.observe(procs, settings)
       return { ok: true, data: procs }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to list processes'
@@ -239,6 +241,7 @@ export function registerIpcHandlers(): void {
             }
           }
         }
+        notificationService.expectStops(targets)
         const report = await terminate(targets, scopedDeps)
         const stopped = new Set([...report.stopped, ...report.forced])
         const actual = procs.filter(
@@ -254,6 +257,7 @@ export function registerIpcHandlers(): void {
         report.undoItems = recentlyStoppedService
           .recordStopped(actual, !!settings.persistRecentlyStopped)
           .map(({ id, name }) => ({ id, name }))
+        notificationService.report(report, settings)
         return { ok: true, data: report }
       } catch {
         return {

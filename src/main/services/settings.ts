@@ -3,7 +3,7 @@ import path from 'path'
 import { app } from 'electron'
 import { DEFAULT_HOTKEY, validHotkey } from './hotkey'
 import { EDITOR_IDS, TERMINAL_IDS } from './applications'
-import { Settings } from '../../shared/types'
+import { Settings, DEFAULT_NOTIFICATIONS } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: Settings = {
   refreshIntervalSec: 3,
@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dockerSocketPath: undefined,
   theme: 'system',
   openAtLogin: false,
+  notifications: { ...DEFAULT_NOTIFICATIONS },
   memoryThresholdMb: 4096,
   hotkey: DEFAULT_HOTKEY,
   preferredEditor: 'auto',
@@ -92,6 +93,14 @@ export class SettingsService {
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
+      notifications: Object.fromEntries(
+        Object.entries(DEFAULT_NOTIFICATIONS).map(([key, fallback]) => [
+          key,
+          typeof (r.notifications as Record<string, unknown> | undefined)?.[key] === 'boolean'
+            ? (r.notifications as Record<string, unknown>)[key]
+            : fallback
+        ])
+      ) as unknown as Settings['notifications'],
       memoryThresholdMb:
         Number.isInteger(r.memoryThresholdMb) &&
         Number(r.memoryThresholdMb) >= 64 &&

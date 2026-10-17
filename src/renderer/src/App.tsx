@@ -123,6 +123,21 @@ const App: React.FC = () => {
     }
   }, [clearRecent])
 
+  useEffect(
+    () =>
+      window.api.onFocusTarget((target) => {
+        setActiveTab('processes')
+        setSearchQuery(target.project || (target.port ? String(target.port) : ''))
+        if (target.pid)
+          requestAnimationFrame(() =>
+            document
+              .querySelector<HTMLElement>(`[data-process-id="${target.pid}"] .process-row`)
+              ?.focus()
+          )
+      }),
+    []
+  )
+
   // Synchronize interface theme
   useEffect(() => {
     const theme = settings.theme || 'system'

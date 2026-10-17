@@ -31,6 +31,7 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  notifications?: NotificationPreferences
   memoryThresholdMb?: number
   hotkey?: string | null
   preferredEditor?: string
@@ -78,6 +79,7 @@ export interface DockerLogMessage {
 }
 
 export interface DevDeckApi {
+  onFocusTarget: (callback: (target: FocusTarget) => void) => () => void
   getInstalledApps: () => Promise<Result<InstalledApplication[]>>
   openProjectInEditor: (path: string) => Promise<Result<null>>
   showProjectInFinder: (path: string) => Promise<Result<null>>
@@ -123,4 +125,22 @@ export interface InstalledApplication {
   path: string
   kind: 'editor' | 'terminal'
   cli?: boolean
+}
+
+export interface NotificationPreferences {
+  serverStopped: boolean
+  memory: boolean
+  actionResults: boolean
+  networkExposure: boolean
+}
+export const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
+  serverStopped: false,
+  memory: false,
+  actionResults: true,
+  networkExposure: false
+}
+export interface FocusTarget {
+  pid?: number
+  project?: string
+  port?: number
 }

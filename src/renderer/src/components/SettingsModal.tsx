@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Settings, InstalledApplication } from '../../../shared/types'
+import { Settings, InstalledApplication, DEFAULT_NOTIFICATIONS } from '../../../shared/types'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -119,6 +119,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Section 1: General */}
           <section className="settings-section">
             <h3 className="section-title">General</h3>
+            <fieldset>
+              <legend>Silent notifications</legend>
+              {(['serverStopped', 'memory', 'actionResults'] as const).map((key) => (
+                <label className="setting-row" key={key}>
+                  <span>
+                    {key === 'serverStopped'
+                      ? 'A watched server stopped unexpectedly'
+                      : key === 'memory'
+                        ? 'A process crosses the memory warning'
+                        : 'Stop actions finish'}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={(settings.notifications || DEFAULT_NOTIFICATIONS)[key]}
+                    onChange={(event) =>
+                      void triggerSave({
+                        notifications: {
+                          ...(settings.notifications || DEFAULT_NOTIFICATIONS),
+                          [key]: event.target.checked
+                        }
+                      })
+                    }
+                  />
+                </label>
+              ))}
+            </fieldset>
             <div className="setting-row">
               <label htmlFor="memory-threshold">Memory warning (MB)</label>
               <input

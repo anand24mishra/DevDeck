@@ -19,6 +19,12 @@ function validSettings(value: Record<string, unknown>): boolean {
     switch (key) {
       case 'refreshIntervalSec':
         return [2, 3, 5, 10].includes(field as number)
+      case 'notifications':
+        return (
+          object(field) &&
+          keys(field, ['serverStopped', 'memory', 'actionResults', 'networkExposure']) &&
+          Object.values(field).every((item) => typeof item === 'boolean')
+        )
       case 'memoryThresholdMb':
         return Number.isInteger(field) && Number(field) >= 64 && Number(field) <= 1048576
       case 'hotkey':

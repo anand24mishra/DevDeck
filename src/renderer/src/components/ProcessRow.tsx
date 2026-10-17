@@ -25,7 +25,10 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
   }
 
   return (
-    <div className={`process-row-container ${expanded ? 'is-expanded' : ''}`}>
+    <div
+      data-process-id={proc.pid}
+      className={`process-row-container ${expanded ? 'is-expanded' : ''}`}
+    >
       <div
         className="process-row"
         onClick={() => setExpanded(!expanded)}

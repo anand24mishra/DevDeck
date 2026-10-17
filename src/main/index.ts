@@ -1,3 +1,4 @@
+import { notificationService } from './services/notifications'
 import { hotkeyService, DEFAULT_HOTKEY } from './services/hotkey'
 import { app, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
@@ -44,7 +45,9 @@ async function handleStopAllFromTray(): Promise<void> {
         return answer.response === 1
       },
       async (targets) => {
+        notificationService.expectStops(targets)
         const result = await terminate(targets, defaultKillDeps)
+        notificationService.report(result, settings)
         const stopped = new Set([...result.stopped, ...result.forced])
         recentlyStoppedService.recordStopped(
           targets.filter((target) => stopped.has(target.pid)),
@@ -149,6 +152,12 @@ app.whenReady().then(() => {
   registerIpcHandlers()
 
   const win = createWindow()
+  notificationService.setFocus((target) => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    mainWindow.show()
+    mainWindow.focus()
+    mainWindow.webContents.send('app:focus', target)
+  })
   hotkeyService.setToggle(() => {
     if (!mainWindow || mainWindow.isDestroyed()) return
     if (mainWindow.isVisible() && mainWindow.isFocused()) mainWindow.hide()

@@ -2,6 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  onFocusTarget: (callback) => {
+    const handler = (_event, target): void => callback(target)
+    ipcRenderer.on('app:focus', handler)
+    return () => {
+      ipcRenderer.removeListener('app:focus', handler)
+    }
+  },
   getInstalledApps: () => ipcRenderer.invoke('project:apps'),
   openProjectInEditor: (path) => ipcRenderer.invoke('project:openEditor', { path }),
   showProjectInFinder: (path) => ipcRenderer.invoke('project:openFinder', { path }),
