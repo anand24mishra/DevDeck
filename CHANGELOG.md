@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P0-7: An opt-in integration test creates one isolated container, lists it through DevDeck, stops and restarts it, reads batched logs, then removes only that fixture.
 - P0-6: A Playwright Electron smoke test verifies launch, project discovery, port search, tray confirmation, window Cancel, and confirmed stop against a disposable real server.
 - P0-5: The macOS CI job now runs npm run lint before tests and build.
 - P0-4: The window and packaged app use DevDeck identity and repository metadata. Unused camera, microphone, Documents, and Downloads permission descriptions are removed.

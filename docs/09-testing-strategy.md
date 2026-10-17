@@ -9,7 +9,11 @@
 
 ## Integration
 - Spawn a real `python3 -m http.server` on a random port; assert it appears with the right project and port; stop it; assert gone.
-- Docker tests run only if a socket exists; otherwise skipped with a clear message.
+- Docker daemon test: `npm run test:docker` opts in; without an accessible daemon it skips.
+  Set `DEVDECK_DOCKER_SOCKET` for a provider/custom socket and `DEVDECK_DOCKER_IMAGE` to use an
+  already installed image (default `busybox:1.37`). The test never pulls images. With an available
+  daemon, a missing image is a setup failure. Only the newly created, network-disabled fixture is
+  stopped, restarted, streamed, and removed; existing containers are never changed.
 
 ## End-to-end (Playwright for Electron)
 Launch the built app; assert window title, Processes tab, search, confirm dialog text, and that Cancel does nothing.
