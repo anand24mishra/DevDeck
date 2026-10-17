@@ -1,4 +1,5 @@
 import path from 'path'
+import { isLocalUrl } from '../../shared/ports'
 import { validIdentities } from '../services/kill'
 
 export function isExpectedPage(actual: string | undefined, expected: string): boolean {
@@ -62,6 +63,7 @@ export function validIpcInput(channel: string, value: unknown): boolean {
     return value === undefined
   }
   if (!object(value)) return false
+  if (channel === 'url:open') return keys(value, ['url']) && isLocalUrl(value.url)
   if (channel === 'ports:lookup')
     return (
       keys(value, ['port']) &&

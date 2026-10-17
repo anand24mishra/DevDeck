@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  openLocalUrl: (url) => ipcRenderer.invoke('url:open', { url }),
   lookupPort: (port) => ipcRenderer.invoke('ports:lookup', { port }),
   getProcesses: (): Promise<Result<Proc[]>> => ipcRenderer.invoke('procs:list'),
   getSettings: (): Promise<Result<Settings>> => ipcRenderer.invoke('settings:get'),

@@ -1,7 +1,7 @@
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { isExpectedPage, validIpcInput } from './security/validate'
-import { ipcMain, IpcMainInvokeEvent, BrowserWindow } from 'electron'
+import { ipcMain, IpcMainInvokeEvent, BrowserWindow, shell } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { Result, Proc, Settings, KillReport, Container, RecentlyStoppedItem } from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
@@ -76,6 +76,11 @@ export function registerIpcHandlers(): void {
         error: { code: 'INTERNAL', message }
       }
     }
+  })
+
+  handle('url:open', async (_event, { url }: { url: string }) => {
+    await shell.openExternal(url)
+    return { ok: true, data: null }
   })
 
   handle('ports:lookup', async (_event, { port }: { port: number }) => {

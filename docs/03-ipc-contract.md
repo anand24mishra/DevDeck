@@ -91,3 +91,8 @@ A null process is read-only (not allowlisted, protected, or owned by another use
 button. Managed owners use the exact same captured-identity stop/confirmation path as process rows.
 `window.api.lookupPort(port)` is the only preload entry. Port input accepts a number, `:number`,
 or `localhost:number`; command lines and arbitrary hosts are not accepted as input.
+
+## P1-3 local URLs
+`url:open` takes `{ url: string }`, returns `Result<null>`. Only explicit HTTP localhost or
+127.0.0.1 URLs with a valid port and no credentials, query, path or fragment are accepted.
+`window.api.openLocalUrl(url)` calls main, which validates again before `shell.openExternal`.

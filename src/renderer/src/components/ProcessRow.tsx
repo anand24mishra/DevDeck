@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { LocalPortLink } from './LocalPortLink'
 import { Proc } from '../../../shared/types'
 import { formatUptime } from '../utils/format'
 
@@ -56,9 +57,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
           {proc.ports && proc.ports.length > 0 ? (
             <div className="port-tags">
               {proc.ports.map((port) => (
-                <span key={port} className="port-pill mono">
-                  :{port}
-                </span>
+                <LocalPortLink key={port} port={port} />
               ))}
             </div>
           ) : (

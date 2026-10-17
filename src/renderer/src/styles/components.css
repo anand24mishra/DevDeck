@@ -1733,3 +1733,24 @@
 .port-owner {
   padding-block: var(--space-2);
 }
+
+.local-port-link {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.local-port-link button {
+  color: var(--accent);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+.local-port-link button:hover {
+  text-decoration: underline;
+}
+.local-port-link .copy-url {
+  color: var(--muted);
+}

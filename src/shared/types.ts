@@ -73,6 +73,7 @@ export interface DockerLogMessage {
 }
 
 export interface DevDeckApi {
+  openLocalUrl: (url: string) => Promise<Result<null>>
   lookupPort: (port: number) => Promise<Result<PortOwner[]>>
   getProcesses: () => Promise<Result<Proc[]>>
   getSettings: () => Promise<Result<Settings>>
