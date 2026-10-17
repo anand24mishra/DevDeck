@@ -1,37 +1,40 @@
 appId: com.devdeck.app
 productName: DevDeck
 directories:
-  buildResources: build
+  buildResources: resources
+  output: release
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - out/**
+  - resources/**
+  - package.json
+forceCodeSigning: true
+asar: true
 asarUnpack:
   - resources/**
-win:
-  executableName: devdeck
-nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
 mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  notarize: false
-dmg:
-  artifactName: ${name}-${version}.${ext}
-linux:
+  category: public.app-category.developer-tools
+  icon: resources/icon.png
+  hardenedRuntime: true
+  entitlements: packaging/entitlements.mac.plist
+  entitlementsInherit: packaging/entitlements.mac.plist
+  notarize: true
   target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: Anand Mishra
-  category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
+    - target: dmg
+      arch: universal
+    - target: zip
+      arch: universal
+  artifactName: ${productName}-${version}-${arch}.${ext}
+dmg:
+  # Only the ZIP is an updater artifact; the DMG is stapled after packaging.
+  writeUpdateInfo: false
+  artifactName: ${productName}-${version}-${arch}.${ext}
 npmRebuild: false
 publish:
   provider: github

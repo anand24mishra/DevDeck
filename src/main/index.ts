@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -8,6 +8,7 @@ import { trayService, confirmTrayStopAll } from './services/tray'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { terminate, defaultKillDeps } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
+import { checkForUpdates } from './services/updater'
 import { settingsService } from './services/settings'
 
 // Request single instance lock
@@ -91,7 +92,8 @@ function createWindow(): BrowserWindow {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webSecurity: true
     }
   })
 
@@ -106,20 +108,12 @@ function createWindow(): BrowserWindow {
     mainWindow?.show()
   })
 
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    const devUrl = process.env['ELECTRON_RENDERER_URL']
-    if (is.dev && devUrl && url.startsWith(devUrl)) {
-      return
-    }
-    event.preventDefault()
-  })
-
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    if (details.url.startsWith('https://')) {
-      shell.openExternal(details.url)
-    }
-    return { action: 'deny' }
-  })
+  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault())
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  mainWindow.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false)
+  )
+  mainWindow.webContents.session.setPermissionCheckHandler(() => false)
 
   // HMR for renderer base on electron-vite cli.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -154,6 +148,13 @@ app.whenReady().then(() => {
   registerIpcHandlers()
 
   const win = createWindow()
+  if (app.isPackaged) {
+    const updateTimer = setTimeout(() => {
+      void checkForUpdates(false)
+    }, 10_000)
+    updateTimer.unref()
+    app.once('before-quit', () => clearTimeout(updateTimer))
+  }
 
   // Initialize menu bar tray
   trayService.init(win, handleStopAllFromTray)
@@ -180,3 +181,13 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+
+process.on('uncaughtException', () => {
+  console.error('Unexpected main-process error')
+  if (app.isReady())
+    dialog.showErrorBox('DevDeck', 'Something went wrong. Restart DevDeck and try again.')
+})
+process.on('unhandledRejection', () => {
+  console.error('Unexpected asynchronous main-process error')
+})
+app.on('before-quit', () => trayService.destroy())

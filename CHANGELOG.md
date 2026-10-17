@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P0-8: Prepared a draft-only universal signing/notarization workflow, hardened packaging and Electron fuses, a consent-based updater, Homebrew cask template, and strict IPC validation with redacted errors.
 - P0-7: An opt-in integration test creates one isolated container, lists it through DevDeck, stops and restarts it, reads batched logs, then removes only that fixture.
 - P0-6: A Playwright Electron smoke test verifies launch, project discovery, port search, tray confirmation, window Cancel, and confirmed stop against a disposable real server.
 - P0-5: The macOS CI job now runs npm run lint before tests and build.

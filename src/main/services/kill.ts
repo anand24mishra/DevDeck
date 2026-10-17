@@ -21,7 +21,7 @@ export interface KillDeps {
  * Injectable dependencies for unit testing with fake timers.
  */
 export function validIdentities(value: unknown): value is ProcessIdentity[] {
-  if (!Array.isArray(value) || value.length > 500) return false
+  if (!Array.isArray(value) || value.length === 0 || value.length > 500) return false
   const seen = new Set<number>()
   return value.every((target) => {
     if (!target || typeof target !== 'object' || Array.isArray(target)) return false
@@ -141,6 +141,7 @@ export function createKillDeps(
       }
 
       try {
+        if (os.userInfo().uid === 0) return { ok: [], refused: [...pids] }
         const currentUser = os.userInfo().username
         const { stdout } = await execFileAsync(
           'ps',

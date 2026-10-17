@@ -61,6 +61,7 @@ describe('safe process termination', () => {
   it('rejects malformed IPC identities and extra fields without throwing', () => {
     for (const invalid of [
       null,
+      [],
       {},
       [null],
       [{ pid: 1 }],

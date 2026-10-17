@@ -74,3 +74,11 @@ null, missing identities, empty identities, duplicates, and more than 500 target
 allowlisted membership, intersects with the confirmed identities, and never adds newly discovered
 processes. PID, start time, and command must all match before **each** signal; mismatches return
 `refusalReasons[pid] = 'identity-changed'`. Commands are compared in memory and never logged.
+
+### Shared validation (P0-8 hardening)
+All handlers use the same pre-dispatch wrapper: the sender must be an application BrowserWindow,
+its main frame, and the exact loaded DevDeck page (including the development origin when running
+from source). Prefix lookalikes, other file URLs and subframes are rejected. No-input channels
+reject payloads; every object channel rejects unknown keys, wrong types and oversized values.
+Unknown settings keys and invalid settings edits return `INVALID_INPUT`; corrupt on-disk settings
+still recover to defaults. Unexpected handler failures use a fixed error message without OS output.

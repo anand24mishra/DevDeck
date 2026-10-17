@@ -1,3 +1,6 @@
+import { join } from 'path'
+import { pathToFileURL } from 'url'
+import { isExpectedPage, validIpcInput } from './security/validate'
 import { ipcMain, IpcMainInvokeEvent, BrowserWindow } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { Result, Proc, Settings, KillReport, Container, RecentlyStoppedItem } from '../shared/types'
@@ -10,22 +13,52 @@ import { recentlyStoppedService } from './services/recentlyStopped'
 const processProvider = new DarwinProcessProvider()
 
 function isSenderAuthorized(event: IpcMainInvokeEvent): boolean {
-  const url = event.senderFrame?.url
-  if (!url) return false
+  const window = BrowserWindow.fromWebContents(event.sender)
+  if (!window || event.senderFrame !== event.sender.mainFrame) return false
   const devUrl = process.env['ELECTRON_RENDERER_URL']
-  if (is.dev && devUrl) {
-    return url.startsWith(devUrl)
-  }
-  return url.startsWith('file://')
+  const expected =
+    is.dev && devUrl
+      ? new URL(devUrl).href
+      : pathToFileURL(join(__dirname, '../renderer/index.html')).href
+  return isExpectedPage(event.senderFrame?.url, expected)
 }
 
 export function registerIpcHandlers(): void {
+  const handle = (channel: string, handler: Parameters<typeof ipcMain.handle>[1]): void => {
+    ipcMain.handle(channel, async (event, ...args: unknown[]) => {
+      if (!isSenderAuthorized(event)) {
+        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+      }
+      if (args.length > 1 || !validIpcInput(channel, args[0])) {
+        return {
+          ok: false,
+          error: { code: 'INVALID_INPUT', message: 'Invalid request. Refresh and try again.' }
+        }
+      }
+      try {
+        const result = await handler(event, args[0])
+        if (result?.ok === false && result.error?.code === 'INTERNAL') {
+          return {
+            ok: false,
+            error: { code: 'INTERNAL', message: 'Could not complete the request. Try again.' }
+          }
+        }
+        return result
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'INTERNAL', message: 'Could not complete the request. Try again.' }
+        }
+      }
+    })
+  }
+
   // Initialize persistence for recently stopped processes
   const initialSettings = settingsService.getSettings()
   recentlyStoppedService.loadIfPersisted(!!initialSettings.persistRecentlyStopped)
 
   // procs:list
-  ipcMain.handle('procs:list', async (event): Promise<Result<Proc[]>> => {
+  handle('procs:list', async (event): Promise<Result<Proc[]>> => {
     if (!isSenderAuthorized(event)) {
       return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
@@ -46,7 +79,7 @@ export function registerIpcHandlers(): void {
   })
 
   // settings:get
-  ipcMain.handle('settings:get', async (event): Promise<Result<Settings>> => {
+  handle('settings:get', async (event): Promise<Result<Settings>> => {
     if (!isSenderAuthorized(event)) {
       return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
@@ -62,36 +95,33 @@ export function registerIpcHandlers(): void {
   })
 
   // settings:set
-  ipcMain.handle(
-    'settings:set',
-    async (event, partial: Partial<Settings>): Promise<Result<Settings>> => {
-      if (!isSenderAuthorized(event)) {
-        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-      }
-      try {
-        if (!partial || typeof partial !== 'object') {
-          return {
-            ok: false,
-            error: { code: 'INVALID_INPUT', message: 'Settings must be an object' }
-          }
-        }
-        const updated = settingsService.updateSettings(partial)
-        if (partial.persistRecentlyStopped !== undefined) {
-          recentlyStoppedService.saveIfPersisted(!!updated.persistRecentlyStopped)
-        }
-        return { ok: true, data: updated }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Failed to update settings'
+  handle('settings:set', async (event, partial: Partial<Settings>): Promise<Result<Settings>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
+    }
+    try {
+      if (!partial || typeof partial !== 'object') {
         return {
           ok: false,
-          error: { code: 'INTERNAL', message }
+          error: { code: 'INVALID_INPUT', message: 'Settings must be an object' }
         }
       }
+      const updated = settingsService.updateSettings(partial)
+      if (partial.persistRecentlyStopped !== undefined) {
+        recentlyStoppedService.saveIfPersisted(!!updated.persistRecentlyStopped)
+      }
+      return { ok: true, data: updated }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to update settings'
+      return {
+        ok: false,
+        error: { code: 'INTERNAL', message }
+      }
     }
-  )
+  })
 
   for (const channel of ['procs:stop', 'procs:stopProject', 'procs:stopAll']) {
-    ipcMain.handle(channel, async (event, input: unknown): Promise<Result<KillReport>> => {
+    handle(channel, async (event, input: unknown): Promise<Result<KillReport>> => {
       if (!isSenderAuthorized(event)) {
         return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
       }
@@ -156,7 +186,7 @@ export function registerIpcHandlers(): void {
   }
 
   // recent:list
-  ipcMain.handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
+  handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
     if (!isSenderAuthorized(event)) {
       return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
@@ -164,7 +194,7 @@ export function registerIpcHandlers(): void {
   })
 
   // recent:restart
-  ipcMain.handle(
+  handle(
     'recent:restart',
     async (event, { id }: { id: string }): Promise<Result<{ pid?: number }>> => {
       if (!isSenderAuthorized(event)) {
@@ -182,7 +212,7 @@ export function registerIpcHandlers(): void {
   )
 
   // recent:clear
-  ipcMain.handle('recent:clear', async (event): Promise<Result<null>> => {
+  handle('recent:clear', async (event): Promise<Result<null>> => {
     if (!isSenderAuthorized(event)) {
       return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
@@ -192,7 +222,7 @@ export function registerIpcHandlers(): void {
   })
 
   // docker:list
-  ipcMain.handle('docker:list', async (event): Promise<Result<Container[]>> => {
+  handle('docker:list', async (event): Promise<Result<Container[]>> => {
     if (!isSenderAuthorized(event)) {
       return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
@@ -201,7 +231,7 @@ export function registerIpcHandlers(): void {
   })
 
   // docker:action
-  ipcMain.handle(
+  handle(
     'docker:action',
     async (
       event,
@@ -225,7 +255,7 @@ export function registerIpcHandlers(): void {
   )
 
   // docker:stopAll
-  ipcMain.handle('docker:stopAll', async (event): Promise<Result<null>> => {
+  handle('docker:stopAll', async (event): Promise<Result<null>> => {
     if (!isSenderAuthorized(event)) {
       return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
@@ -234,54 +264,48 @@ export function registerIpcHandlers(): void {
   })
 
   // docker:logs:start
-  ipcMain.handle(
-    'docker:logs:start',
-    async (event, { id }: { id: string }): Promise<Result<null>> => {
-      if (!isSenderAuthorized(event)) {
-        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-      }
-      if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
-        return {
-          ok: false,
-          error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
-        }
-      }
-      const settings = settingsService.getSettings()
-      const sender = event.sender
-
-      // Clean up if sender is destroyed
-      sender.once('destroyed', () => {
-        dockerService.stopContainerLogs(id)
-      })
-
-      return await dockerService.startContainerLogs(
-        id,
-        (text) => {
-          if (!sender.isDestroyed()) {
-            sender.send('docker:log', { id, text })
-          }
-        },
-        settings.dockerSocketPath
-      )
+  handle('docker:logs:start', async (event, { id }: { id: string }): Promise<Result<null>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
-  )
+    if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
+      return {
+        ok: false,
+        error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
+      }
+    }
+    const settings = settingsService.getSettings()
+    const sender = event.sender
+
+    // Clean up if sender is destroyed
+    sender.once('destroyed', () => {
+      dockerService.stopContainerLogs(id)
+    })
+
+    return await dockerService.startContainerLogs(
+      id,
+      (text) => {
+        if (!sender.isDestroyed()) {
+          sender.send('docker:log', { id, text })
+        }
+      },
+      settings.dockerSocketPath
+    )
+  })
 
   // docker:logs:stop
-  ipcMain.handle(
-    'docker:logs:stop',
-    async (event, { id }: { id: string }): Promise<Result<null>> => {
-      if (!isSenderAuthorized(event)) {
-        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-      }
-      if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
-        return {
-          ok: false,
-          error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
-        }
-      }
-      return dockerService.stopContainerLogs(id)
+  handle('docker:logs:stop', async (event, { id }: { id: string }): Promise<Result<null>> => {
+    if (!isSenderAuthorized(event)) {
+      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
-  )
+    if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
+      return {
+        ok: false,
+        error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
+      }
+    }
+    return dockerService.stopContainerLogs(id)
+  })
 
   // Forward docker changes to all open windows
   dockerService.onDockerChanged(() => {

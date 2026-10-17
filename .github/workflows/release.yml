@@ -1,0 +1,72 @@
+name: Draft macOS release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  macos:
+    runs-on: macos-latest
+    env:
+      CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+      CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Require signing credentials and matching version
+        shell: bash
+        run: |
+          for key in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Required repository signing secret is missing: $key"
+              exit 1
+            fi
+          done
+          node -e 'if (`v${require("./package.json").version}` !== process.env.GITHUB_REF_NAME) process.exit(1)'
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:e2e
+      - name: Build signed and notarized universal app
+        run: npx electron-builder --mac --universal --publish never -c.forceCodeSigning=true
+      - name: Verify app and notarize the disk image
+        shell: bash
+        run: |
+          codesign --verify --deep --strict --verbose=2 release/mac-universal/DevDeck.app
+          xcrun stapler validate release/mac-universal/DevDeck.app
+          spctl --assess --type execute --verbose=2 release/mac-universal/DevDeck.app
+          for image in release/*.dmg; do
+            xcrun notarytool submit "$image" --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+            xcrun stapler staple "$image"
+            xcrun stapler validate "$image"
+          done
+      - name: Upload artifacts to a draft only
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            test "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" = true
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "DevDeck $GITHUB_REF_NAME" --generate-notes
+          fi
+          shopt -s nullglob
+          artifacts=(release/*.dmg release/*.zip release/*.blockmap release/latest-mac.yml)
+          gh release upload "$GITHUB_REF_NAME" "${artifacts[@]}" --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.blockmap
+            release/latest-mac.yml

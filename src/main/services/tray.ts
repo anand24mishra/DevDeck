@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import { app, Tray, Menu, nativeImage, BrowserWindow } from 'electron'
+import { checkForUpdates } from './updater'
 import type { KillReport, Proc } from '../../shared/types'
 
 export class TrayService {
@@ -103,6 +104,12 @@ export class TrayService {
         enabled: count > 0,
         click: (): void => {
           this.onStopAll?.().catch((err) => console.error('Failed to stop all processes:', err))
+        }
+      },
+      {
+        label: 'Check for updates',
+        click: (): void => {
+          void checkForUpdates()
         }
       },
       { type: 'separator' },
