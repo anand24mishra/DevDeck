@@ -12,6 +12,8 @@ export interface ProcessIdentity {
 export interface Proc extends ProcessIdentity {
   pid: number
   ppid: number
+  pgid?: number
+  status?: 'running' | 'paused' | 'zombie'
   name: string
   command: string
   cpu: number
@@ -48,6 +50,8 @@ export interface Settings {
 }
 
 export interface KillReport {
+  signaled?: number[]
+  cancelled?: boolean
   undoItems?: { id: string; name: string }[]
   refusalReasons?: Record<number, 'identity-changed' | 'not-allowed'>
   requested: number[]
@@ -97,6 +101,10 @@ export interface DevDeckApi {
   openProjectInTerminal: (path: string) => Promise<Result<null>>
   openLocalUrl: (url: string) => Promise<Result<null>>
   lookupPort: (port: number, project?: string) => Promise<Result<PortOwner[]>>
+  signalProcess: (
+    action: ProcessSignalAction,
+    target: ProcessIdentity
+  ) => Promise<Result<KillReport>>
   getProcessEnvironment: (pid: number, startTime: string) => Promise<Result<EnvironmentEntry[]>>
   getProcessDetails: (pid: number, startTime: string) => Promise<Result<ProcessDetails>>
   getProcessTree: () => Promise<Result<ProcessTreeNode[]>>
@@ -205,3 +213,5 @@ export interface EnvironmentEntry {
   value: string
   sensitive: boolean
 }
+
+export type ProcessSignalAction = 'pause' | 'resume' | 'reload' | 'group' | 'stop'

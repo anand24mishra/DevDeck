@@ -192,3 +192,12 @@ verifies current-user allowlist identity before and after a bounded `ps eww`, an
 writes values. The panel fetches only when opened and discards state on close; all values and
 copy actions stay masked until per-key reveal. ps text has ambiguous whitespace; parsing is
 best-effort and is never used as input to execution or restart.
+
+## P2-6 additional signals
+Proc adds `pgid` and `status:running|paused|zombie`. `proc:signal` takes
+`{action:pause|resume|reload|group|stop,target:ProcessIdentity}` and returns `Result<KillReport>`
+with optional `signaled:number[]` and `cancelled:boolean`. Main verifies the clicked identity,
+recomputes group members, confirms destructive actions in a native Cancel-default dialog, then
+revalidates identity before each individual signal. Group membership is rechecked through fresh
+PGID metadata; negative group-ID signals are never sent. Extra signals and group stops never
+auto-force. Normal stop retains its established escalation policy.

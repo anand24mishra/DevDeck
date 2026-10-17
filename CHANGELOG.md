@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P2-6: Added native-confirmed extra signals, a paused status, refreshed PGID checks and individual verified group stopping without negative group signals or automatic force.
 - P2-5: Added an opt-in read-only environment viewer with identity checks before and after collection, secret-key classification, per-key reveal, masked copying, and discarded panel state on close.
 - P2-4: Added identity-verified details for command, working directory, start, user, parent, file counts and sockets, with per-field copy and masked command copying until reveal.
 - P2-3: Added UDP bound ports, listening and established connection filters, protocol labels, and active connection counts without additional lsof invocations.

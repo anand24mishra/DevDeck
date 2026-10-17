@@ -122,6 +122,12 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       new Set(value.ids).size === value.ids.length &&
       value.ids.every((id) => typeof id === 'string' && /^[a-f0-9]{12,64}$/.test(id))
     )
+  if (channel === 'proc:signal')
+    return (
+      keys(value, ['action', 'target']) &&
+      ['pause', 'resume', 'reload', 'group', 'stop'].includes(value.action as string) &&
+      validIdentities([value.target])
+    )
   if (['proc:details', 'proc:environment'].includes(channel))
     return (
       keys(value, ['pid', 'startTime']) &&

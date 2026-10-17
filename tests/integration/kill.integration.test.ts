@@ -70,3 +70,35 @@ describe('Terminate Integration Test', () => {
     }
   })
 })
+
+it('pauses, resumes and reloads only a real fixture process', async () => {
+  const { once } = await import('node:events')
+  const { sendControlSignal } = await import('../../src/main/services/kill')
+  const child = spawn(
+    process.execPath,
+    [
+      '-e',
+      "process.on('SIGHUP',()=>process.send('reloaded')); process.send('ready'); setInterval(()=>{},1000)"
+    ],
+    { stdio: ['ignore', 'ignore', 'ignore', 'ipc'] }
+  )
+  try {
+    await once(child, 'message')
+    const snapshot = (await defaultKillDeps.revalidate([child.pid!])).ok
+    expect(snapshot).toHaveLength(1)
+    expect((await sendControlSignal(snapshot, 'SIGSTOP', defaultKillDeps)).signaled).toEqual([
+      child.pid
+    ])
+    expect((await sendControlSignal(snapshot, 'SIGCONT', defaultKillDeps)).signaled).toEqual([
+      child.pid
+    ])
+    const reloaded = once(child, 'message')
+    expect((await sendControlSignal(snapshot, 'SIGHUP', defaultKillDeps)).signaled).toEqual([
+      child.pid
+    ])
+    expect((await reloaded)[0]).toBe('reloaded')
+  } finally {
+    child.kill('SIGCONT')
+    child.kill('SIGTERM')
+  }
+}, 10_000)

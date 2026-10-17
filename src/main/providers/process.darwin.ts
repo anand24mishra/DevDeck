@@ -45,6 +45,8 @@ export function parseEtime(etime: string): number {
 
 interface RawProcess {
   startTime: string
+  pgid: number
+  status: string
   pid: number
   ppid: number
   cpu: number
@@ -63,7 +65,7 @@ export class DarwinProcessProvider implements ProcessProvider {
     const user = os.userInfo().username
     const { stdout } = await execFileAsync(
       'ps',
-      ['-U', user, '-o', 'pid=,ppid=,pcpu=,rss=,etime=,lstart=,command='],
+      ['-U', user, '-o', 'pid=,ppid=,pgid=,stat=,pcpu=,rss=,etime=,lstart=,command='],
       { timeout: 5000, maxBuffer: 10 * 1024 * 1024 }
     )
 
@@ -75,16 +77,20 @@ export class DarwinProcessProvider implements ProcessProvider {
       if (!trimmed) continue
 
       // Match pid, ppid, pcpu, rss, etime, followed by the rest of the line as command
-      const match = trimmed.match(/^(\d+)\s+(\d+)\s+([\d.]+)\s+(\d+)\s+([\d:-]+)\s+(.{24})\s+(.+)$/)
+      const match = trimmed.match(
+        /^(\d+)\s+(\d+)\s+(\d+)\s+(\S+)\s+([\d.]+)\s+(\d+)\s+([\d:-]+)\s+(.{24})\s+(.+)$/
+      )
       if (match) {
         processes.push({
           pid: parseInt(match[1], 10),
           ppid: parseInt(match[2], 10),
-          cpu: parseFloat(match[3]) || 0,
-          rssKB: parseInt(match[4], 10) || 0,
-          etime: match[5],
-          startTime: match[6].trim(),
-          command: match[7]
+          pgid: Number(match[3]),
+          status: match[4],
+          cpu: parseFloat(match[5]) || 0,
+          rssKB: parseInt(match[6], 10) || 0,
+          etime: match[7],
+          startTime: match[8].trim(),
+          command: match[9]
         })
       }
     }
@@ -159,6 +165,12 @@ export class DarwinProcessProvider implements ProcessProvider {
           extractBinaryName(rawProcesses.find((parent) => parent.pid === proc.ppid)?.command || '')
             .binaryName || 'Unavailable',
         ppid: proc.ppid,
+        pgid: proc.pgid,
+        status: proc.status.includes('T')
+          ? 'paused'
+          : proc.status.includes('Z')
+            ? 'zombie'
+            : 'running',
         name: labelProcess(binaryName || 'unknown', proc.command, project.root),
         command: proc.command,
         cpu: proc.cpu,

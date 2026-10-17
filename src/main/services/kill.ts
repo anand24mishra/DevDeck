@@ -7,11 +7,12 @@ import { settingsService } from './settings'
 
 const execFileAsync = promisify(execFile)
 
-export type RevalidatedProcess = ProcessIdentity
+export type RevalidatedProcess = ProcessIdentity & { pgid?: number }
+export type SafeSignal = 'SIGTERM' | 'SIGKILL' | 'SIGSTOP' | 'SIGCONT' | 'SIGHUP'
 
 export interface KillDeps {
   revalidate: (pids: number[]) => Promise<{ ok: RevalidatedProcess[]; refused: number[] }>
-  signal: (pid: number, signal: 'SIGTERM' | 'SIGKILL') => boolean
+  signal: (pid: number, signal: SafeSignal) => boolean
   alive: (pid: number) => boolean
   sleep: (ms: number) => Promise<void>
 }
@@ -107,7 +108,7 @@ export function createKillDeps(
   self: ProcessContext = { pid: process.pid, ppid: process.ppid }
 ): KillDeps {
   return {
-    signal: (pid: number, signal: 'SIGTERM' | 'SIGKILL'): boolean => {
+    signal: (pid: number, signal: SafeSignal): boolean => {
       try {
         process.kill(pid, signal)
         return true
@@ -145,7 +146,7 @@ export function createKillDeps(
         const currentUser = os.userInfo().username
         const { stdout } = await execFileAsync(
           'ps',
-          ['-U', currentUser, '-o', 'pid=,ppid=,user=,lstart=,command='],
+          ['-U', currentUser, '-o', 'pid=,ppid=,pgid=,user=,lstart=,command='],
           { timeout: 5000, maxBuffer: 10 * 1024 * 1024 }
         )
 
@@ -165,15 +166,16 @@ export function createKillDeps(
           if (!trimmed) continue
 
           // Match pid, user, lstart (24 chars), command
-          const match = trimmed.match(/^(\d+)\s+\d+\s+(\S+)\s+([A-Za-z0-9:\s]{24})\s+(.+)$/)
+          const match = trimmed.match(/^(\d+)\s+\d+\s+(\d+)\s+(\S+)\s+([A-Za-z0-9:\s]{24})\s+(.+)$/)
           if (!match) continue
 
           const pid = parseInt(match[1], 10)
           if (!targetSet.has(pid)) continue
 
-          const procUser = match[2]
-          const startTime = match[3].trim()
-          const command = match[4].trim()
+          const pgid = Number(match[2])
+          const procUser = match[3]
+          const startTime = match[4].trim()
+          const command = match[5].trim()
           foundPids.add(pid)
 
           // Only allow killing processes owned by the current user
@@ -191,7 +193,7 @@ export function createKillDeps(
           })
 
           if (check.allowed) {
-            ok.push({ pid, startTime, command })
+            ok.push({ pid, startTime, command, pgid })
           } else {
             refused.push(pid)
           }
@@ -214,3 +216,37 @@ export function createKillDeps(
 }
 
 export const defaultKillDeps = createKillDeps()
+
+export async function sendControlSignal(
+  targets: ProcessIdentity[],
+  signal: 'SIGSTOP' | 'SIGCONT' | 'SIGHUP' | 'SIGTERM',
+  deps: KillDeps
+): Promise<KillReport> {
+  const report: KillReport = {
+    requested: targets.map((target) => target.pid),
+    stopped: [],
+    forced: [],
+    refused: [],
+    stillRunning: [],
+    signaled: [],
+    refusalReasons: {}
+  }
+  for (const target of targets) {
+    const current = (await deps.revalidate([target.pid])).ok.find((proc) => proc.pid === target.pid)
+    if (!current || current.startTime !== target.startTime || current.command !== target.command) {
+      report.refused.push(target.pid)
+      report.refusalReasons![target.pid] = current ? 'identity-changed' : 'not-allowed'
+      continue
+    }
+    if (deps.signal(target.pid, signal)) report.signaled!.push(target.pid)
+    else report.stillRunning.push(target.pid)
+  }
+  if (signal === 'SIGTERM' && report.signaled!.length) {
+    await deps.sleep(3000)
+    for (const pid of report.signaled!) {
+      if (deps.alive(pid)) report.stillRunning.push(pid)
+      else report.stopped.push(pid)
+    }
+  }
+  return report
+}

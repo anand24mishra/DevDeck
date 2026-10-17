@@ -7,7 +7,7 @@ import { detectApplications, verifyProjectPath, openWithApplication } from './se
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { isExpectedPage, validIpcInput } from './security/validate'
-import { ipcMain, IpcMainInvokeEvent, BrowserWindow, shell } from 'electron'
+import { ipcMain, IpcMainInvokeEvent, BrowserWindow, shell, dialog } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import {
   Result,
@@ -16,12 +16,13 @@ import {
   KillReport,
   Container,
   RecentlyStoppedItem,
-  ProcessIdentity
+  ProcessIdentity,
+  ProcessSignalAction
 } from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
 import { dockerService, detectDockerApps } from './services/docker'
-import { terminate, defaultKillDeps, validIdentities } from './services/kill'
+import { terminate, defaultKillDeps, validIdentities, sendControlSignal } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
 
 const processProvider = new DarwinProcessProvider()
@@ -374,6 +375,129 @@ export function registerIpcHandlers(): void {
       }
     })
   }
+
+  handle(
+    'proc:signal',
+    async (
+      _event,
+      { action, target }: { action: ProcessSignalAction; target: ProcessIdentity }
+    ) => {
+      const settings = settingsService.getSettings()
+      const processes = await processProvider.listProcesses({
+        userIgnoreList: settings.ignoreList,
+        customAllowlist: settings.customAllowlist
+      })
+      const root = processes.find(
+        (proc) =>
+          proc.pid === target.pid &&
+          proc.startTime === target.startTime &&
+          proc.command === target.command
+      )
+      if (!root || (action === 'group' && (!root.pgid || root.pgid <= 1)))
+        return {
+          ok: false,
+          error: { code: 'DENIED', message: 'This process changed. Refresh and try again.' }
+        }
+      const targets =
+        action === 'group'
+          ? processes
+              .filter((proc) => proc.pgid === root.pgid)
+              .map(({ pid, startTime, command }) => ({ pid, startTime, command }))
+          : [target]
+      if (targets.length > 500)
+        return {
+          ok: false,
+          error: {
+            code: 'INVALID_INPUT',
+            message: 'This group is too large. Select fewer processes.'
+          }
+        }
+      if (action !== 'resume') {
+        const verb = action === 'group' ? 'Stop group' : action[0].toUpperCase() + action.slice(1)
+        const response = await dialog.showMessageBox({
+          type: 'warning',
+          title: 'DevDeck',
+          message: `${verb} (${targets.length} processes)?`,
+          detail: processes
+            .filter((proc) => targets.some((item) => item.pid === proc.pid))
+            .map((proc) => `${proc.name} in ${proc.project}`)
+            .join('\n'),
+          buttons: ['Cancel', verb],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true
+        })
+        if (response.response !== 1)
+          return {
+            ok: true,
+            data: {
+              requested: targets.map((item) => item.pid),
+              stopped: [],
+              forced: [],
+              refused: [],
+              stillRunning: [],
+              cancelled: true
+            }
+          }
+      }
+      const verifiedRoot = (await defaultKillDeps.revalidate([target.pid])).ok.find(
+        (proc) =>
+          proc.pid === target.pid &&
+          proc.startTime === target.startTime &&
+          proc.command === target.command
+      )
+      if (!verifiedRoot || (action === 'group' && verifiedRoot.pgid !== root.pgid))
+        return {
+          ok: false,
+          error: {
+            code: 'DENIED',
+            message: 'This process changed during confirmation. Nothing was signaled.'
+          }
+        }
+      const deps =
+        action === 'group'
+          ? {
+              ...defaultKillDeps,
+              revalidate: async (pids: number[]) => {
+                const current = await defaultKillDeps.revalidate(pids)
+                return {
+                  ok: current.ok.filter((proc) => proc.pgid === root.pgid),
+                  refused: [
+                    ...current.refused,
+                    ...current.ok.filter((proc) => proc.pgid !== root.pgid).map((proc) => proc.pid)
+                  ]
+                }
+              }
+            }
+          : defaultKillDeps
+      if (action === 'group' || action === 'stop') notificationService.expectStops(targets)
+      const report =
+        action === 'stop'
+          ? await terminate(targets, deps)
+          : await sendControlSignal(
+              targets,
+              action === 'pause'
+                ? 'SIGSTOP'
+                : action === 'resume'
+                  ? 'SIGCONT'
+                  : action === 'reload'
+                    ? 'SIGHUP'
+                    : 'SIGTERM',
+              deps
+            )
+      if (action === 'stop' || action === 'group') {
+        const stopped = new Set([...report.stopped, ...report.forced])
+        report.undoItems = recentlyStoppedService
+          .recordStopped(
+            processes.filter((proc) => stopped.has(proc.pid)),
+            !!settings.persistRecentlyStopped
+          )
+          .map(({ id, name }) => ({ id, name }))
+        notificationService.report(report, settings)
+      }
+      return { ok: true, data: report }
+    }
+  )
 
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {

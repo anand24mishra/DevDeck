@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  signalProcess: (action, target) => ipcRenderer.invoke('proc:signal', { action, target }),
   getProcessEnvironment: (pid, startTime) =>
     ipcRenderer.invoke('proc:environment', { pid, startTime }),
   getProcessDetails: (pid, startTime) => ipcRenderer.invoke('proc:details', { pid, startTime }),
