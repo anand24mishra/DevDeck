@@ -67,3 +67,101 @@ export function explainPortOwner(
     explanation: `Port ${owner.port} is used by ${descriptions[kind]}.`
   }
 }
+
+export interface OpenFileSnapshot {
+  listeners: Map<number, ListeningSocket[]>
+  sockets: Map<number, ListeningSocket[]>
+  cwds: Map<number, string>
+  connections: Map<number, number>
+  files: Map<number, number>
+  users: Map<number, string>
+}
+export function parseOpenFiles(output: string): OpenFileSnapshot {
+  const result: OpenFileSnapshot = {
+    listeners: new Map(),
+    sockets: new Map(),
+    cwds: new Map(),
+    connections: new Map(),
+    files: new Map(),
+    users: new Map()
+  }
+  let pid = 0,
+    name = '',
+    fd = '',
+    address = '',
+    protocol = '',
+    family = '',
+    state = ''
+  const flush = (): void => {
+    if (pid <= 1 || !fd) return
+    if (fd === 'cwd' && address) result.cwds.set(pid, address)
+    if (/^\d/.test(fd)) result.files.set(pid, (result.files.get(pid) || 0) + 1)
+    if (state === 'ESTABLISHED') result.connections.set(pid, (result.connections.get(pid) || 0) + 1)
+    const local = address.split('->')[0].match(/^(.*):(\d+)$/)
+    if (
+      !local ||
+      !['TCP', 'UDP'].includes(protocol) ||
+      (protocol === 'TCP' && !['LISTEN', 'ESTABLISHED'].includes(state))
+    )
+      return
+    const socket: ListeningSocket = {
+      pid,
+      name,
+      port: Number(local[2]),
+      address: local[1].replace(/^\[|\]$/g, ''),
+      protocol: protocol as 'TCP' | 'UDP',
+      family: family === 'IPv6' ? 'IPv6' : 'IPv4',
+      state: state === 'ESTABLISHED' ? 'ESTABLISHED' : 'LISTEN'
+    }
+    const sockets = result.sockets.get(pid) || []
+    sockets.push(socket)
+    result.sockets.set(pid, sockets)
+    if (socket.state === 'LISTEN' && protocol === 'TCP') {
+      const listeners = result.listeners.get(pid) || []
+      if (
+        !listeners.some((entry) => entry.port === socket.port && entry.address === socket.address)
+      )
+        listeners.push(socket)
+      result.listeners.set(pid, listeners)
+    }
+  }
+  for (const line of output.split('\n')) {
+    const value = line.slice(1)
+    switch (line[0]) {
+      case 'p':
+        flush()
+        pid = Number(value)
+        name = ''
+        fd = ''
+        break
+      case 'c':
+        name = value
+        break
+      case 'u':
+        result.users.set(pid, value)
+        break
+      case 'f':
+        flush()
+        fd = value
+        address = ''
+        protocol = ''
+        family = ''
+        state = ''
+        break
+      case 'n':
+        address = value
+        break
+      case 'P':
+        protocol = value
+        break
+      case 't':
+        family = value
+        break
+      case 'T':
+        if (value.startsWith('ST=')) state = value.slice(3)
+        break
+    }
+  }
+  flush()
+  return result
+}

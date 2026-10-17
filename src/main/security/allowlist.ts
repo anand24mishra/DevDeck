@@ -25,6 +25,7 @@ export const DEFAULT_ALLOWLIST = new Set([
 ])
 
 export interface FilterProcessOptions {
+  hintsEnabled?: boolean
   protectedPids?: ReadonlySet<number>
   currentPid?: number
   parentPid?: number

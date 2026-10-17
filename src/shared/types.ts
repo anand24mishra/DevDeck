@@ -22,6 +22,9 @@ export interface Proc extends ProcessIdentity {
   projectPath: string | null
   ports: number[]
   sockets?: ListeningSocket[]
+  establishedConnections?: number
+  openFilesCount?: number
+  idleHint?: string
 }
 
 export interface Settings {
@@ -31,6 +34,7 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  hintsEnabled?: boolean
   notifications?: NotificationPreferences
   memoryThresholdMb?: number
   hotkey?: string | null
@@ -106,6 +110,9 @@ export interface DevDeckApi {
 }
 
 export interface ListeningSocket {
+  protocol?: 'TCP' | 'UDP'
+  family?: 'IPv4' | 'IPv6'
+  state?: 'LISTEN' | 'ESTABLISHED'
   pid: number
   name: string
   port: number

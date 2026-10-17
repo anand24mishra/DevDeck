@@ -52,7 +52,10 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
 
         {/* Column 2: Process Name */}
         <div className="col col-name" title={proc.name}>
-          <span className="process-name">{proc.name}</span>
+          <span className="process-name">
+            {proc.name}
+            {proc.idleHint && <span title={proc.idleHint}> · Possibly idle</span>}
+          </span>
         </div>
 
         {/* Column 3: Ports */}
@@ -123,6 +126,12 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
       {/* Expanded Details Panel */}
       {expanded && (
         <div className="details-panel" role="region" aria-label="Process Details">
+          {proc.idleHint && (
+            <p>
+              {proc.idleHint}. This is a hint from the latest scan, not a reason to stop it
+              automatically.
+            </p>
+          )}
           <div className="details-grid mono">
             <div className="detail-item">
               <span className="detail-label">PID</span>

@@ -119,6 +119,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Section 1: General */}
           <section className="settings-section">
             <h3 className="section-title">General</h3>
+            <label className="setting-row">
+              <span>Show possibly idle process hints</span>
+              <input
+                type="checkbox"
+                checked={settings.hintsEnabled !== false}
+                onChange={(event) => void triggerSave({ hintsEnabled: event.target.checked })}
+              />
+            </label>
             <fieldset>
               <legend>Silent notifications</legend>
               {(['serverStopped', 'memory', 'actionResults'] as const).map((key) => (

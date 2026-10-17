@@ -134,3 +134,9 @@ Settings add `notifications` with exact boolean fields `serverStopped`, `memory`
 preload `onFocusTarget` subscription; notification clicks show the window and focus that row.
 Unexpected-server and threshold detection runs on existing visible-window scans, with crossing
 deduplication and expected-stop suppression. No background process polling is added.
+
+## P1-10 connection hints
+Proc adds optional `establishedConnections`, `openFilesCount`, and `idleHint`. Main collects
+working directories, listeners and TCP connection counts from one batched lsof invocation.
+`Settings.hintsEnabled?: boolean` defaults true. A listener running at least three days with zero
+established connections receives a hint only; it is never stopped automatically.

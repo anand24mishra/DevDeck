@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { parsePortInput, isLocalUrl } from '../../src/shared/ports'
-import { parseListeners, explainPortOwner } from '../../src/main/services/ports'
+import { parseListeners, explainPortOwner, parseOpenFiles } from '../../src/main/services/ports'
 import { validIpcInput } from '../../src/main/security/validate'
 
 it('accepts the supported local port forms and rejects arbitrary hosts or shell text', () => {
@@ -64,4 +64,14 @@ it('distinguishes project, other project, tunnels, containers and protected owne
     ports: [3000]
   } as import('../../src/shared/types').Container
   expect(explainPortOwner(owner, [container]).containerId).toBe(container.id)
+})
+
+it('batches working directories, listeners and established connection counts by file descriptor', () => {
+  const files = parseOpenFiles(
+    'p123\ncnode\nu501\nfcwd\ntDIR\nn/Users/test/project\nf10u\ntIPv6\nPTCP\nn[::1]:3000\nTST=LISTEN\nf11u\ntIPv4\nPTCP\nn127.0.0.1:3000->127.0.0.1:54321\nTST=ESTABLISHED\n'
+  )
+  expect(files.cwds.get(123)).toBe('/Users/test/project')
+  expect(files.listeners.get(123)?.[0].address).toBe('::1')
+  expect(files.connections.get(123)).toBe(1)
+  expect(files.files.get(123)).toBe(2)
 })

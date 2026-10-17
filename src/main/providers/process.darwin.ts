@@ -10,7 +10,7 @@ import {
   ProcessContext
 } from '../security/allowlist'
 import { labelProcess } from '../services/labeler'
-import { parseListeners } from '../services/ports'
+import { parseOpenFiles, type OpenFileSnapshot } from '../services/ports'
 import { resolveProjectFromCwd } from '../services/project'
 
 const execFileAsync = promisify(execFile)
@@ -92,53 +92,16 @@ export class DarwinProcessProvider implements ProcessProvider {
     return processes
   }
 
-  /**
-   * Finds listening TCP ports and associates them with PIDs.
-   */
-  private async getListeningPorts(): Promise<Map<number, ListeningSocket[]>> {
+  private async getOpenFiles(): Promise<OpenFileSnapshot> {
     try {
-      const { stdout } = await execFileAsync('lsof', ['-iTCP', '-sTCP:LISTEN', '-nP', '-Fpcn'], {
+      const { stdout } = await execFileAsync('lsof', ['-nP', '-FpcuftnPT'], {
         timeout: 5000,
-        maxBuffer: 10 * 1024 * 1024
+        maxBuffer: 32 * 1024 * 1024
       })
-      return parseListeners(stdout)
+      return parseOpenFiles(stdout)
     } catch (error) {
-      // lsof may return useful partial output when a process exits during the scan.
-      return parseListeners((error as { stdout?: string }).stdout || '')
+      return parseOpenFiles((error as { stdout?: string }).stdout || '')
     }
-  }
-
-  /**
-   * Retrieves working directory for a batch of PIDs using lsof.
-   */
-  private async getCwds(pids: number[]): Promise<Map<number, string>> {
-    const cwdMap = new Map<number, string>()
-    if (pids.length === 0) return cwdMap
-
-    try {
-      const { stdout } = await execFileAsync('lsof', [
-        '-a',
-        '-d',
-        'cwd',
-        '-Fpn',
-        '-p',
-        pids.join(',')
-      ])
-      const lines = stdout.split('\n')
-      let currentPid: number | null = null
-
-      for (const line of lines) {
-        if (line.startsWith('p')) {
-          currentPid = parseInt(line.slice(1), 10)
-        } else if (line.startsWith('n') && currentPid !== null) {
-          cwdMap.set(currentPid, line.slice(1))
-        }
-      }
-    } catch {
-      // lsof exits non-zero if some processes have disappeared
-    }
-
-    return cwdMap
   }
 
   /**
@@ -176,10 +139,9 @@ export class DarwinProcessProvider implements ProcessProvider {
       return check.allowed
     })
 
-    const pids = filtered.map((p) => p.pid)
-
-    // 2. Fetch ports and cwds in parallel
-    const [portsMap, cwdMap] = await Promise.all([this.getListeningPorts(), this.getCwds(pids)])
+    const openFiles = await this.getOpenFiles()
+    const portsMap = openFiles.listeners
+    const cwdMap = openFiles.cwds
 
     // 3. Assemble complete Proc structures
     const result: Proc[] = filtered.map((proc) => {
@@ -202,7 +164,16 @@ export class DarwinProcessProvider implements ProcessProvider {
         project: project.name,
         projectPath: project.root,
         ports: ports.sort((a, b) => a - b),
-        sockets
+        sockets,
+        establishedConnections: openFiles.connections.get(proc.pid) || 0,
+        openFilesCount: openFiles.files.get(proc.pid) || 0,
+        idleHint:
+          options.hintsEnabled !== false &&
+          ports.length > 0 &&
+          parseEtime(proc.etime) >= 3 * 86400 &&
+          !openFiles.connections.get(proc.pid)
+            ? `Running ${Math.floor(parseEtime(proc.etime) / 86400)} days, no active connections seen`
+            : undefined
       }
     })
 

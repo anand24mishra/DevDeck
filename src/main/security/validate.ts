@@ -35,6 +35,7 @@ function validSettings(value: Record<string, unknown>): boolean {
         return TERMINAL_IDS.includes(field as string)
       case 'theme':
         return ['system', 'light', 'dark'].includes(field as string)
+      case 'hintsEnabled':
       case 'openAtLogin':
       case 'persistRecentlyStopped':
         return typeof field === 'boolean'

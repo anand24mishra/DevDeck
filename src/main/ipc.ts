@@ -70,7 +70,8 @@ export function registerIpcHandlers(): void {
       const settings = settingsService.getSettings()
       const procs = await processProvider.listProcesses({
         userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist
+        customAllowlist: settings.customAllowlist,
+        hintsEnabled: settings.hintsEnabled
       })
       notificationService.observe(procs, settings)
       return { ok: true, data: procs }
