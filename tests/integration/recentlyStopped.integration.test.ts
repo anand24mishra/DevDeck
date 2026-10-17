@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { spawn } from 'child_process'
 import { DarwinProcessProvider } from '../../src/main/providers/process.darwin'
-import { terminate, defaultKillDeps } from '../../src/main/services/kill'
+import { terminate, createKillDeps } from '../../src/main/services/kill'
 import { RecentlyStoppedService } from '../../src/main/services/recentlyStopped'
+
+// A separate app identity keeps fixture children outside the simulated DevDeck tree.
+const defaultKillDeps = createKillDeps({ pid: 0, ppid: 0 })
 
 describe('RecentlyStopped Integration Test', () => {
   it('captures a stopped real process and restarts it successfully', async () => {
@@ -27,7 +30,7 @@ describe('RecentlyStopped Integration Test', () => {
       expect(defaultKillDeps.alive(pid)).toBe(true)
 
       // 2. Fetch proc using DarwinProcessProvider
-      const provider = new DarwinProcessProvider()
+      const provider = new DarwinProcessProvider({ pid: 0, ppid: 0 })
       const procs = await provider.listProcesses()
       const matching = procs.filter((p) => p.pid === pid)
       expect(matching.length).toBeGreaterThan(0)

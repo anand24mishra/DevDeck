@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P0-3: DevDeck excludes its own process, parent, children, and grandchildren from both scans and direct stop requests, rebuilding the protected set for every scan and signal check.
 - P0-2: Every window and tray stop checks the captured PID, start time, and command before each signal. Project and stop-all requests cannot add processes that started after confirmation.
 - P0-1: Tray Stop All now names the process count and projects, defaults to Cancel, records successful stops, and shows a structured result summary.
 - Menu bar tray with template icon, running process count, window focus on click, and quick stop-all action.

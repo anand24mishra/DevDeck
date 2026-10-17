@@ -25,6 +25,7 @@ export const DEFAULT_ALLOWLIST = new Set([
 ])
 
 export interface FilterProcessOptions {
+  protectedPids?: ReadonlySet<number>
   currentPid?: number
   parentPid?: number
   userIgnoreList?: string[]
@@ -84,6 +85,9 @@ export function isProcessAllowed(
   if (pid <= 1) {
     return { allowed: false, reason: 'System process (pid <= 1)' }
   }
+  if (options.protectedPids?.has(pid) || pid === options.parentPid) {
+    return { allowed: false, reason: 'DevDeck protected process tree' }
+  }
   if (currentPid && pid === currentPid) {
     return { allowed: false, reason: 'DevDeck self-process' }
   }
@@ -119,4 +123,29 @@ export function isProcessAllowed(
   }
 
   return { allowed: true }
+}
+
+export interface ProcessContext {
+  pid: number
+  ppid: number
+}
+
+/** Traverse only downward from DevDeck; siblings belonging to its parent remain independent. */
+export function protectedProcessTree(
+  processes: { pid: number; ppid: number }[],
+  self: ProcessContext
+): Set<number> {
+  const descendants = new Set([self.pid])
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const proc of processes) {
+      if (descendants.has(proc.ppid) && !descendants.has(proc.pid)) {
+        descendants.add(proc.pid)
+        changed = true
+      }
+    }
+  }
+  descendants.add(self.ppid)
+  return descendants
 }

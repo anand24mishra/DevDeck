@@ -30,7 +30,7 @@ describe('DarwinProcessProvider Integration', () => {
       setTimeout(() => resolve(), 1000)
     })
 
-    const provider = new DarwinProcessProvider()
+    const provider = new DarwinProcessProvider({ pid: 0, ppid: 0 })
 
     try {
       const procs = await provider.listProcesses()

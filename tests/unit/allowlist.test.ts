@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { isProcessAllowed, extractBinaryName } from '../../src/main/security/allowlist'
+import {
+  isProcessAllowed,
+  extractBinaryName,
+  protectedProcessTree
+} from '../../src/main/security/allowlist'
 
 describe('allowlist security model', () => {
   it('extracts binary names accurately even with spaces and quotes', () => {
@@ -43,5 +47,26 @@ describe('allowlist security model', () => {
     expect(isProcessAllowed(3457, 'python3 test.py', { userIgnoreList: ['test.py'] }).allowed).toBe(
       false
     )
+  })
+})
+
+describe('DevDeck process-tree protection', () => {
+  it('blocks self, parent, child, and out-of-order grandchild even with custom allowlist', () => {
+    const protectedPids = protectedProcessTree(
+      [
+        { pid: 13, ppid: 12 },
+        { pid: 10, ppid: 9 },
+        { pid: 12, ppid: 10 },
+        { pid: 14, ppid: 9 }
+      ],
+      { pid: 10, ppid: 9 }
+    )
+    for (const pid of [9, 10, 12, 13]) {
+      expect(
+        isProcessAllowed(pid, 'node dev.js', { protectedPids, customAllowlist: ['node'] }).allowed
+      ).toBe(false)
+    }
+    expect(isProcessAllowed(14, 'node sibling.js', { protectedPids }).allowed).toBe(true)
+    expect(protectedProcessTree([{ pid: 15, ppid: 10 }], { pid: 10, ppid: 9 }).has(15)).toBe(true)
   })
 })

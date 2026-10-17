@@ -1,8 +1,25 @@
 import { describe, it, expect } from 'vitest'
 import { spawn } from 'child_process'
-import { terminate, defaultKillDeps } from '../../src/main/services/kill'
+import { terminate, createKillDeps } from '../../src/main/services/kill'
+
+// A separate app identity keeps fixture children outside the simulated DevDeck tree.
+const defaultKillDeps = createKillDeps({ pid: 0, ppid: 0 })
 
 describe('Terminate Integration Test', () => {
+  it('production defaults refuse a real child of the app before signaling', async () => {
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      stdio: 'ignore'
+    })
+    try {
+      const snapshot = await defaultKillDeps.revalidate([child.pid!])
+      const report = await terminate(snapshot.ok, createKillDeps())
+      expect(report.refused).toEqual([child.pid])
+      expect(defaultKillDeps.alive(child.pid!)).toBe(true)
+    } finally {
+      child.kill('SIGTERM')
+    }
+  })
+
   it('safely terminates a real spawned child dev process', async () => {
     // Spawn a real child process running node
     const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {

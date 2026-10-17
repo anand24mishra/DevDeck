@@ -2,7 +2,13 @@ import { execFile } from 'child_process'
 import os from 'os'
 import { promisify } from 'util'
 import { Proc } from '../../shared/types'
-import { isProcessAllowed, extractBinaryName, FilterProcessOptions } from '../security/allowlist'
+import {
+  isProcessAllowed,
+  extractBinaryName,
+  FilterProcessOptions,
+  protectedProcessTree,
+  ProcessContext
+} from '../security/allowlist'
 import { resolveProjectFromCwd } from '../services/project'
 
 const execFileAsync = promisify(execFile)
@@ -46,6 +52,8 @@ interface RawProcess {
 }
 
 export class DarwinProcessProvider implements ProcessProvider {
+  constructor(private readonly self: ProcessContext = { pid: process.pid, ppid: process.ppid }) {}
+
   /**
    * Fetches raw processes for the current user using macOS ps command.
    */
@@ -54,7 +62,7 @@ export class DarwinProcessProvider implements ProcessProvider {
     const { stdout } = await execFileAsync(
       'ps',
       ['-U', user, '-o', 'pid=,ppid=,pcpu=,rss=,etime=,lstart=,command='],
-      { maxBuffer: 10 * 1024 * 1024 }
+      { timeout: 5000, maxBuffer: 10 * 1024 * 1024 }
     )
 
     const lines = stdout.split('\n')
@@ -152,12 +160,15 @@ export class DarwinProcessProvider implements ProcessProvider {
    */
   public async listProcesses(options: FilterProcessOptions = {}): Promise<Proc[]> {
     const rawProcesses = await this.getRawProcesses()
-    const currentPid = process.pid
+    const currentPid = this.self.pid
+    const protectedPids = protectedProcessTree(rawProcesses, this.self)
 
     // 1. Filter raw processes with safety allowlist
     const filtered = rawProcesses.filter((proc) => {
       const check = isProcessAllowed(proc.pid, proc.command, {
         currentPid,
+        parentPid: this.self.ppid,
+        protectedPids,
         userIgnoreList: options.userIgnoreList,
         customAllowlist: options.customAllowlist
       })
