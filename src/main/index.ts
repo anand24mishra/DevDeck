@@ -1,10 +1,10 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerIpcHandlers } from './ipc'
 import { windowStateManager } from './services/windowState'
-import { trayService } from './services/tray'
+import { trayService, confirmTrayStopAll } from './services/tray'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
 
@@ -24,15 +24,54 @@ async function handleStopAllFromTray(): Promise<void> {
       userIgnoreList: settings.ignoreList,
       customAllowlist: settings.customAllowlist
     })
-    const pids = procs.map((p) => p.pid)
     const { terminate, defaultKillDeps } = await import('./services/kill')
-    await terminate(pids, defaultKillDeps)
-    trayService.updateProcessCount(0)
+    const report = await confirmTrayStopAll(
+      procs,
+      async (message, detail) => {
+        const answer = await dialog.showMessageBox({
+          type: 'warning',
+          title: 'DevDeck',
+          message,
+          detail,
+          buttons: ['Cancel', 'Stop'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true
+        })
+        return answer.response === 1
+      },
+      async (targets) => {
+        const result = await terminate(
+          targets.map((target) => target.pid),
+          defaultKillDeps
+        )
+        const stopped = new Set([...result.stopped, ...result.forced])
+        const { recentlyStoppedService } = await import('./services/recentlyStopped')
+        recentlyStoppedService.recordStopped(
+          targets.filter((target) => stopped.has(target.pid)),
+          !!settings.persistRecentlyStopped
+        )
+        return result
+      }
+    )
+    if (!report) return
+    await dialog.showMessageBox({
+      type: report.refused.length || report.stillRunning.length ? 'warning' : 'info',
+      title: 'DevDeck',
+      message: 'Stop finished',
+      detail: `${report.stopped.length} stopped; ${report.forced.length} force stopped; ${report.refused.length} skipped; ${report.stillRunning.length} still running.`
+    })
+    const remaining = await processProvider.listProcesses({
+      userIgnoreList: settings.ignoreList,
+      customAllowlist: settings.customAllowlist
+    })
+    trayService.updateProcessCount(remaining.length)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('procs:changed')
     }
   } catch (err: unknown) {
-    console.error('Failed to stop all processes from tray:', err)
+    console.error('Failed to stop all processes from tray')
+    void err
   }
 }
 

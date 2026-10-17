@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P0-1: Tray Stop All now names the process count and projects, defaults to Cancel, records successful stops, and shows a structured result summary.
 - Menu bar tray with template icon, running process count, window focus on click, and quick stop-all action.
 - Settings modal with single-page layout for poll intervals, theme switching, launch at login, process ignore list, custom allowlist, and Docker socket override.
 - Single-instance lock and window position/size persistence across restarts.

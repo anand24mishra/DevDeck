@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import { app, Tray, Menu, nativeImage, BrowserWindow } from 'electron'
+import type { KillReport, Proc } from '../../shared/types'
 
 export class TrayService {
   private tray: Tray | null = null
@@ -126,3 +127,19 @@ export class TrayService {
 }
 
 export const trayService = new TrayService()
+
+/** Keep the confirmation gate shared by every menu-bar stop-all entry point. */
+export async function confirmTrayStopAll(
+  targets: Proc[],
+  confirm: (message: string, detail: string) => Promise<boolean>,
+  stop: (targets: Proc[]) => Promise<KillReport>
+): Promise<KillReport | null> {
+  if (targets.length === 0) return null
+  const projects = [...new Set(targets.map((target) => target.project))].sort()
+  const confirmed = await confirm(
+    `Stop ${targets.length} development ${targets.length === 1 ? 'process' : 'processes'}?`,
+    projects.join('\n')
+  )
+  if (!confirmed) return null
+  return stop(targets)
+}
