@@ -19,10 +19,12 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
   const [errorCode, setErrorCode] = useState<string | null>(null)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
 
+  const inFlight = useRef(false)
   const isMountedRef = useRef(true)
 
   const fetchContainers = useCallback(async (isInitial = false) => {
-    if (!window.api?.listContainers) return
+    if (!window.api?.listContainers || inFlight.current || document.hidden) return
+    inFlight.current = true
 
     if (isInitial) {
       setLoading(true)
@@ -45,11 +47,13 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
       }
     } catch (err: unknown) {
       if (!isMountedRef.current) return
-      const msg = err instanceof Error ? err.message : 'Failed to query Docker'
+      const msg = 'Could not connect to Docker. Check your provider and try again.'
+      void err
       setError(msg)
       setErrorCode('INTERNAL')
     } finally {
-      if (isMountedRef.current && isInitial) {
+      inFlight.current = false
+      if (isMountedRef.current) {
         setLoading(false)
       }
     }
@@ -68,6 +72,10 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
       void fetchContainers(false)
     }, intervalMs)
 
+    const visible = (): void => {
+      if (!document.hidden) void fetchContainers(false)
+    }
+    document.addEventListener('visibilitychange', visible)
     const unsubscribe = window.api?.onDockerChanged?.(() => {
       void fetchContainers(false)
     })
@@ -77,6 +85,7 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
       clearTimeout(initialTimer)
       clearInterval(timer)
       unsubscribe?.()
+      document.removeEventListener('visibilitychange', visible)
     }
   }, [fetchContainers, pollIntervalSec])
 

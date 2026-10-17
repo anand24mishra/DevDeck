@@ -3,12 +3,18 @@ import os from 'os'
 import path from 'path'
 import { Writable } from 'stream'
 import Docker from 'dockerode'
-import { Container, ContainerState, Result, ContainerActionReport } from '../../shared/types'
+import {
+  Container,
+  ContainerState,
+  Result,
+  ContainerActionReport,
+  DockerDesktopApp
+} from '../../shared/types'
 
 export interface DockerSocketCheck {
   found: boolean
   socketPath?: string
-  error?: 'DOCKER_UNAVAILABLE' | 'DENIED'
+  error?: 'DOCKER_UNAVAILABLE' | 'DENIED' | 'INVALID_INPUT'
   message?: string
 }
 
@@ -25,11 +31,16 @@ export function resolveDockerSocket(overridePath?: string): DockerSocketCheck {
   const home = os.homedir()
   const candidates: string[] = []
 
-  if (overridePath && typeof overridePath === 'string') {
+  if (overridePath !== undefined && overridePath.trim()) {
     const trimmed = overridePath.trim()
-    if (trimmed.length > 0 && path.isAbsolute(trimmed) && !trimmed.includes('\0')) {
-      candidates.push(path.normalize(trimmed))
-    }
+    if (!path.isAbsolute(trimmed) || trimmed.includes('\0') || !fs.existsSync(trimmed))
+      return {
+        found: false,
+        error: 'INVALID_INPUT',
+        message:
+          'The Docker connection path is invalid. Choose an existing local Docker socket in Settings.'
+      }
+    candidates.push(path.normalize(trimmed))
   }
 
   const envHost = process.env['DOCKER_HOST']
@@ -37,24 +48,33 @@ export function resolveDockerSocket(overridePath?: string): DockerSocketCheck {
     candidates.push(envHost.replace(/^unix:\/\//, ''))
   }
 
-  candidates.push(
-    path.join(home, '.docker/run/docker.sock'),
-    '/var/run/docker.sock',
-    path.join(home, '.orbstack/run/docker.sock'),
-    path.join(home, '.colima/default/docker.sock')
-  )
+  if (!candidates.length)
+    candidates.push(
+      path.join(home, '.docker/run/docker.sock'),
+      '/var/run/docker.sock',
+      path.join(home, '.orbstack/run/docker.sock'),
+      path.join(home, '.colima/default/docker.sock')
+    )
 
   for (const socketPath of candidates) {
     try {
       if (fs.existsSync(socketPath)) {
         try {
           fs.accessSync(socketPath, fs.constants.R_OK | fs.constants.W_OK)
+          if (!fs.statSync(socketPath).isSocket())
+            return {
+              found: false,
+              error: 'INVALID_INPUT',
+              message:
+                'The Docker connection path is not a socket. Choose a Docker socket in Settings.'
+            }
           return { found: true, socketPath }
         } catch {
           return {
             found: false,
             error: 'DENIED',
-            message: `Permission denied accessing Docker socket at ${socketPath}`
+            message:
+              'DevDeck cannot access Docker. Check your user access to the selected Docker connection.'
           }
         }
       }
@@ -66,7 +86,9 @@ export function resolveDockerSocket(overridePath?: string): DockerSocketCheck {
   return {
     found: false,
     error: 'DOCKER_UNAVAILABLE',
-    message: 'Docker is not installed or not running. No Docker socket found.'
+    message: detectDockerApps().length
+      ? 'Docker is stopped. Start Docker Desktop or OrbStack, then check again.'
+      : 'Docker is not installed. Install Docker Desktop, OrbStack, or Colima, then check again.'
   }
 }
 
@@ -223,7 +245,9 @@ export class DockerService {
       return {
         ok: false,
         error: {
-          code: (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED') || 'DOCKER_UNAVAILABLE',
+          code:
+            (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED' | 'INVALID_INPUT') ||
+            'DOCKER_UNAVAILABLE',
           message: error?.message || 'Docker unavailable'
         }
       }
@@ -246,7 +270,9 @@ export class DockerService {
         ok: false,
         error: {
           code: 'DOCKER_UNAVAILABLE',
-          message: isRefused ? 'Docker is not running.' : msg
+          message: isRefused
+            ? 'Docker is stopped. Start your Docker provider, then check again.'
+            : 'Could not connect to Docker. Check your provider and connection path, then try again.'
         }
       }
     }
@@ -266,7 +292,9 @@ export class DockerService {
       return {
         ok: false,
         error: {
-          code: (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED') || 'DOCKER_UNAVAILABLE',
+          code:
+            (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED' | 'INVALID_INPUT') ||
+            'DOCKER_UNAVAILABLE',
           message: error?.message || 'Docker unavailable'
         }
       }
@@ -378,7 +406,9 @@ export class DockerService {
       return {
         ok: false,
         error: {
-          code: (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED') || 'DOCKER_UNAVAILABLE',
+          code:
+            (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED' | 'INVALID_INPUT') ||
+            'DOCKER_UNAVAILABLE',
           message: error?.message || 'Docker unavailable'
         }
       }
@@ -418,7 +448,9 @@ export class DockerService {
       return {
         ok: false,
         error: {
-          code: (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED') || 'DOCKER_UNAVAILABLE',
+          code:
+            (error?.code as 'DOCKER_UNAVAILABLE' | 'DENIED' | 'INVALID_INPUT') ||
+            'DOCKER_UNAVAILABLE',
           message: error?.message || 'Docker unavailable'
         }
       }
@@ -555,4 +587,16 @@ export function orderCompose(containers: Container[]): Container[] {
   for (const container of [...containers].sort((a, b) => a.name.localeCompare(b.name)))
     visit(container)
   return ordered
+}
+
+export function detectDockerApps(): DockerDesktopApp[] {
+  return (['desktop', 'orbstack'] as const).flatMap((id) => {
+    const name = id === 'desktop' ? 'Docker' : 'OrbStack'
+    const found = ['/Applications', path.join(os.homedir(), 'Applications')]
+      .map((directory) => path.join(directory, `${name}.app`))
+      .find((appPath) => fs.existsSync(appPath))
+    return found
+      ? [{ id, name: id === 'desktop' ? 'Docker Desktop' : 'OrbStack', path: found }]
+      : []
+  })
 }

@@ -13,6 +13,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { RecentlyStoppedDrawer } from './components/RecentlyStoppedDrawer'
 import { EmptyState } from './components/EmptyState'
 import { LoadingState } from './components/LoadingState'
+import { DockerErrorState } from './components/DockerErrorState'
 import { ErrorState } from './components/ErrorState'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { Toast, ToastMessage } from './components/Toast'
@@ -601,16 +602,7 @@ const App: React.FC = () => {
         dockerLoading && containers.length === 0 ? (
           <LoadingState />
         ) : dockerError && containers.length === 0 ? (
-          <ErrorState
-            message={
-              dockerErrorCode === 'DOCKER_UNAVAILABLE'
-                ? 'Docker daemon is not running. Start Docker Desktop, OrbStack, or Colima to view containers.'
-                : dockerErrorCode === 'DENIED'
-                  ? 'Permission denied accessing Docker socket.'
-                  : dockerError
-            }
-            onRetry={refreshDocker}
-          />
+          <DockerErrorState message={dockerError} code={dockerErrorCode} onRetry={refreshDocker} />
         ) : containers.length === 0 ? (
           <EmptyState />
         ) : filteredContainers.length === 0 ? (

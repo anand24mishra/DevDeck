@@ -10,7 +10,7 @@ import { is } from '@electron-toolkit/utils'
 import { Result, Proc, Settings, KillReport, Container, RecentlyStoppedItem } from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
-import { dockerService } from './services/docker'
+import { dockerService, detectDockerApps } from './services/docker'
 import { terminate, defaultKillDeps, validIdentities } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
 
@@ -305,6 +305,19 @@ export function registerIpcHandlers(): void {
     return { ok: true, data: null }
   })
 
+  handle('docker:apps', async () => ({ ok: true, data: detectDockerApps() }))
+  handle('docker:launch', async (_event, { app }: { app: 'desktop' | 'orbstack' }) => {
+    const detected = detectDockerApps().find((candidate) => candidate.id === app)
+    if (!detected)
+      return {
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'This Docker provider is not installed.' }
+      }
+    const error = await shell.openPath(detected.path)
+    return error
+      ? { ok: false, error: { code: 'INTERNAL', message: 'Could not open this Docker provider.' } }
+      : { ok: true, data: null }
+  })
   handle('docker:remove', async (_event, { id }: { id: string }) =>
     dockerService.removeContainer(id, settingsService.getSettings().dockerSocketPath)
   )

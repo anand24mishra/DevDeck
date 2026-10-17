@@ -148,3 +148,10 @@ normally before removing without volume deletion or force. `docker:composeAction
 membership and returns `Result<ContainerActionReport[]>` with id/name/ok/message per member.
 Only captured IDs are affected. Dependency order is start-first, reverse for stops; project restart
 stops in reverse order and starts in dependency order. Cycles fail safely before any mutation.
+
+## P1-12 Docker recovery
+`docker:apps` returns detected desktop providers (`id: desktop|orbstack`, `name`, `path`) with no
+input. `docker:launch` takes `{app:desktop|orbstack}` and opens only the matching detected local
+app path. Invalid socket overrides are `INVALID_INPUT`; unreadable sockets are `DENIED`; missing
+providers or stopped daemons are `DOCKER_UNAVAILABLE`, always with fixed, actionable text.
+Docker polling has an in-flight guard and pauses while hidden.

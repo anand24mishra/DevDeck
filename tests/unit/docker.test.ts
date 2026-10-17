@@ -6,6 +6,7 @@ describe('Docker socket discovery', () => {
   it('honors valid user override socket path', () => {
     vi.spyOn(fs, 'existsSync').mockImplementation((p) => p === '/custom/docker.sock')
     vi.spyOn(fs, 'accessSync').mockReturnValue(undefined)
+    vi.spyOn(fs, 'statSync').mockReturnValue({ isSocket: () => true } as fs.Stats)
 
     const check = resolveDockerSocket('/custom/docker.sock')
     expect(check.found).toBe(true)
@@ -17,6 +18,7 @@ describe('Docker socket discovery', () => {
   it('detects standard socket paths when available', () => {
     vi.spyOn(fs, 'existsSync').mockImplementation((p) => p === '/var/run/docker.sock')
     vi.spyOn(fs, 'accessSync').mockReturnValue(undefined)
+    vi.spyOn(fs, 'statSync').mockReturnValue({ isSocket: () => true } as fs.Stats)
 
     const check = resolveDockerSocket()
     expect(check.found).toBe(true)
@@ -31,7 +33,7 @@ describe('Docker socket discovery', () => {
     const check = resolveDockerSocket()
     expect(check.found).toBe(false)
     expect(check.error).toBe('DOCKER_UNAVAILABLE')
-    expect(check.message).toContain('Docker is not installed or not running')
+    expect(check.message).toContain('Docker is not installed')
 
     vi.restoreAllMocks()
   })
@@ -45,7 +47,7 @@ describe('Docker socket discovery', () => {
     const check = resolveDockerSocket('/var/run/docker.sock')
     expect(check.found).toBe(false)
     expect(check.error).toBe('DENIED')
-    expect(check.message).toContain('Permission denied')
+    expect(check.message).toContain('cannot access Docker')
 
     vi.restoreAllMocks()
   })

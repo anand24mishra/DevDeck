@@ -103,6 +103,8 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  getDockerApps: () => Promise<Result<DockerDesktopApp[]>>
+  launchDockerApp: (app: 'desktop' | 'orbstack') => Promise<Result<null>>
   removeContainer: (id: string) => Promise<Result<null>>
   composeAction: (
     project: string,
@@ -166,4 +168,10 @@ export interface ContainerActionReport {
   name: string
   ok: boolean
   message?: string
+}
+
+export interface DockerDesktopApp {
+  id: 'desktop' | 'orbstack'
+  name: string
+  path: string
 }

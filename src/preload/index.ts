@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  getDockerApps: () => ipcRenderer.invoke('docker:apps'),
+  launchDockerApp: (app) => ipcRenderer.invoke('docker:launch', { app }),
   removeContainer: (id) => ipcRenderer.invoke('docker:remove', { id }),
   composeAction: (project, action, ids) =>
     ipcRenderer.invoke('docker:composeAction', { project, action, ids }),

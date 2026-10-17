@@ -69,6 +69,7 @@ function validSettings(value: Record<string, unknown>): boolean {
 export function validIpcInput(channel: string, value: unknown): boolean {
   if (
     [
+      'docker:apps',
       'project:apps',
       'procs:list',
       'settings:get',
@@ -101,6 +102,8 @@ export function validIpcInput(channel: string, value: unknown): boolean {
           value.project.length > 0 &&
           value.project.length <= 4096))
     )
+  if (channel === 'docker:launch')
+    return keys(value, ['app']) && ['desktop', 'orbstack'].includes(value.app as string)
   if (channel === 'docker:remove')
     return keys(value, ['id']) && typeof value.id === 'string' && /^[a-f0-9]{12,64}$/.test(value.id)
   if (channel === 'docker:composeAction')
