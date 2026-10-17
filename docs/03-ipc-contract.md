@@ -140,3 +140,11 @@ Proc adds optional `establishedConnections`, `openFilesCount`, and `idleHint`. M
 working directories, listeners and TCP connection counts from one batched lsof invocation.
 `Settings.hintsEnabled?: boolean` defaults true. A listener running at least three days with zero
 established connections receives a hint only; it is never stopped automatically.
+
+## P1-11 Docker projects and removal
+Container adds `hasVolumes`, `service?`, `dependsOn?`. `docker:remove` takes `{id}` and stops
+normally before removing without volume deletion or force. `docker:composeAction` takes
+`{project, action:start|stop|restart, ids:string[]}` (1..500 unique confirmed IDs), recomputes
+membership and returns `Result<ContainerActionReport[]>` with id/name/ok/message per member.
+Only captured IDs are affected. Dependency order is start-first, reverse for stops; project restart
+stops in reverse order and starts in dependency order. Cycles fail safely before any mutation.

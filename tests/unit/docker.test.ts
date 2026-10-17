@@ -139,3 +139,79 @@ describe('Docker container parser', () => {
     expect(containers[0].ports).toEqual([])
   })
 })
+
+describe('Compose dependency ordering', () => {
+  it('starts dependencies before dependents and rejects dependency cycles', async () => {
+    const { orderCompose } = await import('../../src/main/services/docker')
+    const db = {
+      id: 'aaaaaaaaaaaa',
+      name: 'db',
+      service: 'db',
+      dependsOn: []
+    } as import('../../src/shared/types').Container
+    const web = {
+      id: 'bbbbbbbbbbbb',
+      name: 'app',
+      service: 'web',
+      dependsOn: ['db']
+    } as import('../../src/shared/types').Container
+    expect(orderCompose([web, db]).map((item) => item.id)).toEqual([db.id, web.id])
+    expect(() => orderCompose([{ ...db, dependsOn: ['web'] }, web])).toThrow('Dependency cycle')
+  })
+})
+
+it('restarts a Compose stack in dependency order, reports failures, and preserves volumes on removal', async () => {
+  const { DockerService } = await import('../../src/main/services/docker')
+  const db = 'aaaaaaaaaaaa',
+    web = 'bbbbbbbbbbbb'
+  const running = new Map([
+    [db, true],
+    [web, true]
+  ])
+  const order: string[] = []
+  let failWeb = false,
+    volumePresent = true
+  const client = {
+    ping: async () => {},
+    listContainers: async () =>
+      [...running].map(([id, active]) => ({
+        Id: id,
+        Names: [id === db ? '/db' : '/app'],
+        State: active ? 'running' : 'exited',
+        Labels: {
+          'com.docker.compose.project': 'shop',
+          'com.docker.compose.service': id === db ? 'db' : 'web',
+          'com.docker.compose.depends_on': id === web ? 'db:service_started:false' : ''
+        },
+        Mounts: [{ Type: 'volume' }]
+      })),
+    getContainer: (id: string) => ({
+      inspect: async () => ({ State: { Running: running.get(id) }, Mounts: [{ Type: 'volume' }] }),
+      stop: async () => {
+        order.push(`stop:${id}`)
+        if (id === web && failWeb) throw new Error('fixture failure')
+        running.set(id, false)
+      },
+      start: async () => {
+        order.push(`start:${id}`)
+        running.set(id, true)
+      },
+      remove: async (options: { v: boolean; force: boolean }) => {
+        if (options.v) volumePresent = false
+        expect(options.force).toBe(false)
+        running.delete(id)
+      }
+    })
+  }
+  const service = new DockerService(client as unknown as import('dockerode'))
+  const restarted = await service.composeAction('shop', 'restart', [db, web])
+  expect(restarted.ok).toBe(true)
+  expect(order).toEqual([`stop:${web}`, `stop:${db}`, `start:${db}`, `start:${web}`])
+  failWeb = true
+  const stopped = await service.composeAction('shop', 'stop', [db, web])
+  expect(stopped.ok && stopped.data.find((item) => item.id === web)?.ok).toBe(false)
+  expect(stopped.ok && stopped.data.find((item) => item.id === db)?.ok).toBe(true)
+  expect((await service.removeContainer(db)).ok).toBe(true)
+  expect(running.has(db)).toBe(false)
+  expect(volumePresent).toBe(true)
+})

@@ -3,7 +3,7 @@ import os from 'os'
 import path from 'path'
 import { Writable } from 'stream'
 import Docker from 'dockerode'
-import { Container, ContainerState, Result } from '../../shared/types'
+import { Container, ContainerState, Result, ContainerActionReport } from '../../shared/types'
 
 export interface DockerSocketCheck {
   found: boolean
@@ -107,12 +107,19 @@ export function parseDockerContainers(rawContainers: Docker.ContainerInfo[]): Co
       status: raw.Status || '',
       project,
       ports,
-      created: raw.Created || 0
+      created: raw.Created || 0,
+      hasVolumes: !!raw.Mounts?.length,
+      service: raw.Labels?.['com.docker.compose.service'],
+      dependsOn: (raw.Labels?.['com.docker.compose.depends_on'] || '')
+        .split(',')
+        .map((entry) => entry.split(':')[0])
+        .filter(Boolean)
     }
   })
 }
 
 export class DockerService {
+  constructor(private readonly injectedClient?: Docker) {}
   private client: Docker | null = null
   private currentSocket: string | null = null
   private activeStreams = new Map<
@@ -131,6 +138,7 @@ export class DockerService {
     client: Docker | null
     error?: { code: string; message: string }
   } {
+    if (this.injectedClient) return { client: this.injectedClient }
     const check = resolveDockerSocket(overridePath)
     if (!check.found || !check.socketPath) {
       this.client = null
@@ -279,6 +287,89 @@ export class DockerService {
       const msg = err instanceof Error ? err.message : `Failed to ${action} container`
       return { ok: false, error: { code: 'INTERNAL', message: msg } }
     }
+  }
+
+  public async removeContainer(id: string, overridePath?: string): Promise<Result<null>> {
+    if (!/^[a-f0-9]{12,64}$/.test(id))
+      return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid container ID' } }
+    const { client } = this.getClient(overridePath)
+    if (!client)
+      return {
+        ok: false,
+        error: { code: 'DOCKER_UNAVAILABLE', message: 'Start Docker and try again.' }
+      }
+    try {
+      const container = client.getContainer(id)
+      const details = await container.inspect()
+      if (details.State.Running) await container.stop({ t: 10 })
+      await container.remove({ v: false, force: false })
+      this.stopContainerLogs(id)
+      this.notifyChanged()
+      return { ok: true, data: null }
+    } catch {
+      return {
+        ok: false,
+        error: {
+          code: 'INTERNAL',
+          message: 'Could not remove this container. Check Docker and try again.'
+        }
+      }
+    }
+  }
+
+  public async composeAction(
+    project: string,
+    action: 'start' | 'stop' | 'restart',
+    ids: string[],
+    overridePath?: string
+  ): Promise<Result<ContainerActionReport[]>> {
+    const listed = await this.listContainers(overridePath)
+    if (!listed.ok) return listed
+    const members = listed.data.filter((item) => item.project === project && ids.includes(item.id))
+    let ordered: Container[]
+    try {
+      ordered = orderCompose(members)
+    } catch {
+      return {
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'This stack has a dependency cycle. Use individual container actions.'
+        }
+      }
+    }
+    const reports = new Map<string, ContainerActionReport>(
+      ids.map((id) => [
+        id,
+        {
+          id,
+          name: members.find((item) => item.id === id)?.name || id,
+          ok: members.some((item) => item.id === id),
+          message: members.some((item) => item.id === id)
+            ? undefined
+            : 'Not a member of this stack.'
+        }
+      ])
+    )
+    const stages: ('start' | 'stop')[] = action === 'restart' ? ['stop', 'start'] : [action]
+    for (const stage of stages)
+      for (const member of stage === 'stop' ? [...ordered].reverse() : ordered) {
+        if (!reports.get(member.id)?.ok) continue
+        if (
+          (stage === 'start' && action === 'start' && member.state === 'running') ||
+          (stage === 'stop' && member.state !== 'running')
+        )
+          continue
+        const result = await this.containerAction(member.id, stage, overridePath)
+        if (!result.ok)
+          reports.set(member.id, {
+            id: member.id,
+            name: member.name,
+            ok: false,
+            message: `Could not ${stage} this container.`
+          })
+      }
+    return { ok: true, data: [...reports.values()] }
   }
 
   public async stopAllContainers(overridePath?: string): Promise<Result<null>> {
@@ -444,3 +535,24 @@ export class DockerService {
 }
 
 export const dockerService = new DockerService()
+
+export function orderCompose(containers: Container[]): Container[] {
+  const ordered: Container[] = [],
+    visiting = new Set<string>(),
+    visited = new Set<string>()
+  const visit = (container: Container): void => {
+    if (visiting.has(container.id)) throw new Error('Dependency cycle')
+    if (visited.has(container.id)) return
+    visiting.add(container.id)
+    for (const dependency of container.dependsOn || []) {
+      const member = containers.find((item) => item.service === dependency)
+      if (member) visit(member)
+    }
+    visiting.delete(container.id)
+    visited.add(container.id)
+    ordered.push(container)
+  }
+  for (const container of [...containers].sort((a, b) => a.name.localeCompare(b.name)))
+    visit(container)
+  return ordered
+}

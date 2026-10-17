@@ -1,9 +1,11 @@
 import React from 'react'
+import { LocalPortLink } from './LocalPortLink'
 import { Container } from '../../../shared/types'
 
 interface DockerContainerRowProps {
   container: Container
   onAction: (id: string, action: 'start' | 'stop' | 'restart') => void
+  onRemove: (container: Container) => void
   onViewLogs: (container: Container) => void
   loading: boolean
 }
@@ -12,6 +14,7 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
   container,
   onAction,
   onViewLogs,
+  onRemove,
   loading
 }) => {
   const isRunning = container.state === 'running'
@@ -44,9 +47,7 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
         {container.ports.length > 0 ? (
           <div className="ports-list">
             {container.ports.map((port) => (
-              <span key={port} className="port-badge">
-                :{port}
-              </span>
+              <LocalPortLink key={port} port={port} />
             ))}
           </div>
         ) : (
@@ -61,6 +62,21 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
 
       {/* Action buttons */}
       <div className="col-actions">
+        <button
+          className="btn-action"
+          onClick={() => {
+            void navigator.clipboard.writeText(container.id).catch(() => {})
+          }}
+        >
+          Copy ID
+        </button>
+        <button
+          className="btn-action btn-danger"
+          disabled={loading}
+          onClick={() => onRemove(container)}
+        >
+          Remove
+        </button>
         <button
           type="button"
           className="btn-action btn-logs"

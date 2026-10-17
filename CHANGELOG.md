@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P1-11: Added confirmed container removal without deleting volumes, copied IDs and local URLs, and captured-membership Compose start, stop and restart with dependency ordering and per-container reports.
 - P1-10: Added opt-out idle hints for listeners running three days without established TCP connections, with explanatory details and a single batched lsof invocation for cwd, sockets and counts.
 - P1-9: Added silent per-type native notifications, crossing deduplication, expected-stop suppression, action reports and click-to-focus navigation with opt-in monitoring preferences.
 - P1-8: Added stable name, CPU, memory, uptime and port sorts, Heavy-only filter, per-project totals, and a configurable total-memory warning with Review action.

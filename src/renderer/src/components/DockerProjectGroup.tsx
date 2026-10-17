@@ -6,6 +6,9 @@ interface DockerProjectGroupProps {
   projectName: string
   containers: Container[]
   onAction: (id: string, action: 'start' | 'stop' | 'restart') => void
+  onRemove: (container: Container) => void
+  onStartProject: (name: string, containers: Container[]) => void
+  onRestartProject: (name: string, containers: Container[]) => void
   onStopProject: (projectName: string, containers: Container[]) => void
   onViewLogs: (container: Container) => void
   actionLoadingId: string | null
@@ -16,6 +19,9 @@ export const DockerProjectGroup: React.FC<DockerProjectGroupProps> = ({
   containers,
   onAction,
   onStopProject,
+  onStartProject,
+  onRestartProject,
+  onRemove,
   onViewLogs,
   actionLoadingId
 }) => {
@@ -38,7 +44,20 @@ export const DockerProjectGroup: React.FC<DockerProjectGroupProps> = ({
         </div>
 
         <div className="project-header-right" onClick={(e) => e.stopPropagation()}>
-          {runningCount > 0 && (
+          {containers.some((item) => item.project) && (
+            <>
+              <button className="quiet-btn" onClick={() => onStartProject(projectName, containers)}>
+                Start stack
+              </button>
+              <button
+                className="quiet-btn"
+                onClick={() => onRestartProject(projectName, containers)}
+              >
+                Restart stack
+              </button>
+            </>
+          )}
+          {runningCount > 0 && containers.some((item) => item.project) && (
             <button
               type="button"
               className="stop-project-btn"
@@ -59,6 +78,7 @@ export const DockerProjectGroup: React.FC<DockerProjectGroupProps> = ({
               container={container}
               onAction={onAction}
               onViewLogs={onViewLogs}
+              onRemove={onRemove}
               loading={actionLoadingId === container.id}
             />
           ))}

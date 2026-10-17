@@ -305,6 +305,23 @@ export function registerIpcHandlers(): void {
     return { ok: true, data: null }
   })
 
+  handle('docker:remove', async (_event, { id }: { id: string }) =>
+    dockerService.removeContainer(id, settingsService.getSettings().dockerSocketPath)
+  )
+  handle(
+    'docker:composeAction',
+    async (
+      _event,
+      input: { project: string; action: 'start' | 'stop' | 'restart'; ids: string[] }
+    ) =>
+      dockerService.composeAction(
+        input.project,
+        input.action,
+        input.ids,
+        settingsService.getSettings().dockerSocketPath
+      )
+  )
+
   // docker:list
   handle('docker:list', async (event): Promise<Result<Container[]>> => {
     if (!isSenderAuthorized(event)) {

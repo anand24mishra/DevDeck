@@ -64,6 +64,9 @@ export interface Container {
   project: string | null
   ports: number[]
   created: number
+  hasVolumes?: boolean
+  service?: string
+  dependsOn?: string[]
 }
 
 export interface RecentlyStoppedItem {
@@ -100,6 +103,12 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  removeContainer: (id: string) => Promise<Result<null>>
+  composeAction: (
+    project: string,
+    action: 'start' | 'stop' | 'restart',
+    ids: string[]
+  ) => Promise<Result<ContainerActionReport[]>>
   listContainers: () => Promise<Result<Container[]>>
   containerAction: (id: string, action: 'start' | 'stop' | 'restart') => Promise<Result<null>>
   stopAllContainers: () => Promise<Result<null>>
@@ -150,4 +159,11 @@ export interface FocusTarget {
   pid?: number
   project?: string
   port?: number
+}
+
+export interface ContainerActionReport {
+  id: string
+  name: string
+  ok: boolean
+  message?: string
 }

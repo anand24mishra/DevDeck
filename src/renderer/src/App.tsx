@@ -31,6 +31,7 @@ interface GroupedDockerProject {
 interface DialogState {
   isOpen: boolean
   title: string
+  confirmLabel?: string
   description?: string
   targetList?: string[]
   action: () => Promise<void>
@@ -344,16 +345,17 @@ const App: React.FC = () => {
       const container = containers.find((c) => c.id === id)
       const name = container?.name || id
 
-      if (action === 'stop') {
+      if (action !== 'start') {
         setDialogState({
           isOpen: true,
-          title: `Stop container ${name}?`,
+          title: `${action === 'restart' ? 'Restart' : 'Stop'} container ${name}?`,
+          confirmLabel: action === 'restart' ? 'Restart' : 'Stop',
           description: `This will send a stop signal to the container with a 10s graceful shutdown timeout.`,
           targetList: [`${name} (${container?.image || 'unknown image'})`],
           action: async () => {
             setIsBusy(true)
             try {
-              const ok = await containerAction(id, 'stop')
+              const ok = await containerAction(id, action)
               if (ok) {
                 setToast({
                   id: Date.now().toString(),
@@ -383,33 +385,72 @@ const App: React.FC = () => {
     [containers, containerAction]
   )
 
-  const handleStopDockerProject = useCallback(
-    (projectName: string, projectContainers: Container[]) => {
-      const running = projectContainers.filter((c) => c.state === 'running')
+  const handleDockerProject = useCallback(
+    (project: string, members: Container[], action: 'start' | 'stop' | 'restart') => {
+      const run = async (): Promise<void> => {
+        setIsBusy(true)
+        try {
+          const result = await window.api.composeAction(
+            project,
+            action,
+            members.map((item) => item.id)
+          )
+          setToast({
+            id: String(Date.now()),
+            text: result.ok
+              ? result.data
+                  .map((item) => `${item.name}: ${item.ok ? 'done' : item.message}`)
+                  .join('; ')
+              : result.error.message,
+            type: result.ok && result.data.every((item) => item.ok) ? 'success' : 'warn'
+          })
+          await refreshDocker()
+        } finally {
+          setIsBusy(false)
+          setDialogState((previous) => ({ ...previous, isOpen: false }))
+        }
+      }
+      if (action === 'start') {
+        void run()
+        return
+      }
       setDialogState({
         isOpen: true,
-        title: `Stop ${running.length} container${running.length === 1 ? '' : 's'} in ${projectName}?`,
-        description: `This will stop all running containers in this Compose stack.`,
-        targetList: running.map((c) => `${c.name} (${c.image})`),
+        title: `${action === 'stop' ? 'Stop' : 'Restart'} ${members.length} containers in ${project}?`,
+        confirmLabel: action === 'stop' ? 'Stop' : 'Restart',
+        targetList: members.map((item) => `${item.name} (${item.image})`),
+        action: run
+      })
+    },
+    [refreshDocker]
+  )
+
+  const handleDockerRemove = useCallback(
+    (container: Container) => {
+      setDialogState({
+        isOpen: true,
+        title: `Remove container ${container.name}?`,
+        confirmLabel: 'Remove',
+        description: `${container.state === 'running' ? 'The container will be stopped first. ' : ''}${container.hasVolumes ? 'Attached folders and volumes will be kept. ' : ''}This container cannot be restored with Undo.`,
+        targetList: [container.name],
         action: async () => {
           setIsBusy(true)
           try {
-            for (const c of running) {
-              await containerAction(c.id, 'stop')
-            }
+            const result = await window.api.removeContainer(container.id)
             setToast({
-              id: Date.now().toString(),
-              text: `Stopped stack ${projectName}`,
-              type: 'success'
+              id: String(Date.now()),
+              text: result.ok ? `Removed ${container.name}` : result.error.message,
+              type: result.ok ? 'success' : 'error'
             })
+            await refreshDocker()
           } finally {
             setIsBusy(false)
-            setDialogState((prev) => ({ ...prev, isOpen: false }))
+            setDialogState((previous) => ({ ...previous, isOpen: false }))
           }
         }
       })
     },
-    [containerAction]
+    [refreshDocker]
   )
 
   const handleStopAllContainers = useCallback(() => {
@@ -582,7 +623,10 @@ const App: React.FC = () => {
                 projectName={group.name}
                 containers={group.containers}
                 onAction={handleDockerAction}
-                onStopProject={handleStopDockerProject}
+                onStopProject={(name, members) => handleDockerProject(name, members, 'stop')}
+                onStartProject={(name, members) => handleDockerProject(name, members, 'start')}
+                onRestartProject={(name, members) => handleDockerProject(name, members, 'restart')}
+                onRemove={handleDockerRemove}
                 onViewLogs={setSelectedLogContainer}
                 actionLoadingId={actionLoadingId}
               />
@@ -622,6 +666,7 @@ const App: React.FC = () => {
       <ConfirmDialog
         isOpen={dialogState.isOpen}
         title={dialogState.title}
+        confirmLabel={dialogState.confirmLabel}
         description={dialogState.description}
         targetList={dialogState.targetList}
         isBusy={isBusy}
