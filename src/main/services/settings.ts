@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
+import { EDITOR_IDS, TERMINAL_IDS } from './applications'
 import { Settings } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -10,6 +11,8 @@ export const DEFAULT_SETTINGS: Settings = {
   dockerSocketPath: undefined,
   theme: 'system',
   openAtLogin: false,
+  preferredEditor: 'auto',
+  preferredTerminal: 'auto',
   persistRecentlyStopped: false
 }
 
@@ -92,7 +95,13 @@ export class SettingsService {
       dockerSocketPath,
       theme,
       openAtLogin,
-      persistRecentlyStopped
+      persistRecentlyStopped,
+      preferredEditor: EDITOR_IDS.includes(r.preferredEditor as string)
+        ? (r.preferredEditor as string)
+        : 'auto',
+      preferredTerminal: TERMINAL_IDS.includes(r.preferredTerminal as string)
+        ? (r.preferredTerminal as string)
+        : 'auto'
     }
   }
 

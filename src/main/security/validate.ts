@@ -1,5 +1,6 @@
 import path from 'path'
 import { isLocalUrl } from '../../shared/ports'
+import { EDITOR_IDS, TERMINAL_IDS } from '../services/applications'
 import { validIdentities } from '../services/kill'
 
 export function isExpectedPage(actual: string | undefined, expected: string): boolean {
@@ -17,6 +18,10 @@ function validSettings(value: Record<string, unknown>): boolean {
     switch (key) {
       case 'refreshIntervalSec':
         return [2, 3, 5, 10].includes(field as number)
+      case 'preferredEditor':
+        return EDITOR_IDS.includes(field as string)
+      case 'preferredTerminal':
+        return TERMINAL_IDS.includes(field as string)
       case 'theme':
         return ['system', 'light', 'dark'].includes(field as string)
       case 'openAtLogin':
@@ -52,6 +57,7 @@ function validSettings(value: Record<string, unknown>): boolean {
 export function validIpcInput(channel: string, value: unknown): boolean {
   if (
     [
+      'project:apps',
       'procs:list',
       'settings:get',
       'recent:list',
@@ -63,6 +69,14 @@ export function validIpcInput(channel: string, value: unknown): boolean {
     return value === undefined
   }
   if (!object(value)) return false
+  if (['project:openEditor', 'project:openFinder', 'project:openTerminal'].includes(channel))
+    return (
+      keys(value, ['path']) &&
+      typeof value.path === 'string' &&
+      value.path.length <= 4096 &&
+      path.isAbsolute(value.path) &&
+      !value.path.includes('\0')
+    )
   if (channel === 'url:open') return keys(value, ['url']) && isLocalUrl(value.url)
   if (channel === 'ports:lookup')
     return (

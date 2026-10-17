@@ -1,3 +1,4 @@
+import { detectApplications, verifyProjectPath, openWithApplication } from './services/applications'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { isExpectedPage, validIpcInput } from './security/validate'
@@ -77,6 +78,49 @@ export function registerIpcHandlers(): void {
       }
     }
   })
+
+  handle('project:apps', async () => ({ ok: true, data: detectApplications() }))
+  for (const channel of ['project:openEditor', 'project:openFinder', 'project:openTerminal']) {
+    handle(channel, async (_event, { path }: { path: string }) => {
+      const settings = settingsService.getSettings()
+      const procs = await processProvider.listProcesses({
+        userIgnoreList: settings.ignoreList,
+        customAllowlist: settings.customAllowlist
+      })
+      const root = verifyProjectPath(
+        path,
+        procs.flatMap((proc) => (proc.projectPath ? [proc.projectPath] : []))
+      )
+      if (!root)
+        return {
+          ok: false,
+          error: {
+            code: 'DENIED',
+            message: 'This project folder could not be verified. Refresh and try again.'
+          }
+        }
+      if (channel === 'project:openFinder') shell.showItemInFolder(root)
+      else {
+        const kind = channel === 'project:openEditor' ? 'editor' : 'terminal'
+        const preferred = kind === 'editor' ? settings.preferredEditor : settings.preferredTerminal
+        const app = detectApplications().find(
+          (candidate) =>
+            candidate.kind === kind &&
+            (!preferred || preferred === 'auto' || candidate.id === preferred)
+        )
+        if (!app)
+          return {
+            ok: false,
+            error: {
+              code: 'NOT_FOUND',
+              message: `No ${kind} was found. Choose an installed application in Settings.`
+            }
+          }
+        await openWithApplication(app, root)
+      }
+      return { ok: true, data: null }
+    })
+  }
 
   handle('url:open', async (_event, { url }: { url: string }) => {
     await shell.openExternal(url)

@@ -1,5 +1,6 @@
 import React from 'react'
 import { Proc } from '../../../shared/types'
+import { ProjectActions } from './ProjectActions'
 import { ProcessRow } from './ProcessRow'
 
 interface ProjectGroupProps {
@@ -44,6 +45,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
         </div>
 
         <div className="project-meta">
+          {projectPath && <ProjectActions path={projectPath} />}
           <span className="process-count-badge mono">
             {processes.length} {processes.length === 1 ? 'proc' : 'procs'}
           </span>

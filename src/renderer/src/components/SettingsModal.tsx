@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { Settings } from '../../../shared/types'
+import { Settings, InstalledApplication } from '../../../shared/types'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -16,6 +16,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [newIgnoreItem, setNewIgnoreItem] = useState('')
   const [newAllowItem, setNewAllowItem] = useState('')
+  const [applications, setApplications] = useState<InstalledApplication[]>([])
+  useEffect(() => {
+    if (isOpen)
+      void window.api
+        .getInstalledApps()
+        .then((result) => {
+          if (result.ok) setApplications(result.data)
+        })
+        .catch(() => {})
+  }, [isOpen])
   const [saveIndicator, setSaveIndicator] = useState(false)
 
   const ignoreInputRef = useRef<HTMLInputElement>(null)
@@ -102,6 +112,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Section 1: General */}
           <section className="settings-section">
             <h3 className="section-title">General</h3>
+            {(['editor', 'terminal'] as const).map((kind) => (
+              <div className="setting-row" key={kind}>
+                <label htmlFor={`preferred-${kind}`}>Preferred {kind}</label>
+                <select
+                  id={`preferred-${kind}`}
+                  className="settings-select"
+                  value={
+                    (kind === 'editor' ? settings.preferredEditor : settings.preferredTerminal) ||
+                    'auto'
+                  }
+                  onChange={(event) =>
+                    void triggerSave(
+                      kind === 'editor'
+                        ? { preferredEditor: event.target.value }
+                        : { preferredTerminal: event.target.value }
+                    )
+                  }
+                >
+                  <option value="auto">Automatic</option>
+                  {applications
+                    .filter((app) => app.kind === kind)
+                    .map((app) => (
+                      <option value={app.id} key={app.id}>
+                        {app.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ))}
 
             <div className="setting-row">
               <div className="setting-info">

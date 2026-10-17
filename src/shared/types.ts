@@ -31,6 +31,8 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  preferredEditor?: string
+  preferredTerminal?: string
   persistRecentlyStopped?: boolean
 }
 
@@ -73,6 +75,10 @@ export interface DockerLogMessage {
 }
 
 export interface DevDeckApi {
+  getInstalledApps: () => Promise<Result<InstalledApplication[]>>
+  openProjectInEditor: (path: string) => Promise<Result<null>>
+  showProjectInFinder: (path: string) => Promise<Result<null>>
+  openProjectInTerminal: (path: string) => Promise<Result<null>>
   openLocalUrl: (url: string) => Promise<Result<null>>
   lookupPort: (port: number) => Promise<Result<PortOwner[]>>
   getProcesses: () => Promise<Result<Proc[]>>
@@ -102,4 +108,12 @@ export interface ListeningSocket {
 }
 export interface PortOwner extends ListeningSocket {
   process: Proc | null
+}
+
+export interface InstalledApplication {
+  id: string
+  name: string
+  path: string
+  kind: 'editor' | 'terminal'
+  cli?: boolean
 }

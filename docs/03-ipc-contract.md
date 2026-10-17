@@ -96,3 +96,11 @@ or `localhost:number`; command lines and arbitrary hosts are not accepted as inp
 `url:open` takes `{ url: string }`, returns `Result<null>`. Only explicit HTTP localhost or
 127.0.0.1 URLs with a valid port and no credentials, query, path or fragment are accepted.
 `window.api.openLocalUrl(url)` calls main, which validates again before `shell.openExternal`.
+
+## P1-4 project applications
+`project:apps` has no input and returns `Result<InstalledApplication[]>` (`id`, `name`, `path`,
+`kind: editor|terminal`, `cli?`). `project:openEditor`, `project:openFinder`, `project:openTerminal`
+take `{ path: absolute string }` and return `Result<null>`. Main recomputes active roots, resolves
+real paths, and requires a project marker before opening. Apps come only from fixed detection
+candidates; fixed argv arrays never interpolate a shell command. Settings add optional
+`preferredEditor`/`preferredTerminal` IDs, default `auto`; unknown IDs are rejected.
