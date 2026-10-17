@@ -73,6 +73,8 @@ const App: React.FC = () => {
     stopAllContainers
   } = useDocker(settings.refreshIntervalSec)
 
+  const [socketProtocol, setSocketProtocol] = useState<'all' | 'TCP' | 'UDP'>('all')
+  const [socketState, setSocketState] = useState<'all' | 'LISTEN' | 'ESTABLISHED'>('all')
   const [treeView, setTreeView] = useState(false)
   const [sortBy, setSortBy] = useState<ProcessSort>('name')
   const [heavyOnly, setHeavyOnly] = useState(false)
@@ -164,6 +166,12 @@ const App: React.FC = () => {
       procs.filter(
         (proc) =>
           (!heavyOnly || proc.cpu >= 50 || proc.memMB >= 512) &&
+          ((socketProtocol === 'all' && socketState === 'all') ||
+            (proc.sockets || []).some(
+              (socket) =>
+                (socketProtocol === 'all' || socket.protocol === socketProtocol) &&
+                (socketState === 'all' || socket.state === socketState)
+            )) &&
           (!q ||
             proc.name.toLowerCase().includes(q) ||
             proc.project.toLowerCase().includes(q) ||
@@ -171,7 +179,7 @@ const App: React.FC = () => {
       ),
       sortBy
     )
-  }, [procs, searchQuery, sortBy, heavyOnly])
+  }, [procs, searchQuery, sortBy, heavyOnly, socketProtocol, socketState])
 
   const groupedProjects = useMemo(() => {
     const map = new Map<string, GroupedProject>()
@@ -576,6 +584,26 @@ const App: React.FC = () => {
             />{' '}
             Process tree
           </label>
+          <select
+            className="settings-select"
+            aria-label="Socket protocol"
+            value={socketProtocol}
+            onChange={(event) => setSocketProtocol(event.target.value as typeof socketProtocol)}
+          >
+            <option value="all">TCP and UDP</option>
+            <option>TCP</option>
+            <option>UDP</option>
+          </select>
+          <select
+            className="settings-select"
+            aria-label="Connection state"
+            value={socketState}
+            onChange={(event) => setSocketState(event.target.value as typeof socketState)}
+          >
+            <option value="all">All connections</option>
+            <option value="LISTEN">Listening</option>
+            <option value="ESTABLISHED">Established</option>
+          </select>
           <label htmlFor="process-sort">Sort by</label>
           <select
             id="process-sort"

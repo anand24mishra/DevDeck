@@ -82,3 +82,12 @@ it('warns for wildcard and LAN binds, preserving loopback-only listeners', () =>
   for (const address of ['127.0.0.1', '127.1.2.3', '::1', '[::1]', '::ffff:127.0.0.1'])
     expect(isNetworkExposed(address)).toBe(false)
 })
+
+it('retains UDP binds and separates established TCP connections from listeners', () => {
+  const files = parseOpenFiles(
+    'p123\ncnode\nf10u\ntIPv4\nPUDP\nn*:5353\nf11u\ntIPv4\nPTCP\nn127.0.0.1:4000->127.0.0.1:8000\nTST=ESTABLISHED\n'
+  )
+  expect(files.listeners.get(123)?.map((socket) => socket.port)).toEqual([5353])
+  expect(files.listeners.get(123)?.[0].protocol).toBe('UDP')
+  expect(files.connections.get(123)).toBe(1)
+})

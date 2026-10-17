@@ -116,10 +116,15 @@ export function parseOpenFiles(output: string): OpenFileSnapshot {
     const sockets = result.sockets.get(pid) || []
     sockets.push(socket)
     result.sockets.set(pid, sockets)
-    if (socket.state === 'LISTEN' && protocol === 'TCP') {
+    if (socket.state === 'LISTEN') {
       const listeners = result.listeners.get(pid) || []
       if (
-        !listeners.some((entry) => entry.port === socket.port && entry.address === socket.address)
+        !listeners.some(
+          (entry) =>
+            entry.port === socket.port &&
+            entry.address === socket.address &&
+            entry.protocol === socket.protocol
+        )
       )
         listeners.push(socket)
       result.listeners.set(pid, listeners)

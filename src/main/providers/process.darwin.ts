@@ -148,8 +148,8 @@ export class DarwinProcessProvider implements ProcessProvider {
       const { binaryName } = extractBinaryName(proc.command)
       const cwd = cwdMap.get(proc.pid) || null
       const project = resolveProjectFromCwd(cwd)
-      const sockets = portsMap.get(proc.pid) || []
-      const ports = [...new Set(sockets.map((socket) => socket.port))]
+      const sockets = openFiles.sockets.get(proc.pid) || []
+      const ports = [...new Set((portsMap.get(proc.pid) || []).map((socket) => socket.port))]
 
       return {
         pid: proc.pid,

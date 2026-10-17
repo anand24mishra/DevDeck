@@ -66,9 +66,18 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
         <div className="col col-ports">
           {proc.ports && proc.ports.length > 0 ? (
             <div className="port-tags">
-              {proc.ports.map((port) => (
-                <LocalPortLink key={port} port={port} />
-              ))}
+              {proc.ports.map((port) =>
+                proc.sockets?.some((socket) => socket.port === port && socket.protocol === 'UDP') &&
+                !proc.sockets?.some(
+                  (socket) => socket.port === port && socket.protocol === 'TCP'
+                ) ? (
+                  <span key={port} className="mono">
+                    UDP :{port}
+                  </span>
+                ) : (
+                  <LocalPortLink key={port} port={port} />
+                )
+              )}
             </div>
           ) : (
             <span className="port-none mono">-</span>
@@ -156,11 +165,12 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
               </p>
             </section>
           )}
+          <p>Active connections: {proc.establishedConnections || 0}</p>
           <div className="details-grid mono">
             {(proc.sockets || []).map((socket) => (
               <div
                 className="detail-item detail-item-wide"
-                key={`${socket.address}:${socket.port}`}
+                key={`${socket.address}:${socket.port}:${socket.protocol}:${socket.state}`}
               >
                 <span>
                   {socket.protocol || 'TCP'} {socket.family} · {socket.address}:{socket.port}

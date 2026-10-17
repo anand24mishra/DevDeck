@@ -173,3 +173,8 @@ ListeningSocket includes `protocol:TCP|UDP`, `family:IPv4|IPv6`, and `state:LIST
 Non-loopback listening binds receive a network-visibility badge and in-app guide. Optional
 networkExposure notifications are deduplicated by process identity, port and address. A wildcard
 is exposed; 127/8, ::1 and IPv4-mapped loopback are local. No network probe or automatic action runs.
+
+## P2-3 UDP and connection states
+Proc.sockets includes listening TCP, UDP bound sockets and established TCP sockets; `ports`
+contains listening/bound ports only. Protocol and state filters use the existing snapshot. UDP
+ports are labeled UDP and do not receive HTTP browser actions. Established counts remain separate.
