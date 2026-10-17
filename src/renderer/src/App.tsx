@@ -3,6 +3,7 @@ import { Proc, KillReport, Container, Settings, ProcessIdentity } from '../../sh
 import { useProcesses } from './hooks/useProcesses'
 import { useDocker } from './hooks/useDocker'
 import { useRecentlyStopped } from './hooks/useRecentlyStopped'
+import { PortLookup } from './components/PortLookup'
 import { Header } from './components/Header'
 import { ProjectGroup } from './components/ProjectGroup'
 import { DockerProjectGroup } from './components/DockerProjectGroup'
@@ -430,6 +431,9 @@ const App: React.FC = () => {
         loading={activeTab === 'processes' ? procsLoading : dockerLoading}
       />
 
+      {activeTab === 'processes' && (
+        <PortLookup interval={settings.refreshIntervalSec} onStop={handleStopProcess} />
+      )}
       <main className="app-content" tabIndex={-1}>
         {activeTab === 'processes' ? (
           /* Processes View */

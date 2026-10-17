@@ -83,6 +83,13 @@ test('launch, search, native tray cancel, and confirmed process stop', async () 
     expect(server.exitCode).toBeNull()
     process.kill(server.pid!, 0)
 
+    await page.getByRole('textbox', { name: 'Free a port', exact: true }).fill(`localhost:${port}`)
+    await expect(page.locator('.port-owner')).toContainText(String(port))
+    await page.locator('.port-owner .row-stop-btn').click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
+    process.kill(server.pid!, 0)
+    await page.getByRole('textbox', { name: 'Free a port', exact: true }).fill('')
+
     await page.locator('.row-stop-btn').click()
     const confirmation = page.getByRole('dialog')
     await expect(confirmation.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()

@@ -23,6 +23,9 @@
   --radius-lg: 10px;
 
   --row-height: 32px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
 }
 
 @media (prefers-color-scheme: light) {

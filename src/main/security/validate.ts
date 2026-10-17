@@ -62,6 +62,13 @@ export function validIpcInput(channel: string, value: unknown): boolean {
     return value === undefined
   }
   if (!object(value)) return false
+  if (channel === 'ports:lookup')
+    return (
+      keys(value, ['port']) &&
+      Number.isInteger(value.port) &&
+      Number(value.port) >= 1 &&
+      Number(value.port) <= 65535
+    )
   if (channel === 'settings:set') return validSettings(value)
   if (['procs:stop', 'procs:stopAll', 'procs:stopProject'].includes(channel)) {
     const expected = channel === 'procs:stopProject' ? ['project', 'targets'] : ['targets']

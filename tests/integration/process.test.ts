@@ -40,6 +40,10 @@ describe('DarwinProcessProvider Integration', () => {
       if (found) {
         expect(found.ports).toContain(testPort)
         expect(found.name).toBe('node')
+        const owners = await provider.lookupPort(testPort)
+        expect(
+          owners.some((owner) => owner.pid === child.pid && owner.address === '127.0.0.1')
+        ).toBe(true)
       }
     } finally {
       child.kill('SIGTERM')

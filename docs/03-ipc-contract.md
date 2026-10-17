@@ -83,3 +83,11 @@ from source). Prefix lookalikes, other file URLs and subframes are rejected. No-
 reject payloads; every object channel rejects unknown keys, wrong types and oversized values.
 Unknown settings keys and invalid settings edits return `INVALID_INPUT`; corrupt on-disk settings
 still recover to defaults. Unexpected handler failures use a fixed error message without OS output.
+
+## P1-1 port lookup
+`ports:lookup` takes `{ port: integer 1..65535 }`, returns `Result<PortOwner[]>`.
+Each owner has `pid`, executable `name`, `port`, `address`, and `process: Proc | null`.
+A null process is read-only (not allowlisted, protected, or owned by another user); it has no Stop
+button. Managed owners use the exact same captured-identity stop/confirmation path as process rows.
+`window.api.lookupPort(port)` is the only preload entry. Port input accepts a number, `:number`,
+or `localhost:number`; command lines and arbitrary hosts are not accepted as input.

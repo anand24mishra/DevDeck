@@ -1710,3 +1710,26 @@
   gap: 8px;
 }
 
+.port-lookup {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.port-field-row,
+.port-owner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.port-field-row input {
+  width: 12ch;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.port-lookup p:empty {
+  display: none;
+}
+.port-owner {
+  padding-block: var(--space-2);
+}

@@ -21,6 +21,7 @@ export interface Proc extends ProcessIdentity {
   project: string
   projectPath: string | null
   ports: number[]
+  sockets?: ListeningSocket[]
 }
 
 export interface Settings {
@@ -72,6 +73,7 @@ export interface DockerLogMessage {
 }
 
 export interface DevDeckApi {
+  lookupPort: (port: number) => Promise<Result<PortOwner[]>>
   getProcesses: () => Promise<Result<Proc[]>>
   getSettings: () => Promise<Result<Settings>>
   updateSettings: (partial: Partial<Settings>) => Promise<Result<Settings>>
@@ -89,4 +91,14 @@ export interface DevDeckApi {
   stopContainerLogs: (id: string) => Promise<Result<null>>
   onDockerLog: (callback: (msg: DockerLogMessage) => void) => () => void
   onDockerChanged: (callback: () => void) => () => void
+}
+
+export interface ListeningSocket {
+  pid: number
+  name: string
+  port: number
+  address: string
+}
+export interface PortOwner extends ListeningSocket {
+  process: Proc | null
 }

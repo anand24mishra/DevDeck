@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P1-1: Added validated port lookup, IPv4 and IPv6 bind addresses, read-only owners, keyboard focus shortcut, automatic refresh, and the existing identity-confirmed Stop flow.
 - P0-9: Documented renderer-scheduled IPC polling, recently stopped behavior, actual safety boundaries, feature status, and deferred signed-release verification.
 - P0-8: Prepared a draft-only universal signing/notarization workflow, hardened packaging and Electron fuses, a consent-based updater, Homebrew cask template, and strict IPC validation with redacted errors.
 - P0-7: An opt-in integration test creates one isolated container, lists it through DevDeck, stops and restarts it, reads batched logs, then removes only that fixture.

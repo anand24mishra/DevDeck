@@ -78,6 +78,17 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  handle('ports:lookup', async (_event, { port }: { port: number }) => {
+    const settings = settingsService.getSettings()
+    return {
+      ok: true,
+      data: await processProvider.lookupPort(port, {
+        userIgnoreList: settings.ignoreList,
+        customAllowlist: settings.customAllowlist
+      })
+    }
+  })
+
   // settings:get
   handle('settings:get', async (event): Promise<Result<Settings>> => {
     if (!isSenderAuthorized(event)) {

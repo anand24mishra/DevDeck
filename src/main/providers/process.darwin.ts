@@ -1,7 +1,7 @@
 import { execFile } from 'child_process'
 import os from 'os'
 import { promisify } from 'util'
-import { Proc } from '../../shared/types'
+import { Proc, PortOwner, ListeningSocket } from '../../shared/types'
 import {
   isProcessAllowed,
   extractBinaryName,
@@ -9,6 +9,7 @@ import {
   protectedProcessTree,
   ProcessContext
 } from '../security/allowlist'
+import { parseListeners } from '../services/ports'
 import { resolveProjectFromCwd } from '../services/project'
 
 const execFileAsync = promisify(execFile)
@@ -93,33 +94,17 @@ export class DarwinProcessProvider implements ProcessProvider {
   /**
    * Finds listening TCP ports and associates them with PIDs.
    */
-  private async getListeningPorts(): Promise<Map<number, number[]>> {
-    const portsMap = new Map<number, number[]>()
+  private async getListeningPorts(): Promise<Map<number, ListeningSocket[]>> {
     try {
-      const { stdout } = await execFileAsync('lsof', ['-iTCP', '-sTCP:LISTEN', '-nP', '-Fpn'])
-      const lines = stdout.split('\n')
-      let currentPid: number | null = null
-
-      for (const line of lines) {
-        if (line.startsWith('p')) {
-          currentPid = parseInt(line.slice(1), 10)
-        } else if (line.startsWith('n') && currentPid !== null) {
-          const match = line.match(/:(\d+)$/)
-          if (match) {
-            const port = parseInt(match[1], 10)
-            const list = portsMap.get(currentPid) || []
-            if (!list.includes(port)) {
-              list.push(port)
-              portsMap.set(currentPid, list)
-            }
-          }
-        }
-      }
-    } catch {
-      // lsof may exit with code 1 if no matching connections exist
+      const { stdout } = await execFileAsync('lsof', ['-iTCP', '-sTCP:LISTEN', '-nP', '-Fpcn'], {
+        timeout: 5000,
+        maxBuffer: 10 * 1024 * 1024
+      })
+      return parseListeners(stdout)
+    } catch (error) {
+      // lsof may return useful partial output when a process exits during the scan.
+      return parseListeners((error as { stdout?: string }).stdout || '')
     }
-
-    return portsMap
   }
 
   /**
@@ -159,6 +144,21 @@ export class DarwinProcessProvider implements ProcessProvider {
    * Lists and enriches all allowlisted processes.
    */
   public async listProcesses(options: FilterProcessOptions = {}): Promise<Proc[]> {
+    return (await this.scan(options)).processes
+  }
+
+  public async lookupPort(port: number, options: FilterProcessOptions = {}): Promise<PortOwner[]> {
+    const snapshot = await this.scan(options)
+    const owners = new Map(snapshot.processes.map((proc) => [proc.pid, proc]))
+    return [...snapshot.listeners.values()]
+      .flat()
+      .filter((socket) => socket.port === port)
+      .map((socket) => ({ ...socket, process: owners.get(socket.pid) || null }))
+  }
+
+  private async scan(
+    options: FilterProcessOptions
+  ): Promise<{ processes: Proc[]; listeners: Map<number, ListeningSocket[]> }> {
     const rawProcesses = await this.getRawProcesses()
     const currentPid = this.self.pid
     const protectedPids = protectedProcessTree(rawProcesses, this.self)
@@ -175,10 +175,6 @@ export class DarwinProcessProvider implements ProcessProvider {
       return check.allowed
     })
 
-    if (filtered.length === 0) {
-      return []
-    }
-
     const pids = filtered.map((p) => p.pid)
 
     // 2. Fetch ports and cwds in parallel
@@ -189,7 +185,8 @@ export class DarwinProcessProvider implements ProcessProvider {
       const { binaryName } = extractBinaryName(proc.command)
       const cwd = cwdMap.get(proc.pid) || null
       const project = resolveProjectFromCwd(cwd)
-      const ports = portsMap.get(proc.pid) || []
+      const sockets = portsMap.get(proc.pid) || []
+      const ports = [...new Set(sockets.map((socket) => socket.port))]
 
       return {
         pid: proc.pid,
@@ -203,12 +200,13 @@ export class DarwinProcessProvider implements ProcessProvider {
         cwd,
         project: project.name,
         projectPath: project.root,
-        ports: ports.sort((a, b) => a - b)
+        ports: ports.sort((a, b) => a - b),
+        sockets
       }
     })
 
     // Sort by project name, then by port, then by process name
-    return result.sort((a, b) => {
+    result.sort((a, b) => {
       if (a.project !== b.project) {
         return a.project.localeCompare(b.project)
       }
@@ -217,5 +215,6 @@ export class DarwinProcessProvider implements ProcessProvider {
       }
       return a.name.localeCompare(b.name)
     })
+    return { processes: result, listeners: portsMap }
   }
 }
