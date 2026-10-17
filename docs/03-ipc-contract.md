@@ -167,3 +167,9 @@ and recursive children. `proc:treeStop` takes `{root:ProcessIdentity,targets:Pro
 the root must be in targets. Main verifies the root identity before any signal, recomputes managed
 descendants, intersects captured identities, and signals children before parents. New descendants
 are excluded. The existing KillReport and Undo recording are preserved.
+
+## P2-2 bind visibility
+ListeningSocket includes `protocol:TCP|UDP`, `family:IPv4|IPv6`, and `state:LISTEN|ESTABLISHED`.
+Non-loopback listening binds receive a network-visibility badge and in-app guide. Optional
+networkExposure notifications are deduplicated by process identity, port and address. A wildcard
+is exposed; 127/8, ::1 and IPv4-mapped loopback are local. No network probe or automatic action runs.

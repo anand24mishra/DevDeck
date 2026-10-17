@@ -12,3 +12,8 @@
 - **Zombie / orphan** — a leftover process whose parent is gone.
 - **Profile** — a saved list of commands to start or stop a whole project stack.
 - **Notarization** — Apple's check that lets a downloaded app open without warnings.
+
+## Network visibility
+A listener bound to 127.0.0.1 or ::1 accepts local connections. A wildcard (*, 0.0.0.0 or ::)
+or a LAN address can accept connections from other devices if the firewall permits them.
+DevDeck shows the bind address and warns; it does not change firewall or server settings.

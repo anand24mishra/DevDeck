@@ -134,29 +134,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </label>
             <fieldset>
               <legend>Silent notifications</legend>
-              {(['serverStopped', 'memory', 'actionResults'] as const).map((key) => (
-                <label className="setting-row" key={key}>
-                  <span>
-                    {key === 'serverStopped'
-                      ? 'A watched server stopped unexpectedly'
-                      : key === 'memory'
-                        ? 'A process crosses the memory warning'
-                        : 'Stop actions finish'}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={(settings.notifications || DEFAULT_NOTIFICATIONS)[key]}
-                    onChange={(event) =>
-                      void triggerSave({
-                        notifications: {
-                          ...(settings.notifications || DEFAULT_NOTIFICATIONS),
-                          [key]: event.target.checked
-                        }
-                      })
-                    }
-                  />
-                </label>
-              ))}
+              {(['serverStopped', 'memory', 'actionResults', 'networkExposure'] as const).map(
+                (key) => (
+                  <label className="setting-row" key={key}>
+                    <span>
+                      {key === 'serverStopped'
+                        ? 'A watched server stopped unexpectedly'
+                        : key === 'memory'
+                          ? 'A process crosses the memory warning'
+                          : key === 'networkExposure'
+                            ? 'A new port is visible on the network'
+                            : 'Stop actions finish'}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={(settings.notifications || DEFAULT_NOTIFICATIONS)[key]}
+                      onChange={(event) =>
+                        void triggerSave({
+                          notifications: {
+                            ...(settings.notifications || DEFAULT_NOTIFICATIONS),
+                            [key]: event.target.checked
+                          }
+                        })
+                      }
+                    />
+                  </label>
+                )
+              )}
             </fieldset>
             <div className="setting-row">
               <label htmlFor="memory-threshold">Memory warning (MB)</label>

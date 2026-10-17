@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P2-2: Added IPv4 and IPv6 bind details, a Visible on your network badge with in-app guidance, and optional deduplicated notifications for newly exposed listeners.
 - P2-1: Added an expandable parent-child view and confirmed whole-tree stop with main-recomputed membership, captured identities, child-first ordering, partial reports and Undo.
 - P1-14: Added a release verifier for Developer ID signing, universal architecture, required fuses and the fixed GitHub updater feed; CI invokes it before draft upload. Documented Homebrew and signed update-chain QA.
 - P1-13: Added a persisted three-step welcome guide covering discovery, safety and customization, replay from Settings, and separate process, Docker and search empty states.

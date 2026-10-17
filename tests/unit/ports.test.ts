@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { parsePortInput, isLocalUrl } from '../../src/shared/ports'
+import { parsePortInput, isLocalUrl, isNetworkExposed } from '../../src/shared/ports'
 import { parseListeners, explainPortOwner, parseOpenFiles } from '../../src/main/services/ports'
 import { validIpcInput } from '../../src/main/security/validate'
 
@@ -74,4 +74,11 @@ it('batches working directories, listeners and established connection counts by 
   expect(files.listeners.get(123)?.[0].address).toBe('::1')
   expect(files.connections.get(123)).toBe(1)
   expect(files.files.get(123)).toBe(2)
+})
+
+it('warns for wildcard and LAN binds, preserving loopback-only listeners', () => {
+  for (const address of ['*', '0.0.0.0', '::', '192.168.1.10', 'fe80::1'])
+    expect(isNetworkExposed(address)).toBe(true)
+  for (const address of ['127.0.0.1', '127.1.2.3', '::1', '[::1]', '::ffff:127.0.0.1'])
+    expect(isNetworkExposed(address)).toBe(false)
 })

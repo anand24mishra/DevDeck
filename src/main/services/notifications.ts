@@ -1,3 +1,4 @@
+import { isNetworkExposed } from '../../shared/ports'
 import { Notification } from 'electron'
 import {
   DEFAULT_NOTIFICATIONS,
@@ -11,6 +12,7 @@ type Notice = { title: string; body: string; target: FocusTarget }
 export class NotificationService {
   private previous = new Map<number, Proc>()
   private high = new Set<string>()
+  private exposed = new Set<string>()
   private expected = new Map<number, number>()
   private focus: (target: FocusTarget) => void = () => {}
   constructor(private readonly send?: (notice: Notice) => void) {}
@@ -47,8 +49,20 @@ export class NotificationService {
           })
       }
     const high = new Set<string>()
+    const exposed = new Set<string>()
     for (const proc of processes) {
       const identity = `${proc.pid}:${proc.startTime}`
+      for (const socket of proc.sockets || [])
+        if (socket.state !== 'ESTABLISHED' && isNetworkExposed(socket.address)) {
+          const key = `${identity}:${socket.port}:${socket.address}`
+          exposed.add(key)
+          if (preferences.networkExposure && !this.exposed.has(key))
+            this.notify({
+              title: 'A server is visible on your network',
+              body: `Port ${socket.port} in ${proc.project} accepts connections beyond this Mac.`,
+              target: { pid: proc.pid, project: proc.project, port: socket.port }
+            })
+        }
       if (proc.memMB >= (settings.memoryThresholdMb || 4096)) {
         high.add(identity)
         if (preferences.memory && !this.high.has(identity))
@@ -61,6 +75,7 @@ export class NotificationService {
     }
     this.previous = current
     this.high = high
+    this.exposed = exposed
     for (const [pid, expiry] of this.expected) if (expiry < Date.now()) this.expected.delete(pid)
   }
   report(report: KillReport, settings: Settings): void {

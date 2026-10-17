@@ -1,3 +1,4 @@
+import { isNetworkExposed } from '../../../shared/ports'
 import React, { useState } from 'react'
 import { LocalPortLink } from './LocalPortLink'
 import { Proc } from '../../../shared/types'
@@ -9,6 +10,9 @@ interface ProcessRowProps {
 }
 
 export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
+  const exposed = proc.sockets?.some(
+    (socket) => socket.state !== 'ESTABLISHED' && isNetworkExposed(socket.address)
+  )
   const [expanded, setExpanded] = useState<boolean>(false)
   const [commandRevealed, setCommandRevealed] = useState<boolean>(false)
   const [copied, setCopied] = useState<boolean>(false)
@@ -71,6 +75,18 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
           )}
         </div>
 
+        {exposed && (
+          <button
+            className="quiet-btn"
+            onClick={(event) => {
+              event.stopPropagation()
+              setExpanded(true)
+            }}
+            aria-label={`Read network visibility guide for ${proc.name}`}
+          >
+            Visible on your network
+          </button>
+        )}
         {/* Column 4: CPU */}
         <div className="col col-cpu mono">
           <span>{proc.cpu.toFixed(1)}%</span>
@@ -132,7 +148,25 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
               automatically.
             </p>
           )}
+          {exposed && (
+            <section aria-label="Network visibility guide">
+              <p>
+                This server accepts connections beyond this Mac. Bind it to 127.0.0.1 or ::1 if only
+                local access is needed. DevDeck never changes the bind address.
+              </p>
+            </section>
+          )}
           <div className="details-grid mono">
+            {(proc.sockets || []).map((socket) => (
+              <div
+                className="detail-item detail-item-wide"
+                key={`${socket.address}:${socket.port}`}
+              >
+                <span>
+                  {socket.protocol || 'TCP'} {socket.family} · {socket.address}:{socket.port}
+                </span>
+              </div>
+            ))}
             <div className="detail-item">
               <span className="detail-label">PID</span>
               <span className="detail-value">{proc.pid}</span>
