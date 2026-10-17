@@ -36,6 +36,7 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  showEnvViewer?: boolean
   onboardingComplete?: boolean
   hintsEnabled?: boolean
   notifications?: NotificationPreferences
@@ -96,6 +97,7 @@ export interface DevDeckApi {
   openProjectInTerminal: (path: string) => Promise<Result<null>>
   openLocalUrl: (url: string) => Promise<Result<null>>
   lookupPort: (port: number, project?: string) => Promise<Result<PortOwner[]>>
+  getProcessEnvironment: (pid: number, startTime: string) => Promise<Result<EnvironmentEntry[]>>
   getProcessDetails: (pid: number, startTime: string) => Promise<Result<ProcessDetails>>
   getProcessTree: () => Promise<Result<ProcessTreeNode[]>>
   stopProcessTree: (
@@ -191,8 +193,15 @@ export interface ProcessTreeNode {
 }
 
 export interface ProcessDetails {
+  canViewEnvironment?: boolean
   process: Proc
   user: string
   parentName: string
   runtime?: string[]
+}
+
+export interface EnvironmentEntry {
+  key: string
+  value: string
+  sensitive: boolean
 }

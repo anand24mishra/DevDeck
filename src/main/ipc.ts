@@ -1,3 +1,4 @@
+import { readEnvironment } from './services/environment'
 import { buildProcessTree, descendantsChildrenFirst } from '../shared/processTree'
 import { notificationService } from './services/notifications'
 import { hotkeyService } from './services/hotkey'
@@ -209,6 +210,17 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  handle(
+    'proc:environment',
+    async (_event, { pid, startTime }: { pid: number; startTime: string }) => {
+      if (!settingsService.getSettings().showEnvViewer)
+        return {
+          ok: false,
+          error: { code: 'DENIED', message: 'Enable the environment viewer in Settings first.' }
+        }
+      return readEnvironment(pid, startTime)
+    }
+  )
   handle('proc:details', async (_event, { pid, startTime }: { pid: number; startTime: string }) => {
     const settings = settingsService.getSettings()
     const processes = await processProvider.listProcesses({
@@ -238,6 +250,7 @@ export function registerIpcHandlers(): void {
     return {
       ok: true,
       data: {
+        canViewEnvironment: !!settings.showEnvViewer,
         process: current,
         user: current.user || 'Current user',
         parentName: current.parentName || 'Unavailable'

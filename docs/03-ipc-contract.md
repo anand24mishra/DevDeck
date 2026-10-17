@@ -184,3 +184,11 @@ ports are labeled UDP and do not receive HTTP browser actions. Established count
 with process snapshot, user and parent name. Main verifies allowlist/ownership/self-tree and the
 identity again after collecting details. Changed, missing or protected processes return no details.
 UI copies masked command values until explicitly revealed; closing the panel discards reveal state.
+
+## P2-5 ephemeral environment
+`Settings.showEnvViewer?: boolean` defaults false. `proc:environment` takes `{pid,startTime}`
+and returns `Result<EnvironmentEntry[]>` (`key,value,sensitive`). Main refuses when disabled,
+verifies current-user allowlist identity before and after a bounded `ps eww`, and never caches or
+writes values. The panel fetches only when opened and discards state on close; all values and
+copy actions stay masked until per-key reveal. ps text has ambiguous whitespace; parsing is
+best-effort and is never used as input to execution or restart.

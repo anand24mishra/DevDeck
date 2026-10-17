@@ -1,3 +1,4 @@
+import { EnvironmentViewer } from './EnvironmentViewer'
 import { useEffect, useState } from 'react'
 import type { Proc, ProcessDetails } from '../../../shared/types'
 import { isNetworkExposed } from '../../../shared/ports'
@@ -27,6 +28,7 @@ function CopyField({ name, value }: { name: string; value: string }): React.JSX.
 export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element {
   const [details, setDetails] = useState<ProcessDetails | null>(null)
   const [error, setError] = useState('')
+  const [showEnvironment, setShowEnvironment] = useState(false)
   const [revealed, setRevealed] = useState(false)
   useEffect(() => {
     let active = true
@@ -96,6 +98,14 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
       <button className="quiet-btn" aria-pressed={revealed} onClick={() => setRevealed(!revealed)}>
         {revealed ? 'Mask command' : 'Reveal command'}
       </button>
+      {details.canViewEnvironment && (
+        <button className="quiet-btn" onClick={() => setShowEnvironment(!showEnvironment)}>
+          {showEnvironment ? 'Close environment' : 'Show environment'}
+        </button>
+      )}
+      {showEnvironment && details.canViewEnvironment && (
+        <EnvironmentViewer pid={current.pid} startTime={current.startTime} />
+      )}
     </section>
   )
 }

@@ -121,6 +121,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* Section 1: General */}
           <section className="settings-section">
             <h3 className="section-title">General</h3>
+            <label className="setting-row">
+              <span>Enable environment viewer (values hidden by default)</span>
+              <input
+                type="checkbox"
+                checked={!!settings.showEnvViewer}
+                onChange={(event) => void triggerSave({ showEnvViewer: event.target.checked })}
+              />
+            </label>
             <button className="quiet-btn" onClick={onReplayOnboarding}>
               Show the welcome guide
             </button>

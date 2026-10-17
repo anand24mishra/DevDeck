@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dockerSocketPath: undefined,
   theme: 'system',
   openAtLogin: false,
+  showEnvViewer: false,
   onboardingComplete: false,
   hintsEnabled: true,
   notifications: { ...DEFAULT_NOTIFICATIONS },
@@ -95,6 +96,7 @@ export class SettingsService {
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
+      showEnvViewer: r.showEnvViewer === true,
       onboardingComplete: r.onboardingComplete === true,
       hintsEnabled: typeof r.hintsEnabled === 'boolean' ? r.hintsEnabled : true,
       notifications: Object.fromEntries(

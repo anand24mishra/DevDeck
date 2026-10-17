@@ -35,6 +35,7 @@ function validSettings(value: Record<string, unknown>): boolean {
         return TERMINAL_IDS.includes(field as string)
       case 'theme':
         return ['system', 'light', 'dark'].includes(field as string)
+      case 'showEnvViewer':
       case 'onboardingComplete':
       case 'hintsEnabled':
       case 'openAtLogin':
@@ -121,7 +122,7 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       new Set(value.ids).size === value.ids.length &&
       value.ids.every((id) => typeof id === 'string' && /^[a-f0-9]{12,64}$/.test(id))
     )
-  if (channel === 'proc:details')
+  if (['proc:details', 'proc:environment'].includes(channel))
     return (
       keys(value, ['pid', 'startTime']) &&
       Number.isSafeInteger(value.pid) &&

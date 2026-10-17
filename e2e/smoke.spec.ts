@@ -21,7 +21,11 @@ test('launch, search, native tray cancel, and confirmed process stop', async () 
       .listen(0, '127.0.0.1', function () { process.stdout.write(String(this.address().port)) })
   `
     ],
-    { cwd: fixture, stdio: ['ignore', 'pipe', 'pipe'] }
+    {
+      cwd: fixture,
+      env: { PATH: process.env.PATH || '/usr/bin:/bin', DEVDECK_SMOKE_TOKEN: 'fixture-secret' },
+      stdio: ['ignore', 'pipe', 'pipe']
+    }
   )
   let app: Awaited<ReturnType<typeof electron.launch>> | undefined
   try {
@@ -89,6 +93,26 @@ test('launch, search, native tray cancel, and confirmed process stop', async () 
     await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click()
     process.kill(server.pid!, 0)
     await page.getByRole('textbox', { name: 'Free a port', exact: true }).fill('')
+
+    await page.getByRole('button', { name: 'Open settings', exact: true }).click()
+    await page.getByLabel('Enable environment viewer (values hidden by default)').check()
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
+    await page.locator('.process-row').click()
+    const details = page.getByRole('region', { name: 'Process details', exact: true })
+    await details.getByRole('button', { name: 'Show environment', exact: true }).click()
+    const environment = page.getByRole('region', { name: 'Process environment', exact: true })
+    await expect(environment.getByText('fixture-secret', { exact: true })).toHaveCount(0)
+    await environment
+      .getByRole('button', { name: 'Reveal DEVDECK_SMOKE_TOKEN', exact: true })
+      .click()
+    await expect(environment.getByText('fixture-secret', { exact: true })).toBeVisible()
+    await details.getByRole('button', { name: 'Close environment', exact: true }).click()
+    await details.getByRole('button', { name: 'Show environment', exact: true }).click()
+    await expect(
+      environment.getByRole('button', { name: 'Reveal DEVDECK_SMOKE_TOKEN', exact: true })
+    ).toBeVisible()
+    await expect(environment.getByText('fixture-secret', { exact: true })).toHaveCount(0)
+    await page.locator('.process-row').click()
 
     await page.locator('.row-stop-btn').click()
     const confirmation = page.getByRole('dialog')
