@@ -25,6 +25,8 @@ export interface Proc extends ProcessIdentity {
   establishedConnections?: number
   openFilesCount?: number
   idleHint?: string
+  user?: string
+  parentName?: string
 }
 
 export interface Settings {
@@ -94,6 +96,7 @@ export interface DevDeckApi {
   openProjectInTerminal: (path: string) => Promise<Result<null>>
   openLocalUrl: (url: string) => Promise<Result<null>>
   lookupPort: (port: number, project?: string) => Promise<Result<PortOwner[]>>
+  getProcessDetails: (pid: number, startTime: string) => Promise<Result<ProcessDetails>>
   getProcessTree: () => Promise<Result<ProcessTreeNode[]>>
   stopProcessTree: (
     root: ProcessIdentity,
@@ -185,4 +188,11 @@ export interface DockerDesktopApp {
 export interface ProcessTreeNode {
   process: Proc
   children: ProcessTreeNode[]
+}
+
+export interface ProcessDetails {
+  process: Proc
+  user: string
+  parentName: string
+  runtime?: string[]
 }

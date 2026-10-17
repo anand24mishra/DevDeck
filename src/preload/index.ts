@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  getProcessDetails: (pid, startTime) => ipcRenderer.invoke('proc:details', { pid, startTime }),
   getProcessTree: () => ipcRenderer.invoke('proc:tree'),
   stopProcessTree: (root, targets) => ipcRenderer.invoke('proc:treeStop', { root, targets }),
   getDockerApps: () => ipcRenderer.invoke('docker:apps'),

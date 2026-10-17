@@ -154,6 +154,10 @@ export class DarwinProcessProvider implements ProcessProvider {
       return {
         pid: proc.pid,
         startTime: proc.startTime,
+        user: os.userInfo().username,
+        parentName:
+          extractBinaryName(rawProcesses.find((parent) => parent.pid === proc.ppid)?.command || '')
+            .binaryName || 'Unavailable',
         ppid: proc.ppid,
         name: labelProcess(binaryName || 'unknown', proc.command, project.root),
         command: proc.command,

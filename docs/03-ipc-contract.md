@@ -178,3 +178,9 @@ is exposed; 127/8, ::1 and IPv4-mapped loopback are local. No network probe or a
 Proc.sockets includes listening TCP, UDP bound sockets and established TCP sockets; `ports`
 contains listening/bound ports only. Protocol and state filters use the existing snapshot. UDP
 ports are labeled UDP and do not receive HTTP browser actions. Established counts remain separate.
+
+## P2-4 verified details
+`proc:details` takes `{pid: integer>1,startTime:string}` and returns `Result<ProcessDetails>`
+with process snapshot, user and parent name. Main verifies allowlist/ownership/self-tree and the
+identity again after collecting details. Changed, missing or protected processes return no details.
+UI copies masked command values until explicitly revealed; closing the panel discards reveal state.

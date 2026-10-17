@@ -121,6 +121,15 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       new Set(value.ids).size === value.ids.length &&
       value.ids.every((id) => typeof id === 'string' && /^[a-f0-9]{12,64}$/.test(id))
     )
+  if (channel === 'proc:details')
+    return (
+      keys(value, ['pid', 'startTime']) &&
+      Number.isSafeInteger(value.pid) &&
+      Number(value.pid) > 1 &&
+      typeof value.startTime === 'string' &&
+      value.startTime.length > 0 &&
+      value.startTime.length <= 64
+    )
   if (channel === 'proc:treeStop')
     return (
       keys(value, ['root', 'targets']) &&

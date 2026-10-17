@@ -78,7 +78,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
 
       <div className="process-rows-list">
         {processes.map((proc) => (
-          <ProcessRow key={proc.pid} proc={proc} onStop={onStopProcess} />
+          <ProcessRow key={`${proc.pid}:${proc.startTime}`} proc={proc} onStop={onStopProcess} />
         ))}
       </div>
     </section>

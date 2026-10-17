@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P2-4: Added identity-verified details for command, working directory, start, user, parent, file counts and sockets, with per-field copy and masked command copying until reveal.
 - P2-3: Added UDP bound ports, listening and established connection filters, protocol labels, and active connection counts without additional lsof invocations.
 - P2-2: Added IPv4 and IPv6 bind details, a Visible on your network badge with in-app guidance, and optional deduplicated notifications for newly exposed listeners.
 - P2-1: Added an expandable parent-child view and confirmed whole-tree stop with main-recomputed membership, captured identities, child-first ordering, partial reports and Undo.

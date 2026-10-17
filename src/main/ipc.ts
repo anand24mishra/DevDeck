@@ -209,6 +209,42 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  handle('proc:details', async (_event, { pid, startTime }: { pid: number; startTime: string }) => {
+    const settings = settingsService.getSettings()
+    const processes = await processProvider.listProcesses({
+      userIgnoreList: settings.ignoreList,
+      customAllowlist: settings.customAllowlist
+    })
+    const current = processes.find((proc) => proc.pid === pid && proc.startTime === startTime)
+    if (!current)
+      return {
+        ok: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'This process changed or stopped. Refresh and try again.'
+        }
+      }
+    const verified = (await defaultKillDeps.revalidate([pid])).ok.find(
+      (proc) => proc.pid === pid && proc.startTime === startTime && proc.command === current.command
+    )
+    if (!verified)
+      return {
+        ok: false,
+        error: {
+          code: 'DENIED',
+          message: 'This process cannot be inspected safely. Refresh and try again.'
+        }
+      }
+    return {
+      ok: true,
+      data: {
+        process: current,
+        user: current.user || 'Current user',
+        parentName: current.parentName || 'Unavailable'
+      }
+    }
+  })
+
   handle('proc:tree', async () => {
     const settings = settingsService.getSettings()
     return {

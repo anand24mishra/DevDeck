@@ -1,5 +1,6 @@
 import { isNetworkExposed } from '../../../shared/ports'
 import React, { useState } from 'react'
+import { ProcessDetailsPanel } from './ProcessDetailsPanel'
 import { LocalPortLink } from './LocalPortLink'
 import { Proc } from '../../../shared/types'
 import { formatUptime } from '../utils/format'
@@ -14,20 +15,6 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
     (socket) => socket.state !== 'ESTABLISHED' && isNetworkExposed(socket.address)
   )
   const [expanded, setExpanded] = useState<boolean>(false)
-  const [commandRevealed, setCommandRevealed] = useState<boolean>(false)
-  const [copied, setCopied] = useState<boolean>(false)
-
-  const handleCopyCommand = async (e: React.MouseEvent): Promise<void> => {
-    e.stopPropagation()
-    try {
-      await navigator.clipboard.writeText(proc.command)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Clipboard write failed
-    }
-  }
-
   return (
     <div
       data-process-id={proc.pid}
@@ -148,80 +135,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
         </div>
       </div>
 
-      {/* Expanded Details Panel */}
-      {expanded && (
-        <div className="details-panel" role="region" aria-label="Process Details">
-          {proc.idleHint && (
-            <p>
-              {proc.idleHint}. This is a hint from the latest scan, not a reason to stop it
-              automatically.
-            </p>
-          )}
-          {exposed && (
-            <section aria-label="Network visibility guide">
-              <p>
-                This server accepts connections beyond this Mac. Bind it to 127.0.0.1 or ::1 if only
-                local access is needed. DevDeck never changes the bind address.
-              </p>
-            </section>
-          )}
-          <p>Active connections: {proc.establishedConnections || 0}</p>
-          <div className="details-grid mono">
-            {(proc.sockets || []).map((socket) => (
-              <div
-                className="detail-item detail-item-wide"
-                key={`${socket.address}:${socket.port}:${socket.protocol}:${socket.state}`}
-              >
-                <span>
-                  {socket.protocol || 'TCP'} {socket.family} · {socket.address}:{socket.port}
-                </span>
-              </div>
-            ))}
-            <div className="detail-item">
-              <span className="detail-label">PID</span>
-              <span className="detail-value">{proc.pid}</span>
-            </div>
-            <div className="detail-item">
-              <span className="detail-label">PPID</span>
-              <span className="detail-value">{proc.ppid}</span>
-            </div>
-            {proc.cwd && (
-              <div className="detail-item detail-item-wide">
-                <span className="detail-label">PATH</span>
-                <span className="detail-value" title={proc.cwd}>
-                  {proc.cwd}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="detail-command-section">
-            <div className="command-header">
-              <span className="detail-label mono">COMMAND</span>
-              <div className="command-actions">
-                <button
-                  type="button"
-                  className="quiet-btn mono"
-                  onClick={() => setCommandRevealed(!commandRevealed)}
-                >
-                  {commandRevealed ? 'Mask' : 'Reveal'}
-                </button>
-                <button type="button" className="quiet-btn mono" onClick={handleCopyCommand}>
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-            </div>
-
-            <div className="command-box mono">
-              {commandRevealed ? (
-                <code>{proc.command}</code>
-              ) : (
-                <span className="masked-command">••••••••••••••••••••••••••••••••••••••••</span>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {expanded && <ProcessDetailsPanel key={`${proc.pid}:${proc.startTime}`} proc={proc} />}
     </div>
   )
 }
