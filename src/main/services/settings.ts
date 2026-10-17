@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
+import { DEFAULT_HOTKEY, validHotkey } from './hotkey'
 import { EDITOR_IDS, TERMINAL_IDS } from './applications'
 import { Settings } from '../../shared/types'
 
@@ -11,6 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   dockerSocketPath: undefined,
   theme: 'system',
   openAtLogin: false,
+  hotkey: DEFAULT_HOTKEY,
   preferredEditor: 'auto',
   preferredTerminal: 'auto',
   persistRecentlyStopped: false
@@ -89,6 +91,7 @@ export class SettingsService {
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
+      hotkey: validHotkey(r.hotkey) ? r.hotkey : DEFAULT_HOTKEY,
       refreshIntervalSec,
       ignoreList,
       customAllowlist,

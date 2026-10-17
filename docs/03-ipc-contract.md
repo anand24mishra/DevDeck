@@ -110,3 +110,8 @@ candidates; fixed argv arrays never interpolate a shell command. Settings add op
 `kind`, `explanation`, `suggestedAction: stop-process|stop-container|none`, and optional
 `containerId`. Docker matching uses published host ports only. Suggested actions still use
 the existing confirmation handlers; classification never grants signal permission.
+
+## P1-6 shortcut setting
+`Settings.hotkey?: string|null` defaults to `Control+Alt+D`; null disables it. `settings:set`
+validates modifier/key syntax and attempts native registration before persisting. Conflicts return
+`DENIED` with a plain message and restore the old shortcut. All shortcuts are removed on quit.

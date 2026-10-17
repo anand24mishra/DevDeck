@@ -26,6 +26,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         })
         .catch(() => {})
   }, [isOpen])
+  const [saveError, setSaveError] = useState('')
   const [saveIndicator, setSaveIndicator] = useState(false)
 
   const ignoreInputRef = useRef<HTMLInputElement>(null)
@@ -46,9 +47,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const triggerSave = useCallback(
     async (partial: Partial<Settings>) => {
-      await onUpdate(partial)
-      setSaveIndicator(true)
-      setTimeout(() => setSaveIndicator(false), 1200)
+      try {
+        await onUpdate(partial)
+        setSaveError('')
+        setSaveIndicator(true)
+        setTimeout(() => setSaveIndicator(false), 1200)
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'Could not save settings.')
+      }
     },
     [onUpdate]
   )
@@ -109,9 +115,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Scrolling page with 4 short sections */}
         <div className="settings-content">
+          {saveError && <p role="alert">{saveError}</p>}
           {/* Section 1: General */}
           <section className="settings-section">
             <h3 className="section-title">General</h3>
+            <div className="setting-row">
+              <label htmlFor="global-hotkey">Global shortcut</label>
+              <input
+                id="global-hotkey"
+                className="settings-input mono"
+                readOnly
+                value={settings.hotkey || ''}
+                placeholder="Disabled"
+                onKeyDown={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  const modifiers = [
+                    event.ctrlKey && 'Control',
+                    event.metaKey && 'Command',
+                    event.altKey && 'Alt',
+                    event.shiftKey && 'Shift'
+                  ].filter(Boolean)
+                  const key = event.code.replace(/^(Key|Digit)/, '')
+                  if (modifiers.length && /^(?:[A-Z0-9]|F\d{1,2}|Space|Escape)$/.test(key))
+                    void triggerSave({ hotkey: [...modifiers, key].join('+') })
+                }}
+              />
+              <button
+                className="quiet-btn"
+                onClick={() =>
+                  void triggerSave({ hotkey: settings.hotkey ? null : 'Control+Alt+D' })
+                }
+              >
+                {settings.hotkey ? 'Disable' : 'Enable'}
+              </button>
+            </div>
             {(['editor', 'terminal'] as const).map((kind) => (
               <div className="setting-row" key={kind}>
                 <label htmlFor={`preferred-${kind}`}>Preferred {kind}</label>

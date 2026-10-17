@@ -31,6 +31,7 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  hotkey?: string | null
   preferredEditor?: string
   preferredTerminal?: string
   persistRecentlyStopped?: boolean

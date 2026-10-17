@@ -1,5 +1,6 @@
 import path from 'path'
 import { isLocalUrl } from '../../shared/ports'
+import { validHotkey } from '../services/hotkey'
 import { EDITOR_IDS, TERMINAL_IDS } from '../services/applications'
 import { validIdentities } from '../services/kill'
 
@@ -18,6 +19,8 @@ function validSettings(value: Record<string, unknown>): boolean {
     switch (key) {
       case 'refreshIntervalSec':
         return [2, 3, 5, 10].includes(field as number)
+      case 'hotkey':
+        return validHotkey(field)
       case 'preferredEditor':
         return EDITOR_IDS.includes(field as string)
       case 'preferredTerminal':

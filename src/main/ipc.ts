@@ -1,3 +1,4 @@
+import { hotkeyService } from './services/hotkey'
 import { explainPortOwner } from './services/ports'
 import { detectApplications, verifyProjectPath, openWithApplication } from './services/applications'
 import { join } from 'path'
@@ -171,6 +172,15 @@ export function registerIpcHandlers(): void {
         return {
           ok: false,
           error: { code: 'INVALID_INPUT', message: 'Settings must be an object' }
+        }
+      }
+      if (partial.hotkey !== undefined && !hotkeyService.configure(partial.hotkey)) {
+        return {
+          ok: false,
+          error: {
+            code: 'DENIED',
+            message: 'That shortcut is already in use. Choose a different shortcut.'
+          }
         }
       }
       const updated = settingsService.updateSettings(partial)

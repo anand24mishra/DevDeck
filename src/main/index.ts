@@ -1,3 +1,4 @@
+import { hotkeyService, DEFAULT_HOTKEY } from './services/hotkey'
 import { app, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -148,6 +149,16 @@ app.whenReady().then(() => {
   registerIpcHandlers()
 
   const win = createWindow()
+  hotkeyService.setToggle(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isVisible() && mainWindow.isFocused()) mainWindow.hide()
+    else {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+  const hotkey = settingsService.getSettings().hotkey
+  hotkeyService.configure(hotkey === undefined ? DEFAULT_HOTKEY : hotkey)
   if (app.isPackaged) {
     const updateTimer = setTimeout(() => {
       void checkForUpdates(false)
@@ -191,3 +202,5 @@ process.on('unhandledRejection', () => {
   console.error('Unexpected asynchronous main-process error')
 })
 app.on('before-quit', () => trayService.destroy())
+
+app.on('will-quit', () => hotkeyService.dispose())

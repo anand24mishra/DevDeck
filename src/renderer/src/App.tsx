@@ -393,6 +393,7 @@ const App: React.FC = () => {
   const handleUpdateSettings = useCallback(
     async (partial: Partial<Settings>): Promise<void> => {
       const res = await updateSettings(partial)
+      if (!res.ok) throw new Error(res.error.message)
       if (res.ok) {
         if (partial.dockerSocketPath !== undefined) {
           await refreshDocker()
