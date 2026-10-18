@@ -1,3 +1,4 @@
+import { closeLaunchOutputs } from './services/launchOutput'
 import { dockerService } from './services/docker'
 import { notificationService } from './services/notifications'
 import { hotkeyService, DEFAULT_HOTKEY } from './services/hotkey'
@@ -219,6 +220,7 @@ app.on('before-quit', () => trayService.destroy())
 app.on('will-quit', () => hotkeyService.dispose())
 
 app.on('before-quit', () => {
+  closeLaunchOutputs()
   dockerService.stopAllStats()
   dockerService.stopAllLogs()
 })

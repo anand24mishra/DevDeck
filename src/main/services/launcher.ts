@@ -1,5 +1,5 @@
 import { LogRing } from '../../shared/logs'
-import { StringDecoder } from 'string_decoder'
+import { launchOutput } from './launchOutput'
 import fs from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { defaultKillDeps } from './kill'
@@ -122,39 +122,36 @@ export async function launchMember(
           'Quit and reopen DevDeck to clear old launch records before starting more processes.'
       }
     }
+  const id = randomUUID()
+  const entry: LaunchedProcess = {
+    id,
+    name: member.name,
+    pid: 0,
+    cwd,
+    log: new LogRing(),
+    command: member.command!,
+    startedAt: Date.now()
+  }
+  const append = (text: string): void => {
+    entry.log.append(text)
+    let bytes = [...launches.values()].reduce(
+      (total, item) => total + item.log.size,
+      entry.log.size
+    )
+    for (const old of launches.values()) {
+      if (bytes <= 33554432) break
+      bytes -= old.log.size
+      old.log.clear()
+    }
+  }
+  const output = await launchOutput(append)
   return new Promise((resolve) => {
     const worker = utilityProcess.fork(path.join(__dirname, 'launch-worker.js'), [], {
-      stdio: 'pipe',
+      stdio: 'ignore',
       serviceName: 'DevDeck launcher'
     })
     let pid = 0,
       settled = false
-    const id = randomUUID()
-    const entry: LaunchedProcess = {
-      id,
-      name: member.name,
-      pid: 0,
-      cwd,
-      log: new LogRing(),
-      command: member.command!,
-      startedAt: Date.now()
-    }
-    const stdoutDecoder = new StringDecoder('utf8'),
-      stderrDecoder = new StringDecoder('utf8')
-    const append = (text: string): void => {
-      entry.log.append(text)
-      let bytes = [...launches.values()].reduce(
-        (total, item) => total + item.log.size,
-        entry.log.size
-      )
-      for (const old of launches.values()) {
-        if (bytes <= 33554432) break
-        bytes -= old.log.size
-        old.log.clear()
-      }
-    }
-    worker.stdout?.on('data', (chunk) => append(stdoutDecoder.write(chunk)))
-    worker.stderr?.on('data', (chunk) => append(stderrDecoder.write(chunk)))
     worker.on('message', (message) => {
       if (Number.isSafeInteger(message.pid) && message.pid > 1) {
         pid = message.pid
@@ -165,6 +162,7 @@ export async function launchMember(
       if (!settled) {
         settled = true
         worker.kill()
+        output.close()
         resolve({
           ok: false,
           error: { code: 'INTERNAL', message: 'The launcher did not respond.' }
@@ -179,12 +177,21 @@ export async function launchMember(
         entry.identity = (await defaultKillDeps.revalidate([pid])).ok.find((p) => p.pid === pid)
         launches.set(id, entry)
         resolve({ ok: true, data: { pid, id } })
-      } else
+      } else {
+        output.close()
         resolve({
           ok: false,
           error: { code: 'INTERNAL', message: 'The process could not be started.' }
         })
+      }
     })
-    worker.postMessage({ file, args: parsed.args, cwd, env: { ...process.env } })
+    worker.postMessage({
+      file,
+      args: parsed.args,
+      cwd,
+      env: { ...process.env },
+      outputPath: output.path,
+      outputToken: output.token
+    })
   })
 }
