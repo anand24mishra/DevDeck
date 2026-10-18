@@ -1,0 +1,39 @@
+{
+  "name": "devdeck-local",
+  "title": "DevDeck",
+  "description": "Find local development processes, open servers and stop with DevDeck confirmation.",
+  "icon": "icon.png",
+  "author": "anand24mishra",
+  "license": "UNLICENSED",
+  "private": true,
+  "version": "1.0.0",
+  "commands": [
+    {
+      "name": "processes",
+      "title": "Find Development Processes",
+      "description": "Search DevDeck processes and ports",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "cliPath",
+      "title": "DevDeck CLI path",
+      "description": "Absolute path to the installed executable CLI. DevDeck and Node.js must be available.",
+      "type": "textfield",
+      "required": true,
+      "default": "/usr/local/bin/devdeck"
+    }
+  ],
+  "scripts": {
+    "build": "ray build -e dist",
+    "typecheck": "tsc --noEmit",
+    "dev": "ray develop"
+  },
+  "dependencies": {
+    "@raycast/api": "2.8.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

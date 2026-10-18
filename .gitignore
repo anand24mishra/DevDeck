@@ -82,3 +82,8 @@ docs/16-agent-communication.md
 docs/17-spawning-and-skill-discovery.md
 docs/18-skills-registry.md
 docs/19-repo-hygiene.md
+
+# Launcher extension build output
+extensions/raycast/dist/
+extensions/raycast/raycast-env.d.ts
+*.alfredworkflow

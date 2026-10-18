@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.devdeck.alfred</string>
+	<key>connections</key>
+	<dict>
+		<key>search</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>action</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>Anand Mishra</string>
+	<key>description</key>
+	<string>Search development processes through the authenticated DevDeck CLI. Stops require native confirmation.</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>DevDeck</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>keyword</key>
+				<string>devdeck</string>
+				<key>runbehaviour</key>
+				<integer>0</integer>
+				<key>script</key>
+				<string>exec /usr/bin/env node "$alfred_workflow_folder/list.cjs" "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>subtext</key>
+				<string>Search process, project or port</string>
+				<key>title</key>
+				<string>Find DevDeck processes</string>
+				<key>type</key>
+				<integer>0</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>search</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>escaping</key>
+				<integer>102</integer>
+				<key>script</key>
+				<string>exec /usr/bin/env node "$alfred_workflow_folder/action.cjs" "$1"</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>type</key>
+				<integer>0</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>action</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+	</array>
+	<key>uidata</key>
+	<dict>
+		<key>action</key>
+		<dict>
+			<key>xpos</key>
+			<integer>350</integer>
+			<key>ypos</key>
+			<integer>100</integer>
+		</dict>
+		<key>search</key>
+		<dict>
+			<key>xpos</key>
+			<integer>100</integer>
+			<key>ypos</key>
+			<integer>100</integer>
+		</dict>
+	</dict>
+	<key>variables</key>
+	<dict>
+		<key>DEVDECK_CLI</key>
+		<string></string>
+	</dict>
+	<key>version</key>
+	<string>1.0.0</string>
+	<key>webaddress</key>
+	<string>https://github.com/anand24mishra/DevDeck</string>
+</dict>
+</plist>
