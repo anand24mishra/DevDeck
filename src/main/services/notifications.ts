@@ -96,6 +96,13 @@ export class NotificationService {
     this.exposed = exposed
     for (const [pid, expiry] of this.expected) if (expiry < Date.now()) this.expected.delete(pid)
   }
+  projectThreshold(project: string, cpu: number, memMB: number): void {
+    this.notify({
+      title: 'Project resource limit reached',
+      body: `${project} is using ${cpu.toFixed(1)}% CPU and ${memMB.toFixed(0)} MB.`,
+      target: { project }
+    })
+  }
   report(report: KillReport, settings: Settings): void {
     if (!(settings.notifications || DEFAULT_NOTIFICATIONS).actionResults) return
     this.notify({

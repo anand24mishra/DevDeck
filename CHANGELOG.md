@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P3-5: One-hour bounded CPU and memory history, theme sparkline and explicit crossing alerts reuse visible scans.
 - P3-4: Private 0700 directory, 0600 socket and random-token handshake transfer captured stdout descriptors to independent servers; live Electron capture-stop test passes.
 - P3-4: Preserve empty quoted arguments, reject unfinished launch quotes, check resolved executables and reuse theme tokens.
 - P3-4: Direct and profile launches capture stdout and stderr with redaction, ANSI text rendering, search, copy, clear and windowed log rows.

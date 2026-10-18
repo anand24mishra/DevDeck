@@ -1,4 +1,4 @@
-import { validProfile, validMember } from '../../shared/profiles'
+import { validProfile, validMember, validThresholds } from '../../shared/profiles'
 import path from 'path'
 import { isLocalUrl, validReservations } from '../../shared/ports'
 import { validHotkey } from '../services/hotkey'
@@ -18,6 +18,8 @@ function keys(value: Record<string, unknown>, expected: string[]): boolean {
 function validSettings(value: Record<string, unknown>): boolean {
   return Object.entries(value).every(([key, field]) => {
     switch (key) {
+      case 'resourceThresholds':
+        return validThresholds(field)
       case 'reservedPorts':
         return validReservations(field)
       case 'profiles':
@@ -148,6 +150,13 @@ export function validIpcInput(channel: string, value: unknown): boolean {
   if (['launch:logs', 'launch:clear'].includes(channel))
     return (
       keys(value, ['id']) && typeof value.id === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(value.id)
+    )
+  if (channel === 'project:history')
+    return (
+      keys(value, ['project']) &&
+      typeof value.project === 'string' &&
+      value.project.length > 0 &&
+      value.project.length <= 4096
     )
   if (channel === 'url:open') return keys(value, ['url']) && isLocalUrl(value.url)
   if (channel === 'ports:lookup')

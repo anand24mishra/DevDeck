@@ -105,3 +105,12 @@
   line-height: 1.5;
   border: 1px solid var(--line);
 }
+:root {
+  --history-width: 15rem;
+  --history-height: 4rem;
+}
+.history-chart {
+  width: var(--history-width);
+  max-width: 100%;
+  height: var(--history-height);
+}

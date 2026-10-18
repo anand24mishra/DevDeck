@@ -1,5 +1,5 @@
 import { validReservations } from '../../shared/ports'
-import { validProfile } from '../../shared/profiles'
+import { validProfile, validThresholds } from '../../shared/profiles'
 import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
@@ -9,6 +9,7 @@ import { Settings, DEFAULT_NOTIFICATIONS } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: Settings = {
   approvedRepoConfigs: {},
+  resourceThresholds: {},
   reservedPorts: [],
   profiles: [],
   refreshIntervalSec: 3,
@@ -116,6 +117,7 @@ export class SettingsService {
                 .slice(0, 200)
             )
           : {},
+      resourceThresholds: validThresholds(r.resourceThresholds) ? r.resourceThresholds : {},
       reservedPorts: validReservations(r.reservedPorts) ? r.reservedPorts : [],
       profiles: Array.isArray(r.profiles) ? r.profiles.filter(validProfile).slice(0, 50) : [],
       showUnmanageable: r.showUnmanageable === true,

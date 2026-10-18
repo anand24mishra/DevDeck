@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  projectHistory: (project) => ipcRenderer.invoke('project:history', { project }),
   startLaunch: (member) => ipcRenderer.invoke('launch:start', { member }),
   listLaunches: () => ipcRenderer.invoke('launch:list'),
   launchLogs: (id) => ipcRenderer.invoke('launch:logs', { id }),

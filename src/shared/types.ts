@@ -51,6 +51,7 @@ export interface Settings {
   hotkey?: string | null
   preferredEditor?: string
   preferredTerminal?: string
+  resourceThresholds?: Record<string, { cpu?: number; memMB?: number }>
   reservedPorts?: { port: number; project: string }[]
   approvedRepoConfigs?: Record<string, string>
   profiles?: StackProfile[]
@@ -131,6 +132,7 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  projectHistory: (project: string) => Promise<Result<ResourceSample[]>>
   startLaunch: (member: ProfileMember) => Promise<Result<{ pid: number; id: string }>>
   listLaunches: () => Promise<Result<{ id: string; name: string; pid: number }[]>>
   launchLogs: (id: string) => Promise<Result<string[]>>
@@ -309,4 +311,10 @@ export interface ReservedPortStatus {
   project: string
   owners: string[]
   conflict: boolean
+}
+
+export interface ResourceSample {
+  at: number
+  cpu: number
+  memMB: number
 }

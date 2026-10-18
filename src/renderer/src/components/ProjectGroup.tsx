@@ -1,3 +1,4 @@
+import { ProjectHistory } from './ProjectHistory'
 import { processTotals } from '../utils/processes'
 import React, { useEffect, useState } from 'react'
 import { Proc, ProjectContext } from '../../../shared/types'
@@ -130,6 +131,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
         </div>
       </div>
 
+      <ProjectHistory project={projectName} />
       <div className="table-column-headers mono" aria-hidden="true">
         <div className="col col-state">STATE</div>
         <div className="col col-name">PROCESS</div>

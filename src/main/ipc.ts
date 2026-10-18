@@ -1,3 +1,4 @@
+import { resourceHistory } from './services/resourceHistory'
 import { launchMember, launches } from './services/launcher'
 import { repoConfigRequest } from './services/repoConfig'
 import { listProfiles, saveProfile, profileFromProject, profileAction } from './services/profiles'
@@ -91,6 +92,7 @@ export function registerIpcHandlers(): void {
         hintsEnabled: settings.hintsEnabled,
         showUnmanageable: settings.showUnmanageable || !!settings.reservedPorts?.length
       })
+      resourceHistory.observe(procs, settings)
       latestPortProcesses = procs
       notificationService.observe(procs, settings)
       return {
@@ -651,6 +653,10 @@ export function registerIpcHandlers(): void {
     launches.get(id)?.log.clear()
     return { ok: true, data: null }
   })
+  handle('project:history', async (_event, { project }) => ({
+    ok: true,
+    data: resourceHistory.read(project)
+  }))
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
     if (!isSenderAuthorized(event)) {

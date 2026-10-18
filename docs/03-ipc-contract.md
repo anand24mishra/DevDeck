@@ -254,3 +254,6 @@ also closes all streams on hide/close/provider change. Pending opens are cancell
 
 ### Launch capture (P3-4)
 `launch:start {member}` uses the same strict member validation, native exact-command confirmation, verified project cwd and fixed argv launcher as profiles. `launch:list` exposes opaque launch IDs, display names and PIDs, never commands or environment. `launch:logs {id}` reads a bounded memory ring; `launch:clear {id}` clears it. No arbitrary PID output attachment. Each launch keeps at most 5,000 lines / 2 MiB and all launch rings share a 32 MiB cap. Read responses redact recognized secret assignments, credentials and bearer tokens; raw output never reaches disk. Clear discards partial lines too. ANSI rendering uses text nodes and fixed token colors, never HTML.
+
+### Project history (P3-5)
+`project:history {project}` returns up to one hour / 1,800 samples of per-project CPU and memory totals, gathered from visible batched process refreshes. History is memory-only, with a 500-project cap and time pruning. Validated `resourceThresholds` settings map project names to optional CPU percent and memory MiB limits. A notification fires only when a total crosses a configured limit; falling below resets it. No additional OS polling is introduced.

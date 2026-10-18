@@ -48,3 +48,30 @@ export function profileProcesses(member: ProfileMember, processes: Proc[]): Proc
         (member.ports.length > 0 && member.ports.some((port) => p.ports.includes(port))))
   )
 }
+
+export function validThresholds(
+  value: unknown
+): value is Record<string, { cpu?: number; memMB?: number }> {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    Array.isArray(value) ||
+    Object.keys(value).length > 200
+  )
+    return false
+  return Object.entries(value).every(
+    ([key, v]) =>
+      text(key, 4096) &&
+      v &&
+      typeof v === 'object' &&
+      !Array.isArray(v) &&
+      Object.keys(v).every((k) => ['cpu', 'memMB'].includes(k)) &&
+      Object.entries(v).every(
+        ([k, n]) =>
+          typeof n === 'number' &&
+          Number.isFinite(n) &&
+          n > 0 &&
+          n <= (k === 'cpu' ? 100000 : 1048576)
+      )
+  )
+}
