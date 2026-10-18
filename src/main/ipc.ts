@@ -238,6 +238,7 @@ export function registerIpcHandlers(): void {
           message: 'This process changed or stopped. Refresh and try again.'
         }
       }
+    const context = current.projectPath ? await projectContext(current.projectPath) : {}
     const verified = (await defaultKillDeps.revalidate([pid])).ok.find(
       (proc) => proc.pid === pid && proc.startTime === startTime && proc.command === current.command
     )
@@ -252,6 +253,7 @@ export function registerIpcHandlers(): void {
     return {
       ok: true,
       data: {
+        runtime: context.runtime,
         canViewEnvironment: !!settings.showEnvViewer,
         process: current,
         user: current.user || 'Current user',

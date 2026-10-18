@@ -1,3 +1,4 @@
+import { runtimeHints } from './runtime'
 import fs from 'fs/promises'
 import path from 'path'
 import { execFile } from 'child_process'
@@ -75,7 +76,10 @@ export function projectContext(root: string): Promise<ProjectContext> {
   const cached = cache.get(root)
   if (cached && Date.now() - cached.at < 10_000) return cached.pending
   if (cache.size > 500) cache.clear()
-  const pending = readContext(root)
+  const pending = Promise.all([readContext(root), runtimeHints(root)]).then(([git, runtime]) => ({
+    ...git,
+    runtime
+  }))
   cache.set(root, { at: Date.now(), pending })
   return pending
 }

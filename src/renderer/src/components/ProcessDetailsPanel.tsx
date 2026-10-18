@@ -108,6 +108,11 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
           </p>
         </section>
       )}
+      {(details.runtime || []).map((runtime) => (
+        <p className="mono" key={runtime}>
+          {runtime}
+        </p>
+      ))}
       <div className="details-grid">
         <CopyField name="Process ID" value={String(current.pid)} />
         <CopyField name="User" value={details.user} />

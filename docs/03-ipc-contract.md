@@ -213,3 +213,9 @@ only manageable hinted rows, lists them in confirmation, and uses the normal saf
 and returns `Result<ProjectContext>` (`branch?`, `dirty?`). HEAD is parsed strictly; dirty status
 uses fixed git argv with fsmonitor/hooks disabled, a one-second timeout and 64-KB bound. Results
 are cached for ten seconds. Failures return an empty context and never block rendering.
+
+## P2-9 runtime hints
+ProjectContext and ProcessDetails add `runtime?:string[]`. These are declared project-version
+hints from bounded reads of .nvmrc, .node-version, package engines, Python version/virtualenv
+metadata, go.mod, Rust toolchain files and Java version files. They are shown only in Details,
+never execute a project command, and share the ten-second context cache.
