@@ -27,6 +27,24 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
         tabIndex={0}
         aria-expanded={expanded}
         onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return
+          if (e.key === 'Delete' && onStop && proc.manageable !== false) {
+            e.preventDefault()
+            onStop(proc)
+            return
+          }
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault()
+            const rows = [
+              ...document.querySelectorAll<HTMLElement>('.app-content .process-row[role="button"]')
+            ]
+            const index = rows.indexOf(e.currentTarget)
+            const next = rows[index + (e.key === 'ArrowDown' ? 1 : -1)]
+            next?.focus()
+            next?.scrollIntoView({ block: 'nearest' })
+            return
+          }
+
           if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault()
             setExpanded(!expanded)
@@ -125,7 +143,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
           <button
             className="details-toggle-btn"
             aria-label={expanded ? 'Hide process details' : 'Show process details'}
-            tabIndex={-1}
+            tabIndex={0}
           >
             <svg
               className={`chevron-icon ${expanded ? 'rotated' : ''}`}

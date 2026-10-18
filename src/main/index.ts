@@ -258,6 +258,5 @@ app.on('will-quit', () => hotkeyService.dispose())
 app.on('before-quit', () => {
   void cliServer.stop()
   closeLaunchOutputs()
-  dockerService.stopAllStats()
-  dockerService.stopAllLogs()
+  dockerService.stopAllConnections()
 })

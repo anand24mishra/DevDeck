@@ -266,3 +266,8 @@ The packaged app registers `devdeck://port/3000` and `devdeck://project/<encoded
 
 ### Reviewable exports (P3-9)
 `export:preview {kind:'snapshot'|'diagnostics',format:'json'|'text'}` returns preview text only. Snapshot projects/process labels and Docker names are bounded, command arguments are entirely replaced with `[hidden]`, and environment, cwd, mounts and socket paths are never included. Diagnostics contains app/Electron/macOS version, architecture, provider label and counts only. The renderer displays the exact output before an explicit clipboard action. Nothing is copied, saved or uploaded by the request.
+
+### Final profile and layout safeguards
+Profile executable/argv matching normalizes bare executables against absolute process listings and known package-manager shims. Successful profile launches also save pid/startTime/command in a main-owned `profileLaunches` map so quoted arguments retain exact identity across app restarts. Renderer settings cannot write that map. Records are limited to saved profiles; settings are atomically replaced with mode0600 and failed writes do not report Saved. Logs and resource history remain memory-only.
+
+Lists over 200 process/container rows use measured windowing with the same project controls. Notification focus clears conflicting filters and selects an exact PID, so offscreen rows remain reachable. Arrow keys move between rows, Enter opens Details, and Delete requests the usual confirmed Stop. Large-text layouts permit scrolling to every control and the list.

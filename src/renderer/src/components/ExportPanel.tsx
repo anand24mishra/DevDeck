@@ -5,13 +5,16 @@ export function ExportPanel(): React.ReactElement {
   const [text, setText] = useState(''),
     [status, setStatus] = useState(''),
     [loading, setLoading] = useState(false)
-  const dialog = useRef<HTMLDialogElement>(null)
+  const dialog = useRef<HTMLDialogElement>(null),
+    cancelButton = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!kind) {
       dialog.current?.close()
       return
     }
+    const opening = !dialog.current?.open
     dialog.current?.showModal()
+    if (opening) cancelButton.current?.focus()
     let active = true
     void window.api
       .exportPreview(kind, format)
@@ -85,7 +88,7 @@ export function ExportPanel(): React.ReactElement {
           readOnly
           value={loading ? 'Preparing preview…' : text}
         />
-        <button className="quiet-btn" autoFocus onClick={() => setKind(null)}>
+        <button className="quiet-btn" ref={cancelButton} onClick={() => setKind(null)}>
           Cancel
         </button>
         <button

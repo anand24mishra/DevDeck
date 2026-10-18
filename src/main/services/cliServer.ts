@@ -116,8 +116,10 @@ export class CliServer {
       })
       await fs.chmod(socketPath, 0o600)
       await fs.mkdir(userData, { recursive: true })
-      await fs.writeFile(credentials, JSON.stringify({ socketPath, token }), { mode: 0o600 })
-      await fs.chmod(credentials, 0o600)
+      const temporary = credentials + `.${process.pid}.tmp`
+      await fs.writeFile(temporary, JSON.stringify({ socketPath, token }), { mode: 0o600 })
+      await fs.chmod(temporary, 0o600)
+      await fs.rename(temporary, credentials)
       this.closeServer = close
     } catch (error) {
       await close()

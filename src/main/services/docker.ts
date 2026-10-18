@@ -167,6 +167,7 @@ export class DockerService {
     if (this.injectedClient) return { client: this.injectedClient }
     const check = resolveDockerSocket(overridePath)
     if (!check.found || !check.socketPath) {
+      this.stopAllConnections()
       this.client = null
       this.currentSocket = null
       return {
@@ -182,7 +183,7 @@ export class DockerService {
       return { client: this.client }
     }
 
-    this.statsService.stopAll()
+    this.stopAllConnections()
     this.currentSocket = check.socketPath
     this.client = new Docker({ socketPath: check.socketPath })
     this.initEvents()
@@ -252,8 +253,13 @@ export class DockerService {
   private initEvents(): void {
     if (!this.client || this.eventStream) return
     try {
-      this.client.getEvents((err, stream) => {
+      const requestedClient = this.client
+      requestedClient.getEvents((err, stream) => {
         if (err || !stream) return
+        if (this.client !== requestedClient) {
+          if ('destroy' in stream && typeof stream.destroy === 'function') stream.destroy()
+          return
+        }
         this.eventStream = stream
 
         stream.on('data', (chunk: Buffer) => {
@@ -275,11 +281,11 @@ export class DockerService {
         })
 
         stream.on('end', () => {
-          this.eventStream = null
+          if (this.eventStream === stream) this.eventStream = null
         })
 
         stream.on('error', () => {
-          this.eventStream = null
+          if (this.eventStream === stream) this.eventStream = null
         })
       })
     } catch {
@@ -643,6 +649,13 @@ export class DockerService {
     return { ok: true, data: null }
   }
 
+  public stopAllConnections(): void {
+    this.statsService.stopAll()
+    this.stopAllLogs()
+    const stream = this.eventStream
+    this.eventStream = null
+    if (stream && 'destroy' in stream && typeof stream.destroy === 'function') stream.destroy()
+  }
   public stopAllLogs(): void {
     for (const id of Array.from(this.activeStreams.keys())) {
       this.stopContainerLogs(id)

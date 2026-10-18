@@ -51,6 +51,7 @@ export interface Settings {
   hotkey?: string | null
   preferredEditor?: string
   preferredTerminal?: string
+  profileLaunches?: Record<string, Record<string, ProcessIdentity>>
   resourceThresholds?: Record<string, { cpu?: number; memMB?: number }>
   reservedPorts?: { port: number; project: string }[]
   approvedRepoConfigs?: Record<string, string>

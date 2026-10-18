@@ -13,11 +13,10 @@ interface ProjectGroupProps {
   onStopProject?: (project: string, procs: Proc[]) => void
 }
 
-export const ProjectGroup: React.FC<ProjectGroupProps> = ({
+export const ProjectHeading: React.FC<ProjectGroupProps> = ({
   projectName,
   projectPath,
   processes,
-  onStopProcess,
   onStopProject
 }) => {
   const [profileStatus, setProfileStatus] = useState('')
@@ -42,7 +41,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   }, [projectPath])
   const totals = processTotals(processes)
   return (
-    <section className="project-group" aria-label={`Project ${projectName}`}>
+    <>
       <div className="project-group-header">
         <div className="project-title-area">
           <svg
@@ -141,12 +140,20 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
         <div className="col col-uptime">UPTIME</div>
         <div className="col col-action">DETAILS</div>
       </div>
-
-      <div className="process-rows-list">
-        {processes.map((proc) => (
-          <ProcessRow key={`${proc.pid}:${proc.startTime}`} proc={proc} onStop={onStopProcess} />
-        ))}
-      </div>
-    </section>
+    </>
   )
 }
+export const ProjectGroup: React.FC<ProjectGroupProps> = (props) => (
+  <section className="project-group" aria-label={`Project ${props.projectName}`}>
+    <ProjectHeading {...props} />
+    <div className="process-rows-list">
+      {props.processes.map((proc) => (
+        <ProcessRow
+          key={`${proc.pid}:${proc.startTime}`}
+          proc={proc}
+          onStop={props.onStopProcess}
+        />
+      ))}
+    </div>
+  </section>
+)

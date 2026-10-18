@@ -32,7 +32,19 @@ export const DockerProjectGroup: React.FC<DockerProjectGroupProps> = ({
 
   return (
     <div className="project-group">
-      <div className="project-header" onClick={() => setCollapsed(!collapsed)}>
+      <div
+        className="project-header"
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        onKeyDown={(e) => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault()
+            setCollapsed(!collapsed)
+          }
+        }}
+        onClick={() => setCollapsed(!collapsed)}
+      >
         <div className="project-header-left">
           <span className={`collapse-chevron ${collapsed ? 'collapsed' : ''}`} aria-hidden="true">
             ▼

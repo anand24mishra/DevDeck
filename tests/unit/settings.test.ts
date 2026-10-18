@@ -92,3 +92,22 @@ describe('SettingsService', () => {
     expect(updated.dockerSocketPath).toBeUndefined()
   })
 })
+
+it('writes private settings atomically and keeps cached values if saving fails', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'devdeck-private-settings-'))
+  try {
+    const file = path.join(directory, 'settings.json')
+    fs.writeFileSync(file, '{}', { mode: 0o644 })
+    const service = new SettingsService(file)
+    service.updateSettings({ theme: 'dark' })
+    expect(fs.statSync(file).mode & 0o777).toBe(0o600)
+    expect(JSON.parse(fs.readFileSync(file, 'utf8')).theme).toBe('dark')
+    const blocked = path.join(directory, 'not-a-directory')
+    fs.writeFileSync(blocked, 'x')
+    const failing = new SettingsService(path.join(blocked, 'settings.json'))
+    expect(() => failing.updateSettings({ theme: 'light' })).toThrow('Settings could not be saved')
+    expect(failing.getSettings().theme).toBe('system')
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
+})

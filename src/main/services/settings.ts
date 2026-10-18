@@ -1,5 +1,5 @@
 import { validReservations } from '../../shared/ports'
-import { validProfile, validThresholds } from '../../shared/profiles'
+import { validProfile, validThresholds, validProfileLaunches } from '../../shared/profiles'
 import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
@@ -9,6 +9,7 @@ import { Settings, DEFAULT_NOTIFICATIONS } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: Settings = {
   approvedRepoConfigs: {},
+  profileLaunches: {},
   resourceThresholds: {},
   reservedPorts: [],
   profiles: [],
@@ -102,6 +103,13 @@ export class SettingsService {
     const persistRecentlyStopped =
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
+    const profiles = Array.isArray(r.profiles) ? r.profiles.filter(validProfile).slice(0, 50) : []
+    const launchCandidates =
+      r.profileLaunches && typeof r.profileLaunches === 'object'
+        ? Object.fromEntries(
+            Object.entries(r.profileLaunches).filter(([id]) => profiles.some((p) => p.id === id))
+          )
+        : {}
     return {
       approvedRepoConfigs:
         r.approvedRepoConfigs && typeof r.approvedRepoConfigs === 'object'
@@ -117,9 +125,10 @@ export class SettingsService {
                 .slice(0, 200)
             )
           : {},
+      profileLaunches: validProfileLaunches(launchCandidates) ? launchCandidates : {},
       resourceThresholds: validThresholds(r.resourceThresholds) ? r.resourceThresholds : {},
       reservedPorts: validReservations(r.reservedPorts) ? r.reservedPorts : [],
-      profiles: Array.isArray(r.profiles) ? r.profiles.filter(validProfile).slice(0, 50) : [],
+      profiles,
       showUnmanageable: r.showUnmanageable === true,
       showEnvViewer: r.showEnvViewer === true,
       onboardingComplete: r.onboardingComplete === true,
@@ -166,12 +175,22 @@ export class SettingsService {
     }
 
     const validated = this.validate(merged)
-    this.cached = validated
-
+    const temporary = this.filePath + `.${process.pid}.tmp`
     try {
-      fs.writeFileSync(this.filePath, JSON.stringify(validated, null, 2), 'utf-8')
-    } catch (err: unknown) {
-      console.error('Failed to save settings:', err)
+      fs.writeFileSync(temporary, JSON.stringify(validated, null, 2), {
+        encoding: 'utf8',
+        mode: 0o600
+      })
+      fs.chmodSync(temporary, 0o600)
+      fs.renameSync(temporary, this.filePath)
+      this.cached = validated
+    } catch {
+      try {
+        fs.unlinkSync(temporary)
+      } catch {
+        /* No temporary file. */
+      }
+      throw new Error('Settings could not be saved.')
     }
 
     // Apply login item settings if changed

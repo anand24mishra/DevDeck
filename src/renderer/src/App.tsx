@@ -1,3 +1,5 @@
+import { VirtualProcesses } from './components/VirtualProcesses'
+import { VirtualContainers } from './components/VirtualContainers'
 import { ExportPanel } from './components/ExportPanel'
 import { ReservedPorts } from './components/ReservedPorts'
 import { ProfilesPanel } from './components/ProfilesPanel'
@@ -139,7 +141,16 @@ const App: React.FC = () => {
     () =>
       window.api.onFocusTarget((target) => {
         setActiveTab('processes')
-        setSearchQuery(target.project || (target.port ? String(target.port) : ''))
+        setHeavyOnly(false)
+        setLeftoversOnly(false)
+        setSocketProtocol('all')
+        setSocketState('all')
+        setTreeView(false)
+        setSearchQuery(
+          target.pid
+            ? `pid:${target.pid}`
+            : target.project || (target.port ? String(target.port) : '')
+        )
         if (target.pid)
           requestAnimationFrame(() =>
             document
@@ -178,9 +189,11 @@ const App: React.FC = () => {
                 (socketState === 'all' || socket.state === socketState)
             )) &&
           (!q ||
-            proc.name.toLowerCase().includes(q) ||
-            proc.project.toLowerCase().includes(q) ||
-            proc.ports.some((port) => String(port).includes(q)))
+            (q.startsWith('pid:')
+              ? proc.pid === Number(q.slice(4))
+              : proc.name.toLowerCase().includes(q) ||
+                proc.project.toLowerCase().includes(q) ||
+                proc.ports.some((port) => String(port).includes(q))))
       ),
       sortBy
     )
@@ -704,6 +717,16 @@ const App: React.FC = () => {
             <EmptyState />
           ) : filteredProcesses.length === 0 ? (
             <EmptyState searchQuery={searchQuery} onClearSearch={() => setSearchQuery('')} />
+          ) : filteredProcesses.length > 200 ? (
+            <VirtualProcesses
+              groups={groupedProjects}
+              processes={filteredProcesses}
+              allProcesses={procs}
+              tree={treeView}
+              onStop={handleStopProcess}
+              onStopProject={handleStopProject}
+              onStopTree={handleStopTree}
+            />
           ) : treeView ? (
             <ProcessTreeView
               processes={filteredProcesses}
@@ -734,6 +757,15 @@ const App: React.FC = () => {
           <EmptyState kind="docker" />
         ) : filteredContainers.length === 0 ? (
           <EmptyState searchQuery={searchQuery} onClearSearch={() => setSearchQuery('')} />
+        ) : filteredContainers.length > 200 ? (
+          <VirtualContainers
+            groups={groupedDockerProjects}
+            onAction={handleDockerAction}
+            onRemove={handleDockerRemove}
+            onProject={handleDockerProject}
+            onLogs={setSelectedLogContainer}
+            loadingId={actionLoadingId}
+          />
         ) : (
           <div className="project-groups-list">
             {groupedDockerProjects.map((group) => (

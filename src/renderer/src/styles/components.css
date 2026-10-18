@@ -1803,3 +1803,97 @@
   width: var(--sparkline-width);
   height: var(--sparkline-height);
 }
+
+.virtual-list {
+  position: relative;
+  min-width: 0;
+}
+.virtual-row {
+  position: absolute;
+  inset: 0 0 auto;
+  width: 100%;
+}
+.virtual-row .project-group-header {
+  position: static;
+}
+.process-row {
+  min-height: var(--min-row-height);
+  height: auto;
+  padding-block: var(--space-2);
+}
+.process-row:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 900px) {
+  .app-header,
+  .header-left,
+  .header-right,
+  .project-group-header,
+  .project-meta,
+  .port-field-row {
+    flex-wrap: wrap;
+  }
+  .header-center {
+    min-width: 12rem;
+    flex: 1 1 100%;
+  }
+  .process-row {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .col-name {
+    min-width: 8rem;
+  }
+  .container-row .col-actions {
+    flex-wrap: wrap;
+  }
+}
+.profiles-panel form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+}
+.profiles-panel label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2);
+}
+.profiles-panel input,
+.profiles-panel select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  min-height: var(--min-row-height);
+  padding-inline: var(--space-2);
+}
+
+/* At large text sizes, controls and the list remain reachable by scrolling. */
+.app-container {
+  overflow-y: auto;
+}
+.app-header {
+  height: auto;
+  min-height: 48px;
+  padding-block: var(--space-2);
+}
+.app-content {
+  min-height: 10rem;
+  flex-shrink: 0;
+}
+.onboarding,
+.port-lookup,
+.process-tools,
+.export-controls {
+  flex-shrink: 0;
+}

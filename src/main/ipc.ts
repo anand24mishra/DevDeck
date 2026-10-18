@@ -194,6 +194,7 @@ export function registerIpcHandlers(): void {
 
   // settings:set
   handle('settings:set', async (event, partial: Partial<Settings>): Promise<Result<Settings>> => {
+    const previousHotkey = settingsService.getSettings().hotkey
     if (!isSenderAuthorized(event)) {
       return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
     }
@@ -219,6 +220,8 @@ export function registerIpcHandlers(): void {
       }
       return { ok: true, data: updated }
     } catch (err: unknown) {
+      if (partial?.hotkey !== undefined)
+        hotkeyService.configure(previousHotkey === undefined ? null : previousHotkey)
       const message = err instanceof Error ? err.message : 'Failed to update settings'
       return {
         ok: false,

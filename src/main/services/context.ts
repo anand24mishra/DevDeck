@@ -1,3 +1,4 @@
+import { readMetadata } from './metadata'
 import { runtimeHints } from './runtime'
 import fs from 'fs/promises'
 import path from 'path'
@@ -27,13 +28,13 @@ async function readContext(root: string): Promise<ProjectContext> {
     const info = await fs.stat(git)
     if (info.isFile()) {
       if (info.size > 4096) return {}
-      const pointer = (await fs.readFile(git, 'utf8')).trim().match(/^gitdir: (.+)$/)
+      const pointer = readMetadata(root, '.git', 4096)
+        .trim()
+        .match(/^gitdir: (.+)$/)
       if (!pointer) return {}
       git = path.resolve(root, pointer[1])
     }
-    const head = path.join(git, 'HEAD')
-    if ((await fs.stat(head)).size > 4096) return {}
-    const branch = parseGitHead(await fs.readFile(head, 'utf8'))
+    const branch = parseGitHead(readMetadata(git, 'HEAD', 4096))
     if (!branch) return {}
     let executable: string | undefined
     for (const candidate of [

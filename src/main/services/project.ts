@@ -1,4 +1,4 @@
-import fs from 'fs'
+import { hasProjectMarker } from './metadata'
 import os from 'os'
 import path from 'path'
 
@@ -28,10 +28,7 @@ export function resolveProjectFromCwd(cwd: string | null): ProjectInfo {
 
   while (currentDir && currentDir !== path.dirname(currentDir)) {
     // Check for project root markers
-    const hasGit = fs.existsSync(path.join(currentDir, '.git'))
-    const hasPackageJson = fs.existsSync(path.join(currentDir, 'package.json'))
-
-    if (hasGit || hasPackageJson) {
+    if (hasProjectMarker(currentDir)) {
       const info: ProjectInfo = {
         name: path.basename(currentDir),
         root: currentDir

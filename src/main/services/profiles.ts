@@ -20,15 +20,20 @@ const read = async (): Promise<Awaited<ReturnType<typeof provider.listProcesses>
 }
 function matched(
   member: StackProfile['members'][number],
-  procs: Awaited<ReturnType<typeof read>>
+  procs: Awaited<ReturnType<typeof read>>,
+  profileId?: string
 ): typeof procs {
   const known = [...launches.values()].filter(
     (l) => l.cwd === member.cwd && l.command === member.command && l.identity
   )
+  const saved = profileId
+    ? settingsService.getSettings().profileLaunches?.[profileId]?.[member.name]
+    : undefined
   const pids = new Set(profileProcesses(member, procs).map((p) => p.pid))
   return procs.filter(
     (p) =>
       pids.has(p.pid) ||
+      (saved?.pid === p.pid && saved.startTime === p.startTime && saved.command === p.command) ||
       known.some(
         (l) =>
           l.identity!.pid === p.pid &&
@@ -49,7 +54,7 @@ export async function listProfiles(): Promise<ProfileStatus[]> {
       running: member.containerId
         ? containers.ok &&
           containers.data.some((c) => member.containerId!.startsWith(c.id) && c.state === 'running')
-        : matched(member, procs).length > 0
+        : matched(member, procs, profile.id).length > 0
     }))
   }))
 }
@@ -120,7 +125,7 @@ export async function profileAction(
     const snapshot = await read()
     const captured = profile.members.map((member) => ({
       member,
-      procs: matched(member, snapshot)
+      procs: matched(member, snapshot, profile.id)
     }))
     const answer = await dialog.showMessageBox({
       type: action === 'start' ? 'question' : 'warning',
@@ -180,10 +185,35 @@ export async function profileAction(
             continue
           }
           const result = await launchMember(member)
+          let persisted = true
+          if (result.ok) {
+            const identity = launches.get(result.data.id)?.identity
+            if (identity) {
+              const current = settingsService.getSettings().profileLaunches || {}
+              const { pid, startTime, command } = identity
+              try {
+                settingsService.updateSettings({
+                  profileLaunches: {
+                    ...current,
+                    [profile.id]: {
+                      ...current[profile.id],
+                      [member.name]: { pid, startTime, command }
+                    }
+                  }
+                })
+              } catch {
+                persisted = false
+              }
+            }
+          }
           reports.push({
             name: member.name,
             ok: result.ok,
-            message: result.ok ? 'Started' : result.error.message,
+            message: result.ok
+              ? persisted
+                ? 'Started'
+                : 'Started; could not save its restart identity. Refresh to see the process.'
+              : result.error.message,
             ...(result.ok ? { pid: result.data.pid } : {})
           })
         } else

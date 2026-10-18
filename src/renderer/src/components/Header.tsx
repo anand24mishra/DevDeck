@@ -43,7 +43,13 @@ export const Header: React.FC<HeaderProps> = ({
   // Global shortcut '/' to focus search, 'Escape' to clear/blur
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === '/' && document.activeElement !== searchInputRef.current) {
+      if (
+        e.key === '/' &&
+        !(
+          e.target instanceof HTMLElement &&
+          (e.target.matches('input,textarea,select') || e.target.isContentEditable)
+        )
+      ) {
         e.preventDefault()
         searchInputRef.current?.focus()
       } else if (e.key === 'Escape' && document.activeElement === searchInputRef.current) {

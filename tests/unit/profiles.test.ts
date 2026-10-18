@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validProfile, profileProcesses } from '../../src/shared/profiles'
+import { validProfile, profileProcesses, equivalentCommand } from '../../src/shared/profiles'
 import type { Proc } from '../../src/shared/types'
 const profile = {
   id: 'web',
@@ -30,4 +30,15 @@ describe('profile boundary', () => {
       ]).map((p) => p.pid)
     ).toEqual([10])
   })
+})
+
+it('matches normal absolute executable representations without relying on launch memory', () => {
+  expect(equivalentCommand('node server.cjs', '/opt/homebrew/bin/node server.cjs')).toBe(true)
+  expect(
+    equivalentCommand(
+      'npm run dev',
+      '/opt/homebrew/bin/node /usr/local/lib/npm/bin/npm-cli.js run dev'
+    )
+  ).toBe(true)
+  expect(equivalentCommand('node server.cjs', '/opt/homebrew/bin/node other.cjs')).toBe(false)
 })
