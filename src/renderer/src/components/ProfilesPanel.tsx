@@ -1,3 +1,4 @@
+import { LaunchPanel } from './LaunchPanel'
 import React, { useEffect, useState } from 'react'
 import type { ProfileStatus, MemberReport, StackProfile } from '../../../shared/types'
 export function ProfilesPanel(): React.ReactElement {
@@ -143,6 +144,7 @@ export function ProfilesPanel(): React.ReactElement {
           </button>
         </section>
       )}
+      <LaunchPanel />
       <div role="status">
         {reports.map((report, index) => (
           <p key={index}>

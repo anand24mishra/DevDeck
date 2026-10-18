@@ -131,6 +131,10 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  startLaunch: (member: ProfileMember) => Promise<Result<{ pid: number; id: string }>>
+  listLaunches: () => Promise<Result<{ id: string; name: string; pid: number }[]>>
+  launchLogs: (id: string) => Promise<Result<string[]>>
+  clearLaunchLogs: (id: string) => Promise<Result<null>>
   reservePort: (port: number, project: string) => Promise<Result<null>>
   unreservePort: (port: number) => Promise<Result<null>>
   reservedPortStatus: () => Promise<Result<ReservedPortStatus[]>>

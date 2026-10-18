@@ -1,3 +1,5 @@
+import { LogRing } from '../../shared/logs'
+import { StringDecoder } from 'string_decoder'
 import fs from 'fs/promises'
 import { randomUUID } from 'crypto'
 import { defaultKillDeps } from './kill'
@@ -13,8 +15,7 @@ export interface LaunchedProcess {
   name: string
   pid: number
   cwd: string
-  lines: string[]
-  partial: string
+  log: LogRing
   command: string
   identity?: ProcessIdentity
   startedAt: number
@@ -111,20 +112,26 @@ export async function launchMember(
       name: member.name,
       pid: 0,
       cwd,
-      lines: [],
-      partial: '',
+      log: new LogRing(),
       command: member.command!,
       startedAt: Date.now()
     }
-    const append = (chunk: Buffer): void => {
-      const text = (entry.partial + chunk.toString()).slice(-1048576)
-      const lines = text.split('\n')
-      entry.partial = (lines.pop() || '').slice(-16384)
-      entry.lines.push(...lines.map((line) => line.slice(0, 16384)))
-      if (entry.lines.length > 5000) entry.lines.splice(0, entry.lines.length - 5000)
+    const stdoutDecoder = new StringDecoder('utf8'),
+      stderrDecoder = new StringDecoder('utf8')
+    const append = (text: string): void => {
+      entry.log.append(text)
+      let bytes = [...launches.values()].reduce(
+        (total, item) => total + item.log.size,
+        entry.log.size
+      )
+      for (const old of launches.values()) {
+        if (bytes <= 33554432) break
+        bytes -= old.log.size
+        old.log.clear()
+      }
     }
-    worker.stdout?.on('data', append)
-    worker.stderr?.on('data', append)
+    worker.stdout?.on('data', (chunk) => append(stdoutDecoder.write(chunk)))
+    worker.stderr?.on('data', (chunk) => append(stderrDecoder.write(chunk)))
     worker.on('message', (message) => {
       if (Number.isSafeInteger(message.pid) && message.pid > 1) {
         pid = message.pid

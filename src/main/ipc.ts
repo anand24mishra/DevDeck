@@ -1,3 +1,4 @@
+import { launchMember, launches } from './services/launcher'
 import { repoConfigRequest } from './services/repoConfig'
 import { listProfiles, saveProfile, profileFromProject, profileAction } from './services/profiles'
 import { openContainerShell } from './services/containerShell'
@@ -617,6 +618,37 @@ export function registerIpcHandlers(): void {
         (p) => p.port !== port
       )
     })
+    return { ok: true, data: null }
+  })
+  handle('launch:start', async (_event, { member }) => {
+    const answer = await dialog.showMessageBox({
+      type: 'question',
+      message: `Start ${member.name}?`,
+      detail: `Review this exact command before running it.\n\n${member.cwd}\n${member.command}`,
+      buttons: ['Cancel', 'Start'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    })
+    if (answer.response !== 1)
+      return { ok: false, error: { code: 'DENIED', message: 'Launch cancelled.' } }
+    return launchMember(member)
+  })
+  handle('launch:list', async () => ({
+    ok: true,
+    data: [...launches.values()].map(({ id, name, pid }) => ({ id, name, pid }))
+  }))
+  handle('launch:logs', async (_event, { id }) => {
+    const item = launches.get(id)
+    return item
+      ? { ok: true, data: item.log.read() }
+      : {
+          ok: false,
+          error: { code: 'NOT_FOUND', message: 'No captured output exists for this launch.' }
+        }
+  })
+  handle('launch:clear', async (_event, { id }) => {
+    launches.get(id)?.log.clear()
     return { ok: true, data: null }
   })
   // recent:list

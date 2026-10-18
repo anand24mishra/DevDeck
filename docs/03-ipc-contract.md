@@ -251,3 +251,6 @@ also closes all streams on hide/close/provider change. Pending opens are cancell
 
 ### Reserved ports (P3-3)
 `ports:reserve {port,project}` stars a project reservation (maximum 200); `ports:unreserve {port}` removes it. Strict port/name validation; `ports:reserved` reads reservation status from the latest batched process scan, without another lsof invocation. Reservations remain visible while free. Accessible unexpected owners cause a deduplicated native conflict notice; hidden-window polling stays paused. Renderer cannot stop an unknown owner through a reservation.
+
+### Launch capture (P3-4)
+`launch:start {member}` uses the same strict member validation, native exact-command confirmation, verified project cwd and fixed argv launcher as profiles. `launch:list` exposes opaque launch IDs, display names and PIDs, never commands or environment. `launch:logs {id}` reads a bounded memory ring; `launch:clear {id}` clears it. No arbitrary PID output attachment. Each launch keeps at most 5,000 lines / 2 MiB and all launch rings share a 32 MiB cap. Read responses redact recognized secret assignments, credentials and bearer tokens; raw output never reaches disk. Clear discards partial lines too. ANSI rendering uses text nodes and fixed token colors, never HTML.

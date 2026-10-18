@@ -2,6 +2,10 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  startLaunch: (member) => ipcRenderer.invoke('launch:start', { member }),
+  listLaunches: () => ipcRenderer.invoke('launch:list'),
+  launchLogs: (id) => ipcRenderer.invoke('launch:logs', { id }),
+  clearLaunchLogs: (id) => ipcRenderer.invoke('launch:clear', { id }),
   reservePort: (port, project) => ipcRenderer.invoke('ports:reserve', { port, project }),
   unreservePort: (port) => ipcRenderer.invoke('ports:unreserve', { port }),
   reservedPortStatus: () => ipcRenderer.invoke('ports:reserved'),

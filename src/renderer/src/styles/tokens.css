@@ -96,3 +96,12 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
 }
+:root {
+  --capture-height: 20rem;
+}
+.captured-logs {
+  height: var(--capture-height);
+  overflow: auto;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+}

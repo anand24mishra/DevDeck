@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P3-4: Direct and profile launches capture stdout and stderr with redaction, ANSI text rendering, search, copy, clear and windowed log rows.
 - P3-3: Starred reservations persist while free and explain conflicts with deduplicated notices using the batched scan.
 - P3-2: Bounded schema-v1 parsing, contained real folders, native exact-command approval and source hash rechecks before launch.
 - P3-1: Electron launch-stop test passes with real helper reparenting and normal safety checks; clone env before structured IPC and capture post-launch identity.

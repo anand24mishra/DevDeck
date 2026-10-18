@@ -1,4 +1,4 @@
-import { validProfile } from '../../shared/profiles'
+import { validProfile, validMember } from '../../shared/profiles'
 import path from 'path'
 import { isLocalUrl, validReservations } from '../../shared/ports'
 import { validHotkey } from '../services/hotkey'
@@ -82,6 +82,7 @@ function validSettings(value: Record<string, unknown>): boolean {
 export function validIpcInput(channel: string, value: unknown): boolean {
   if (
     [
+      'launch:list',
       'ports:reserved',
       'profiles:list',
       'docker:apps',
@@ -141,6 +142,12 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       Number.isInteger(value.port) &&
       Number(value.port) > 0 &&
       Number(value.port) <= 65535
+    )
+  if (channel === 'launch:start')
+    return keys(value, ['member']) && validMember(value.member) && !value.member.containerId
+  if (['launch:logs', 'launch:clear'].includes(channel))
+    return (
+      keys(value, ['id']) && typeof value.id === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(value.id)
     )
   if (channel === 'url:open') return keys(value, ['url']) && isLocalUrl(value.url)
   if (channel === 'ports:lookup')

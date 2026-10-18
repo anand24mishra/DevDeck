@@ -47,6 +47,15 @@ test('profile launches independently and stops through normal identity guards', 
         return result.ok && result.data.some((p) => p.pid === pid && p.manageable !== false)
       })
       .toBe(true)
+    const captured = await page.evaluate(() => window.api.listLaunches())
+    expect(captured.ok && captured.data.length).toBe(1)
+    const launchId = captured.ok ? captured.data[0].id : ''
+    await expect
+      .poll(async () => {
+        const logs = await page.evaluate((id) => window.api.launchLogs(id), launchId)
+        return logs.ok && logs.data.some((line) => line.includes('still-running'))
+      })
+      .toBe(true)
     const stopped = await page.evaluate(() => window.api.profileAction('fixture', 'stop'))
     expect(stopped.ok && stopped.data[0].message).toBe('Stopped')
     expect(() => process.kill(pid!, 0)).toThrow()
