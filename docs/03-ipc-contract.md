@@ -239,3 +239,6 @@ Start requires a visible app window and current running-container membership. `d
 events carry `{id,sample:ContainerStatsSample}` with timestamp, CPU%, memory MB and cumulative
 RX/TX bytes, at most once per second per container. Viewport observers start/stop streams; main
 also closes all streams on hide/close/provider change. Pending opens are cancelled safely.
+
+### Container inspection and interactive shell (P2-14)
+`docker:inspect {id}` returns bounded in-memory environment, mounts, networks and health/state. Values are masked in the panel until explicit reveal and discarded on close. `docker:exec {id}` verifies running membership, resolves a fixed Docker executable and local socket, probes bash then falls back to sh. A private short-lived static Ruby command bridge calls `Process.spawn` with an argument array in the preferred detected terminal. No renderer executable, shell text or environment is accepted. Missing CLI/Ruby/terminal returns a clear error.

@@ -1,3 +1,4 @@
+import { openContainerShell } from './services/containerShell'
 import { projectContext } from './services/context'
 import { readEnvironment } from './services/environment'
 import { buildProcessTree, descendantsChildrenFirst } from '../shared/processTree'
@@ -534,6 +535,20 @@ export function registerIpcHandlers(): void {
   handle('docker:stats:stop', async (_event, { ids }: { ids: string[] }) => {
     dockerService.stopStats(ids)
     return { ok: true, data: null }
+  })
+
+  handle('docker:inspect', async (_event, { id }) =>
+    dockerService.inspectContainer(id, settingsService.getSettings().dockerSocketPath)
+  )
+  handle('docker:exec', async (_event, { id }) => {
+    const settings = settingsService.getSettings()
+    const current = await dockerService.listContainers(settings.dockerSocketPath)
+    if (!current.ok || !current.data.some((item) => item.id === id && item.state === 'running'))
+      return {
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'This container is no longer running.' }
+      }
+    return openContainerShell(id, settings)
   })
 
   // recent:list

@@ -10,6 +10,7 @@ import {
   ContainerState,
   Result,
   ContainerActionReport,
+  ContainerInspection,
   DockerDesktopApp
 } from '../../shared/types'
 
@@ -186,6 +187,49 @@ export class DockerService {
     this.client = new Docker({ socketPath: check.socketPath })
     this.initEvents()
     return { client: this.client }
+  }
+
+  public async inspectContainer(
+    id: string,
+    override?: string
+  ): Promise<Result<ContainerInspection>> {
+    const { client, error } = this.getClient(override)
+    if (!client)
+      return {
+        ok: false,
+        error: { code: 'DOCKER_UNAVAILABLE', message: error?.message || 'Docker unavailable' }
+      }
+    try {
+      const data = await client.getContainer(id).inspect()
+      return {
+        ok: true,
+        data: {
+          environment: (data.Config?.Env || []).slice(0, 1000).map((entry) => {
+            const at = entry.indexOf('=')
+            return {
+              key: entry.slice(0, at < 0 ? entry.length : at),
+              value: at < 0 ? '' : entry.slice(at + 1, at + 65537)
+            }
+          }),
+          mounts: (data.Mounts || [])
+            .slice(0, 200)
+            .map((m) => `${m.Source} → ${m.Destination}${m.RW ? '' : ' (read only)'}`),
+          networks: Object.keys(data.NetworkSettings?.Networks || {}).slice(0, 200),
+          health: data.State.Health?.Status || data.State.Status,
+          restartCount: data.RestartCount,
+          exitCode: data.State.ExitCode,
+          oomKilled: data.State.OOMKilled
+        }
+      }
+    } catch {
+      return {
+        ok: false,
+        error: {
+          code: 'DOCKER_UNAVAILABLE',
+          message: 'Could not inspect this container. Check Docker and try again.'
+        }
+      }
+    }
   }
 
   public onDockerChanged(callback: () => void): () => void {

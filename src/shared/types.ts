@@ -128,6 +128,8 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  inspectContainer: (id: string) => Promise<Result<ContainerInspection>>
+  openContainerShell: (id: string) => Promise<Result<null>>
   startContainerStats: (ids: string[]) => Promise<Result<null>>
   stopContainerStats: (ids: string[]) => Promise<Result<null>>
   onContainerStats: (
@@ -239,4 +241,14 @@ export interface ContainerStatsSample {
   memMB: number
   rxBytes: number
   txBytes: number
+}
+
+export interface ContainerInspection {
+  environment: { key: string; value: string }[]
+  mounts: string[]
+  networks: string[]
+  health: string
+  restartCount: number
+  exitCode: number
+  oomKilled: boolean
 }

@@ -124,7 +124,7 @@ export function validIpcInput(channel: string, value: unknown): boolean {
     )
   if (channel === 'docker:launch')
     return keys(value, ['app']) && ['desktop', 'orbstack'].includes(value.app as string)
-  if (channel === 'docker:remove')
+  if (['docker:remove', 'docker:inspect', 'docker:exec'].includes(channel))
     return keys(value, ['id']) && typeof value.id === 'string' && /^[a-f0-9]{12,64}$/.test(value.id)
   if (channel === 'docker:composeAction')
     return (

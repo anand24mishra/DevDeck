@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  inspectContainer: (id) => ipcRenderer.invoke('docker:inspect', { id }),
+  openContainerShell: (id) => ipcRenderer.invoke('docker:exec', { id }),
   startContainerStats: (ids) => ipcRenderer.invoke('docker:stats:start', { ids }),
   stopContainerStats: (ids) => ipcRenderer.invoke('docker:stats:stop', { ids }),
   onContainerStats: (callback) => {
