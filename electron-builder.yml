@@ -21,6 +21,9 @@ electronFuses:
   enableNodeCliInspectArguments: false
   enableEmbeddedAsarIntegrityValidation: true
   onlyLoadAppFromAsar: true
+protocols:
+  - name: DevDeck focus link
+    schemes: [devdeck]
 mac:
   category: public.app-category.developer-tools
   icon: resources/icon.png

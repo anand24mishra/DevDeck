@@ -4,6 +4,13 @@ const fs = require('node:fs'),
   net = require('node:net'),
   os = require('node:os'),
   path = require('node:path')
+function cleanTerminal(value) {
+  return String(value)
+    .replace(/\x1b\][\s\S]*?(?:\x07|\x1b\\|$)/g, '')
+    .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '')
+    .replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '')
+}
+const print = (value) => console.log(cleanTerminal(value))
 async function main() {
   const argv = process.argv.slice(2),
     json = argv.includes('--json'),
@@ -11,7 +18,7 @@ async function main() {
   if (argv.some((a) => a.startsWith('--') && !['--json', '--yes', '--help'].includes(a)))
     throw new Error('Unknown option. Run devdeck --help.')
   if (!argv.length || argv.includes('--help')) {
-    console.log(
+    print(
       'devdeck ls [--json]\ndevdeck port 3000 [--json]\ndevdeck stop <port|pid:PID> [--yes] [--json]\ndevdeck logs <name|PID|launch-id> [--json]'
     )
     return
@@ -72,25 +79,25 @@ async function main() {
   })
   if (!reply.ok) throw new Error(reply.error.message)
   if (json) {
-    console.log(JSON.stringify(reply.data, null, 2))
+    print(JSON.stringify(reply.data, null, 2))
     return
   }
-  if (command === 'logs') console.log(reply.data.join('\n'))
+  if (command === 'logs') print(reply.data.join('\n'))
   else if (command === 'ls')
-    console.log(
+    print(
       reply.data
         .map((p) => `${p.pid}\t${p.name}\t${p.project}\t${p.ports.join(',') || '—'}`)
         .join('\n') || 'No development processes found.'
     )
   else if (command === 'port')
-    console.log(
+    print(
       reply.data
         .map((p) => `${p.port}\t${p.pid}\t${p.name}\t${p.explanation || p.address}`)
         .join('\n') || `${positional[0]} is free.`
     )
   else {
     const r = reply.data
-    console.log(
+    print(
       r.cancelled
         ? 'Cancelled.'
         : `${r.stopped.length} stopped; ${r.forced.length} force stopped; ${r.refused.length} skipped; ${r.stillRunning.length} still running.`
@@ -98,7 +105,9 @@ async function main() {
     if (r.refused?.length || r.stillRunning?.length) process.exitCode = 1
   }
 }
-main().catch((error) => {
-  console.error(error.message)
-  process.exitCode = 1
-})
+module.exports = { cleanTerminal }
+if (require.main === module)
+  main().catch((error) => {
+    console.error(cleanTerminal(error.message))
+    process.exitCode = 1
+  })

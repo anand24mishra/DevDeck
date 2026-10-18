@@ -1,3 +1,5 @@
+import { parseDeepLink } from '../shared/deepLinks'
+import type { FocusTarget } from '../shared/types'
 import { cliServer } from './services/cliServer'
 import { cliCommand } from './services/cliCommands'
 import { closeLaunchOutputs } from './services/launchOutput'
@@ -23,7 +25,27 @@ if (!gotTheLock) {
   app.quit()
 }
 
+let pendingFocus: FocusTarget | null = null
+function focusLink(input: string): void {
+  const target = parseDeepLink(input)
+  if (!target) return
+  pendingFocus = target
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show()
+    mainWindow.focus()
+    if (!mainWindow.webContents.isLoading()) {
+      mainWindow.webContents.send('app:focus', target)
+      pendingFocus = null
+    }
+  }
+}
+app.on('open-url', (event, input) => {
+  event.preventDefault()
+  focusLink(input)
+})
+
 let mainWindow: BrowserWindow | null = null
+for (const arg of process.argv) if (arg.startsWith('devdeck://')) focusLink(arg)
 const processProvider = new DarwinProcessProvider()
 
 async function handleStopAllFromTray(): Promise<void> {
@@ -112,6 +134,13 @@ function createWindow(): BrowserWindow {
   // Track window bounds
   windowStateManager.track(mainWindow)
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (pendingFocus && mainWindow) {
+      mainWindow.webContents.send('app:focus', pendingFocus)
+      pendingFocus = null
+    }
+  })
+
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
   })
@@ -141,7 +170,8 @@ function createWindow(): BrowserWindow {
 }
 
 // Second-instance focus
-app.on('second-instance', () => {
+app.on('second-instance', (_event, args) => {
+  for (const arg of args) if (arg.startsWith('devdeck://')) focusLink(arg)
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore()
     mainWindow.show()
@@ -151,6 +181,7 @@ app.on('second-instance', () => {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.devdeck.app')
+  if (app.isPackaged) app.setAsDefaultProtocolClient('devdeck')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
