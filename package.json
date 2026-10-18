@@ -57,5 +57,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/anand24mishra/DevDeck.git"
+  },
+  "bin": {
+    "devdeck": "cli/devdeck.cjs"
   }
 }

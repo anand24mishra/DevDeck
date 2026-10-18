@@ -7,6 +7,9 @@ files:
   - out/**
   - resources/**
   - package.json
+extraResources:
+  - from: cli
+    to: cli
 forceCodeSigning: true
 asar: true
 asarUnpack:

@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P3-6: User-only Unix transport, bounded authenticated requests, masked ls/port/logs and captured identity stops with --yes or native confirmation.
 - Review: Regression cases cover cancelled and changed repository approval, altered imported commands, FIFO/symlink metadata, colored and database secrets, bundle aliases and legitimate package-manager shims.
 - Review: Independent review fixes: bounded regular project metadata, canonical executable scope, full secret masking, precise tunnels, per-member repo matching, full Docker IDs, independent Undo and nested button keyboard support.
 - P3-5: One-hour bounded CPU and memory history, theme sparkline and explicit crossing alerts reuse visible scans.

@@ -1,3 +1,5 @@
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { _electron as electron, expect, test } from '@playwright/test'
 import { mkdtemp, writeFile, mkdir, rm } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -56,6 +58,26 @@ test('profile launches independently and stops through normal identity guards', 
         return logs.ok && logs.data.some((line) => line.includes('still-running'))
       })
       .toBe(true)
+    const cli = async (args: string[]): Promise<string> => {
+      const result = await promisify(execFile)(
+        process.execPath,
+        [path.resolve('cli/devdeck.cjs'), ...args],
+        { env: { ...process.env, DEVDECK_DATA_DIR: data }, timeout: 15000 }
+      )
+      return result.stdout
+    }
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].hide())
+    const listed = JSON.parse(await cli(['ls', '--json']))
+    expect(listed.some((p) => p.pid === pid && p.command === '[hidden]')).toBe(true)
+    expect(await cli(['logs', 'Web'])).toContain('still-running')
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false })
+    })
+    expect(JSON.parse(await cli(['stop', `pid:${pid}`, '--json'])).cancelled).toBe(true)
+    process.kill(pid!, 0)
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false })
+    })
     const stopped = await page.evaluate(() => window.api.profileAction('fixture', 'stop'))
     expect(stopped.ok && stopped.data[0].message).toBe('Stopped')
     expect(() => process.kill(pid!, 0)).toThrow()

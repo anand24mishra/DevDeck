@@ -91,3 +91,6 @@ For Homebrew, use `packaging/devdeck.rb` only after replacing VERSION and SHA256
 universal DMG values (calculate with `shasum -a 256 <downloaded-dmg>`), validating the cask, and
 placing it in a maintained tap. Follow that tap's installation command. No placeholder cask should
 be installed or published. A working public tap is still maintainer-owned distribution work.
+
+### Command line
+With Node.js installed, link `cli/devdeck.cjs` from the checkout into a directory on your PATH. Packaged apps include it at `/Applications/DevDeck.app/Contents/Resources/cli/devdeck.cjs`; a user-local symlink works there too. DevDeck must be running in the menu bar. Run `devdeck --help` for commands. `stop 3000` matches a listening port first; use `stop pid:123` to choose a PID. Stops show a native confirmation unless you explicitly pass `--yes`. `ls --json` hides all command arguments. `logs` works only for processes launched through DevDeck. The CLI uses a local authenticated socket, never a TCP port. `DEVDECK_DATA_DIR` can point to a separate app data directory when needed.

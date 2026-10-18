@@ -1,3 +1,5 @@
+import { cliServer } from './services/cliServer'
+import { cliCommand } from './services/cliCommands'
 import { closeLaunchOutputs } from './services/launchOutput'
 import { dockerService } from './services/docker'
 import { notificationService } from './services/notifications'
@@ -154,6 +156,9 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  void cliServer
+    .start(app.getPath('userData'), cliCommand)
+    .catch(() => console.error('CLI connection could not start'))
   registerIpcHandlers()
 
   const win = createWindow()
@@ -220,6 +225,7 @@ app.on('before-quit', () => trayService.destroy())
 app.on('will-quit', () => hotkeyService.dispose())
 
 app.on('before-quit', () => {
+  void cliServer.stop()
   closeLaunchOutputs()
   dockerService.stopAllStats()
   dockerService.stopAllLogs()
