@@ -187,11 +187,11 @@ const App: React.FC = () => {
     const map = new Map<string, GroupedProject>()
 
     for (const proc of filteredProcesses) {
-      const key = proc.project || 'Other'
+      const key = proc.tunnel ? 'Tunnels' : proc.project || 'Other'
       if (!map.has(key)) {
         map.set(key, {
           name: key,
-          path: proc.projectPath,
+          path: proc.tunnel ? null : proc.projectPath,
           processes: []
         })
       }
@@ -306,7 +306,10 @@ const App: React.FC = () => {
   )
 
   const handleStopProject = useCallback(
-    (project: string, projectProcs: Proc[]) => {
+    (project: string) => {
+      const projectProcs = procs.filter(
+        (proc) => proc.project === project && proc.manageable !== false
+      )
       setDialogState({
         isOpen: true,
         title: `Stop ${projectProcs.length} ${projectProcs.length === 1 ? 'process' : 'processes'} in ${project}?`,
@@ -328,7 +331,7 @@ const App: React.FC = () => {
         }
       })
     },
-    [stopProject, showReportToast]
+    [stopProject, showReportToast, procs]
   )
 
   const handleStopAllProcesses = useCallback(() => {
@@ -710,7 +713,7 @@ const App: React.FC = () => {
                   projectPath={group.path}
                   processes={group.processes}
                   onStopProcess={handleStopProcess}
-                  onStopProject={handleStopProject}
+                  onStopProject={group.name === 'Tunnels' ? undefined : handleStopProject}
                 />
               ))}
             </div>

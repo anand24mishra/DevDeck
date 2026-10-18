@@ -219,3 +219,9 @@ ProjectContext and ProcessDetails add `runtime?:string[]`. These are declared pr
 hints from bounded reads of .nvmrc, .node-version, package engines, Python version/virtualenv
 metadata, go.mod, Rust toolchain files and Java version files. They are shown only in Details,
 never execute a project command, and share the ten-second context cache.
+
+## P2-11 tunnels
+Proc adds `tunnel?: {kind:ssh|kubectl|ngrok|cloudflared|tailscale,target?:string}`. Only SSH
+forwarding, kubectl port-forward and Tailscale funnel commands receive conditional default
+allowlist coverage; generic SSH sessions, kubectl operations and the VPN daemon remain refused.
+Targets strip URL credentials/query/fragment, appear in a Tunnels section and port explanations.

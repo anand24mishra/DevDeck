@@ -26,6 +26,7 @@ export interface Proc extends ProcessIdentity {
   sockets?: ListeningSocket[]
   establishedConnections?: number
   openFilesCount?: number
+  tunnel?: { kind: 'ssh' | 'kubectl' | 'ngrok' | 'cloudflared' | 'tailscale'; target?: string }
   leftoverReason?: string
   manageable?: boolean
   readOnlyReason?: string

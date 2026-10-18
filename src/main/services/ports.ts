@@ -1,3 +1,4 @@
+import { detectTunnel } from './tunnels'
 import type { ListeningSocket, PortOwner, Container } from '../../shared/types'
 
 export function parseListeners(output: string): Map<number, ListeningSocket[]> {
@@ -64,7 +65,7 @@ export function explainPortOwner(
     ...owner,
     kind,
     suggestedAction: owner.process ? 'stop-process' : 'none',
-    explanation: `Port ${owner.port} is used by ${descriptions[kind]}.`
+    explanation: `Port ${owner.port} is used by ${descriptions[kind]}${detectTunnel(command)?.target ? `, forwarding to ${detectTunnel(command)!.target}` : ''}.`
   }
 }
 

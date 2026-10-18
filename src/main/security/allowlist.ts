@@ -1,3 +1,4 @@
+import { detectTunnel } from '../services/tunnels'
 import path from 'path'
 
 export const DEFAULT_ALLOWLIST = new Set([
@@ -44,7 +45,9 @@ export const DEFAULT_ALLOWLIST = new Set([
   'mailpit',
   'mailhog',
   'air',
-  'cargo-watch'
+  'cargo-watch',
+  'ngrok',
+  'cloudflared'
 ])
 
 export interface FilterProcessOptions {
@@ -141,6 +144,7 @@ export function isProcessAllowed(
   // 4. Check allowlist (defaults + custom additions)
   const isDefault =
     DEFAULT_ALLOWLIST.has(binaryName) ||
+    (['ssh', 'kubectl', 'tailscale'].includes(binaryName) && !!detectTunnel(command)) ||
     /^python(?:\d+(?:\.\d+)*)?$/.test(binaryName) ||
     (binaryName === 'beam.smp' && /(?:\brabbitmq\b|\s-s\s+rabbit\s+boot\b)/i.test(command))
   const isCustom = customAllowlist.map((c) => c.toLowerCase()).includes(binaryName)

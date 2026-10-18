@@ -113,6 +113,12 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
           {runtime}
         </p>
       ))}
+      {current.tunnel && (
+        <p>
+          Tunnel: {current.tunnel.kind}
+          {current.tunnel.target ? ` → ${current.tunnel.target}` : ''}
+        </p>
+      )}
       <div className="details-grid">
         <CopyField name="Process ID" value={String(current.pid)} />
         <CopyField name="User" value={details.user} />

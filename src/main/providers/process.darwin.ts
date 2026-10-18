@@ -1,3 +1,4 @@
+import { detectTunnel } from '../services/tunnels'
 import fs from 'fs'
 import { leftoverHint } from '../services/leftovers'
 import { execFile } from 'child_process'
@@ -169,6 +170,7 @@ export class DarwinProcessProvider implements ProcessProvider {
         : proc.status.includes('Z')
           ? ('zombie' as const)
           : ('running' as const)
+      const tunnel = detectTunnel(proc.command)
       const hint = leftoverHint(
         { ppid: proc.ppid, startTime: proc.startTime, status, cwd },
         this.previousParents.get(proc.pid),
@@ -190,7 +192,15 @@ export class DarwinProcessProvider implements ProcessProvider {
             ? 'Waiting for parent cleanup; signals cannot remove a zombie.'
             : undefined,
         leftoverReason: hint,
-        name: labelProcess(binaryName || 'unknown', proc.command, project.root),
+        name:
+          tunnel?.kind === 'ssh'
+            ? 'SSH tunnel'
+            : tunnel?.kind === 'kubectl'
+              ? 'Kubernetes port forward'
+              : tunnel?.kind === 'tailscale'
+                ? 'Tailscale funnel'
+                : labelProcess(binaryName || 'unknown', proc.command, project.root),
+        tunnel,
         command: proc.command,
         cpu: proc.cpu,
         memMB: Math.round(proc.rssKB / 1024),
