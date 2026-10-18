@@ -128,6 +128,11 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  startContainerStats: (ids: string[]) => Promise<Result<null>>
+  stopContainerStats: (ids: string[]) => Promise<Result<null>>
+  onContainerStats: (
+    callback: (event: { id: string; sample: ContainerStatsSample }) => void
+  ) => () => void
   getDockerApps: () => Promise<Result<DockerDesktopApp[]>>
   launchDockerApp: (app: 'desktop' | 'orbstack') => Promise<Result<null>>
   removeContainer: (id: string) => Promise<Result<null>>
@@ -226,4 +231,12 @@ export interface ProjectContext {
   branch?: string
   dirty?: boolean
   runtime?: string[]
+}
+
+export interface ContainerStatsSample {
+  at: number
+  cpu: number
+  memMB: number
+  rxBytes: number
+  txBytes: number
 }

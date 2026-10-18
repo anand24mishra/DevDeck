@@ -1,3 +1,5 @@
+import { DockerStatsService } from './dockerStats'
+import type { ContainerStatsSample } from '../../shared/types'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -141,6 +143,7 @@ export function parseDockerContainers(rawContainers: Docker.ContainerInfo[]): Co
 }
 
 export class DockerService {
+  private statsService = new DockerStatsService()
   constructor(private readonly injectedClient?: Docker) {}
   private client: Docker | null = null
   private currentSocket: string | null = null
@@ -178,6 +181,7 @@ export class DockerService {
       return { client: this.client }
     }
 
+    this.statsService.stopAll()
     this.currentSocket = check.socketPath
     this.client = new Docker({ socketPath: check.socketPath })
     this.initEvents()
@@ -315,6 +319,52 @@ export class DockerService {
       const msg = err instanceof Error ? err.message : `Failed to ${action} container`
       return { ok: false, error: { code: 'INTERNAL', message: msg } }
     }
+  }
+
+  public async startStats(
+    ids: string[],
+    onSample: (id: string, sample: ContainerStatsSample) => void,
+    visible: () => boolean,
+    overridePath?: string
+  ): Promise<Result<null>> {
+    const { client } = this.getClient(overridePath)
+    if (!client || !visible())
+      return {
+        ok: false,
+        error: {
+          code: 'DOCKER_UNAVAILABLE',
+          message: 'Stats are available while Docker and this window are open.'
+        }
+      }
+    const listed = await this.listContainers(overridePath)
+    if (!listed.ok) return listed
+    if (
+      ids.some(
+        (id) =>
+          !listed.data.some((container) => container.id === id && container.state === 'running')
+      )
+    )
+      return {
+        ok: false,
+        error: { code: 'NOT_FOUND', message: 'This container stopped. Refresh the list.' }
+      }
+    await Promise.all(
+      ids.map((id) =>
+        this.statsService.start(
+          id,
+          () => client.getContainer(id).stats({ stream: true }),
+          (sample) => onSample(id, sample),
+          visible
+        )
+      )
+    )
+    return { ok: true, data: null }
+  }
+  public stopStats(ids: string[]): void {
+    this.statsService.stop(ids)
+  }
+  public stopAllStats(): void {
+    this.statsService.stopAll()
   }
 
   public async removeContainer(id: string, overridePath?: string): Promise<Result<null>> {

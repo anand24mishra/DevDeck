@@ -2,6 +2,15 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  startContainerStats: (ids) => ipcRenderer.invoke('docker:stats:start', { ids }),
+  stopContainerStats: (ids) => ipcRenderer.invoke('docker:stats:stop', { ids }),
+  onContainerStats: (callback) => {
+    const handler = (_event, value): void => callback(value)
+    ipcRenderer.on('docker:stats', handler)
+    return () => {
+      ipcRenderer.removeListener('docker:stats', handler)
+    }
+  },
   getProjectContext: (path) => ipcRenderer.invoke('project:context', { path }),
   signalProcess: (action, target) => ipcRenderer.invoke('proc:signal', { action, target }),
   getProcessEnvironment: (pid, startTime) =>

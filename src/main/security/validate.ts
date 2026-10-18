@@ -113,6 +113,15 @@ export function validIpcInput(channel: string, value: unknown): boolean {
           value.project.length > 0 &&
           value.project.length <= 4096))
     )
+  if (['docker:stats:start', 'docker:stats:stop'].includes(channel))
+    return (
+      keys(value, ['ids']) &&
+      Array.isArray(value.ids) &&
+      value.ids.length > 0 &&
+      value.ids.length <= 200 &&
+      new Set(value.ids).size === value.ids.length &&
+      value.ids.every((id) => typeof id === 'string' && /^[a-f0-9]{12,64}$/.test(id))
+    )
   if (channel === 'docker:launch')
     return keys(value, ['app']) && ['desktop', 'orbstack'].includes(value.app as string)
   if (channel === 'docker:remove')

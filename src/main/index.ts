@@ -1,3 +1,4 @@
+import { dockerService } from './services/docker'
 import { notificationService } from './services/notifications'
 import { hotkeyService, DEFAULT_HOTKEY } from './services/hotkey'
 import { app, BrowserWindow, dialog } from 'electron'
@@ -126,7 +127,10 @@ function createWindow(): BrowserWindow {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
+  mainWindow.on('hide', () => dockerService.stopAllStats())
   mainWindow.on('closed', () => {
+    dockerService.stopAllStats()
+    dockerService.stopAllLogs()
     mainWindow = null
   })
 
@@ -213,3 +217,8 @@ process.on('unhandledRejection', () => {
 app.on('before-quit', () => trayService.destroy())
 
 app.on('will-quit', () => hotkeyService.dispose())
+
+app.on('before-quit', () => {
+  dockerService.stopAllStats()
+  dockerService.stopAllLogs()
+})

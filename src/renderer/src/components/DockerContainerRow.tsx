@@ -1,4 +1,5 @@
 import React from 'react'
+import { useContainerStats } from '../hooks/useContainerStats'
 import { LocalPortLink } from './LocalPortLink'
 import { Container } from '../../../shared/types'
 
@@ -18,9 +19,12 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
   loading
 }) => {
   const isRunning = container.state === 'running'
+  const { element, samples } = useContainerStats(container.id, isRunning)
+  const latest = isRunning ? samples.at(-1) : undefined
+  const maximum = Math.max(1, ...samples.map((sample) => sample.cpu))
 
   return (
-    <div className={`process-row container-row state-${container.state}`}>
+    <div ref={element} className={`process-row container-row state-${container.state}`}>
       {/* State indicator: dot + word */}
       <div className="col-status">
         <span className={`status-dot dot-${container.state}`} aria-hidden="true" />
@@ -55,6 +59,29 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
         )}
       </div>
 
+      {latest && (
+        <div className="docker-stats mono">
+          <span>
+            {latest.cpu.toFixed(1)}% · {latest.memMB.toFixed(0)} MB · RX{' '}
+            {(latest.rxBytes / 1048576).toFixed(1)} MB / TX {(latest.txBytes / 1048576).toFixed(1)}{' '}
+            MB
+          </span>
+          <svg
+            className="stats-sparkline"
+            viewBox="0 0 60 20"
+            role="img"
+            aria-label="CPU history, up to 60 samples"
+          >
+            <polyline
+              fill="none"
+              stroke="var(--accent)"
+              points={samples
+                .map((sample, index) => `${index},${20 - (sample.cpu / maximum) * 18}`)
+                .join(' ')}
+            />
+          </svg>
+        </div>
+      )}
       {/* Uptime / Status */}
       <div className="col-uptime mono" title={container.status}>
         {container.status}

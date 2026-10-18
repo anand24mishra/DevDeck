@@ -232,3 +232,10 @@ read-only rows from unprivileged lsof listener records. They contain no argument
 have empty command/startTime, `manageable:false` and a reason. Stop, tree/group signals, details
 and environment cannot use these rows as an authority. Main ownership, allowlist and self-tree
 checks remain mandatory; no privilege escalation or other-user ps inspection is added.
+
+## P2-13 Docker stats
+`docker:stats:start` / `docker:stats:stop` take `{ids:string[]}` (1..200 unique container IDs).
+Start requires a visible app window and current running-container membership. `docker:stats`
+events carry `{id,sample:ContainerStatsSample}` with timestamp, CPU%, memory MB and cumulative
+RX/TX bytes, at most once per second per container. Viewport observers start/stop streams; main
+also closes all streams on hide/close/provider change. Pending opens are cancelled safely.

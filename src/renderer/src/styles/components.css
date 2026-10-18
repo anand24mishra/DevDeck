@@ -1793,3 +1793,13 @@
   cursor: pointer;
   padding: var(--space-2);
 }
+
+.docker-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.stats-sparkline {
+  width: var(--sparkline-width);
+  height: var(--sparkline-height);
+}

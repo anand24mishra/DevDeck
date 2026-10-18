@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P2-13: Added per-visible-container CPU, memory and network stats, one-second IPC batching and 60-sample CPU history, with viewport/window/provider cleanup and pending-stream cancellation.
 - P2-12: Added optional read-only listener rows from unprivileged lsof data, explicit ownership/protection reasons, no command/environment data and no Stop or tree-stop controls.
 - P2-11: Added conditional forwarding-tool coverage, sanitized targets, a Tunnels section, detailed tunnel context and target-aware port explanations while preserving generic SSH and VPN exclusions.
 - P2-10: Expanded explicit watcher, database and local-service executable coverage, versioned Python names, and labels while preserving ignore, app-bundle, ownership and self-tree checks.

@@ -516,6 +516,26 @@ export function registerIpcHandlers(): void {
     return { ok: true, data: root ? await projectContext(root) : {} }
   })
 
+  handle('docker:stats:start', async (event, { ids }: { ids: string[] }) => {
+    const visible = (): boolean => {
+      const window = BrowserWindow.fromWebContents(event.sender)
+      return !!window && !window.isDestroyed() && window.isVisible()
+    }
+    return dockerService.startStats(
+      ids,
+      (id, sample) => {
+        if (visible() && !event.sender.isDestroyed())
+          event.sender.send('docker:stats', { id, sample })
+      },
+      visible,
+      settingsService.getSettings().dockerSocketPath
+    )
+  })
+  handle('docker:stats:stop', async (_event, { ids }: { ids: string[] }) => {
+    dockerService.stopStats(ids)
+    return { ok: true, data: null }
+  })
+
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
     if (!isSenderAuthorized(event)) {
