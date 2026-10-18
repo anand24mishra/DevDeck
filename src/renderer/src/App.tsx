@@ -1,3 +1,4 @@
+import { ExportPanel } from './components/ExportPanel'
 import { ReservedPorts } from './components/ReservedPorts'
 import { ProfilesPanel } from './components/ProfilesPanel'
 import { ProcessTreeView } from './components/ProcessTreeView'
@@ -688,6 +689,7 @@ const App: React.FC = () => {
           )}
         </div>
       )}
+      <ExportPanel />
       <ReservedPorts />
       <main className="app-content" tabIndex={-1}>
         {activeTab === 'profiles' ? (

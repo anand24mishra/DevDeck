@@ -158,6 +158,12 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       value.project.length > 0 &&
       value.project.length <= 4096
     )
+  if (channel === 'export:preview')
+    return (
+      keys(value, ['kind', 'format']) &&
+      ['snapshot', 'diagnostics'].includes(value.kind as string) &&
+      ['json', 'text'].includes(value.format as string)
+    )
   if (channel === 'url:open') return keys(value, ['url']) && isLocalUrl(value.url)
   if (channel === 'ports:lookup')
     return (

@@ -132,6 +132,10 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  exportPreview: (
+    kind: 'snapshot' | 'diagnostics',
+    format: 'json' | 'text'
+  ) => Promise<Result<string>>
   projectHistory: (project: string) => Promise<Result<ResourceSample[]>>
   startLaunch: (member: ProfileMember) => Promise<Result<{ pid: number; id: string }>>
   listLaunches: () => Promise<Result<{ id: string; name: string; pid: number }[]>>

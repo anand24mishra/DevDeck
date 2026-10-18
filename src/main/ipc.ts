@@ -1,3 +1,4 @@
+import { exportPreview } from '../shared/export'
 import { resourceHistory } from './services/resourceHistory'
 import { launchMember, launches } from './services/launcher'
 import { repoConfigRequest } from './services/repoConfig'
@@ -13,7 +14,7 @@ import { detectApplications, verifyProjectPath, openWithApplication } from './se
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { isExpectedPage, validIpcInput } from './security/validate'
-import { ipcMain, IpcMainInvokeEvent, BrowserWindow, shell, dialog } from 'electron'
+import { ipcMain, IpcMainInvokeEvent, BrowserWindow, shell, dialog, app } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import {
   Result,
@@ -27,7 +28,7 @@ import {
 } from '../shared/types'
 import { DarwinProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
-import { dockerService, detectDockerApps } from './services/docker'
+import { dockerService, detectDockerApps, resolveDockerSocket } from './services/docker'
 import { terminate, defaultKillDeps, validIdentities, sendControlSignal } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
 
@@ -665,6 +666,43 @@ export function registerIpcHandlers(): void {
     ok: true,
     data: resourceHistory.read(project)
   }))
+  handle('export:preview', async (_event, { kind, format }) => {
+    const settings = settingsService.getSettings()
+    const [procs, docker] = await Promise.all([
+      processProvider.listProcesses({
+        userIgnoreList: settings.ignoreList,
+        customAllowlist: settings.customAllowlist,
+        showUnmanageable: settings.showUnmanageable,
+        hintsEnabled: settings.hintsEnabled
+      }),
+      dockerService.listContainers(settings.dockerSocketPath)
+    ])
+    const containers = docker.ok ? docker.data : []
+    const socket = resolveDockerSocket(settings.dockerSocketPath).socketPath
+    const provider = !socket
+      ? 'Unavailable'
+      : settings.dockerSocketPath
+        ? 'Custom socket'
+        : socket.includes('orbstack')
+          ? 'OrbStack'
+          : socket.includes('colima')
+            ? 'Colima'
+            : socket.includes('docker')
+              ? 'Docker Desktop'
+              : 'Local Docker'
+    return {
+      ok: true,
+      data: exportPreview(kind, format, procs, containers, {
+        appVersion: app.getVersion(),
+        electronVersion: process.versions.electron,
+        macOS: process.getSystemVersion(),
+        architecture: process.arch,
+        dockerProvider: provider,
+        processCount: procs.length,
+        containerCount: containers.length
+      })
+    }
+  })
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
     if (!isSenderAuthorized(event)) {

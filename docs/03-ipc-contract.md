@@ -263,3 +263,6 @@ Main exposes a local Unix socket in a random 0700 temporary directory, chmod 060
 
 ### Focus links (P3-7)
 The packaged app registers `devdeck://port/3000` and `devdeck://project/<encoded-name>`. Parsing accepts only port/project hosts with one nonempty bounded path segment and no credentials, query or fragment. No action or command is accepted. Main handles open-url and second-instance events, queues a focus target until the renderer loads, then sends the existing `app:focus` event. Links only show/focus/filter the app; they never stop, launch, or mutate anything.
+
+### Reviewable exports (P3-9)
+`export:preview {kind:'snapshot'|'diagnostics',format:'json'|'text'}` returns preview text only. Snapshot projects/process labels and Docker names are bounded, command arguments are entirely replaced with `[hidden]`, and environment, cwd, mounts and socket paths are never included. Diagnostics contains app/Electron/macOS version, architecture, provider label and counts only. The renderer displays the exact output before an explicit clipboard action. Nothing is copied, saved or uploaded by the request.

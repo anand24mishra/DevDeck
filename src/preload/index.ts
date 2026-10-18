@@ -15,6 +15,7 @@ ipcRenderer.on('app:focus', (_event, target: FocusTarget) => {
   else pendingFocus = target
 })
 const api: DevDeckApi = {
+  exportPreview: (kind, format) => ipcRenderer.invoke('export:preview', { kind, format }),
   projectHistory: (project) => ipcRenderer.invoke('project:history', { project }),
   startLaunch: (member) => ipcRenderer.invoke('launch:start', { member }),
   listLaunches: () => ipcRenderer.invoke('launch:list'),

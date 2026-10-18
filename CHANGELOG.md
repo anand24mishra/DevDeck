@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P3-9: Whitelist-only JSON/text exports hide all commands, omit environments and paths, and require reviewing exact clipboard text before copy.
 - P3-8: Search, project focus and localhost actions use the authenticated CLI; Stop requests always retain DevDeck native confirmation. Raycast typecheck/build and Alfred plist validation pass.
 - P3-7: Early deep links remain pending in preload until App installs its focus callback, avoiding initial-load event loss.
 - P3-7: Strict focus-only links queue until renderer load; CLI human output strips terminal controls from logs, names and errors.

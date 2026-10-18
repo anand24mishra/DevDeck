@@ -114,3 +114,22 @@
   max-width: 100%;
   height: var(--history-height);
 }
+:root {
+  --export-width: 45rem;
+}
+.export-controls {
+  padding-inline: var(--space-4);
+  display: flex;
+  justify-content: flex-end;
+}
+.export-dialog {
+  width: min(var(--export-width), 90vw);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: var(--space-4);
+}
+.export-dialog::backdrop {
+  background: var(--bg);
+  opacity: 0.8;
+}
