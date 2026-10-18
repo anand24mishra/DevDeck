@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  readRepoConfig: (path) => ipcRenderer.invoke('repoConfig:read', { path }),
+  importRepoConfig: (path) => ipcRenderer.invoke('repoConfig:import', { path }),
   listProfiles: () => ipcRenderer.invoke('profiles:list'),
   saveProfile: (profile) => ipcRenderer.invoke('profiles:save', { profile }),
   deleteProfile: (id) => ipcRenderer.invoke('profiles:delete', { id }),

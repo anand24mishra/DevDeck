@@ -23,7 +23,12 @@ export function validProfile(value: unknown): value is StackProfile {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const p = value as StackProfile
   return (
-    Object.keys(p).sort().join(',') === 'id,members,name' &&
+    Object.keys(p).sort().join(',') === (p.repo ? 'id,members,name,repo' : 'id,members,name') &&
+    (!p.repo ||
+      (Object.keys(p.repo).sort().join(',') === 'hash,path' &&
+        text(p.repo.path, 4096) &&
+        p.repo.path.startsWith('/') &&
+        /^[a-f0-9]{64}$/.test(p.repo.hash))) &&
     typeof p.id === 'string' &&
     /^[a-zA-Z0-9_-]{1,80}$/.test(p.id) &&
     text(p.name, 120) &&

@@ -1,3 +1,4 @@
+import { repoApprovalCurrent } from './repoConfig'
 import { dialog } from 'electron'
 import { randomUUID } from 'crypto'
 import { settingsService } from './settings'
@@ -105,6 +106,14 @@ export async function profileAction(
   const profile = settingsService.getSettings().profiles?.find((p) => p.id === id)
   if (!profile)
     return { ok: false, error: { code: 'NOT_FOUND', message: 'This profile no longer exists.' } }
+  if (action !== 'stop' && !(await repoApprovalCurrent(profile)))
+    return {
+      ok: false,
+      error: {
+        code: 'DENIED',
+        message: 'This repository config changed or is unapproved. Import it again before starting.'
+      }
+    }
   busy = true
   try {
     const settings = settingsService.getSettings()
@@ -129,6 +138,14 @@ export async function profileAction(
       noLink: true
     })
     if (answer.response !== 1) return { ok: true, data: [] }
+    if (action !== 'stop' && !(await repoApprovalCurrent(profile)))
+      return {
+        ok: false,
+        error: {
+          code: 'DENIED',
+          message: 'The repository config changed during review. Import it again.'
+        }
+      }
     const reports: MemberReport[] = []
     for (const { member, procs } of captured) {
       try {

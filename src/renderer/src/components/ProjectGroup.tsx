@@ -97,6 +97,22 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
           <span className="process-count-badge mono">
             {processes.length} {processes.length === 1 ? 'proc' : 'procs'}
           </span>
+          {projectPath && (
+            <button
+              className="quiet-btn"
+              onClick={() => {
+                void window.api
+                  .importRepoConfig(projectPath)
+                  .then((result) =>
+                    setProfileStatus(
+                      result.ok ? 'Repository import finished' : result.error.message
+                    )
+                  )
+              }}
+            >
+              Import .devdeck.json
+            </button>
+          )}
           {onStopProject && processes.some((proc) => proc.manageable !== false) && (
             <button
               type="button"

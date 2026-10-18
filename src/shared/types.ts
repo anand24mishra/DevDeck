@@ -51,6 +51,7 @@ export interface Settings {
   hotkey?: string | null
   preferredEditor?: string
   preferredTerminal?: string
+  approvedRepoConfigs?: Record<string, string>
   profiles?: StackProfile[]
   persistRecentlyStopped?: boolean
 }
@@ -129,6 +130,8 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  readRepoConfig: (path: string) => Promise<Result<RepoConfigPreview>>
+  importRepoConfig: (path: string) => Promise<Result<null>>
   listProfiles: () => Promise<Result<ProfileStatus[]>>
   saveProfile: (profile: StackProfile) => Promise<Result<null>>
   deleteProfile: (id: string) => Promise<Result<null>>
@@ -270,6 +273,7 @@ export interface ProfileMember {
   containerId?: string
 }
 export interface StackProfile {
+  repo?: { path: string; hash: string }
   id: string
   name: string
   members: ProfileMember[]
@@ -283,4 +287,11 @@ export interface MemberReport {
 export interface ProfileStatus {
   profile: StackProfile
   members: { name: string; running: boolean }[]
+}
+
+export interface RepoConfigPreview {
+  name: string
+  expectedPorts: number[]
+  commandCount: number
+  approved: boolean
 }

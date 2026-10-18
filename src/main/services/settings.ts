@@ -7,6 +7,7 @@ import { EDITOR_IDS, TERMINAL_IDS } from './applications'
 import { Settings, DEFAULT_NOTIFICATIONS } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: Settings = {
+  approvedRepoConfigs: {},
   profiles: [],
   refreshIntervalSec: 3,
   ignoreList: [],
@@ -99,6 +100,20 @@ export class SettingsService {
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
+      approvedRepoConfigs:
+        r.approvedRepoConfigs && typeof r.approvedRepoConfigs === 'object'
+          ? Object.fromEntries(
+              Object.entries(r.approvedRepoConfigs)
+                .filter(
+                  ([key, value]) =>
+                    key.startsWith('/') &&
+                    key.length <= 4096 &&
+                    typeof value === 'string' &&
+                    /^[a-f0-9]{64}$/.test(value)
+                )
+                .slice(0, 200)
+            )
+          : {},
       profiles: Array.isArray(r.profiles) ? r.profiles.filter(validProfile).slice(0, 50) : [],
       showUnmanageable: r.showUnmanageable === true,
       showEnvViewer: r.showEnvViewer === true,

@@ -1,3 +1,4 @@
+import { repoConfigRequest } from './services/repoConfig'
 import { listProfiles, saveProfile, profileFromProject, profileAction } from './services/profiles'
 import { openContainerShell } from './services/containerShell'
 import { projectContext } from './services/context'
@@ -565,6 +566,27 @@ export function registerIpcHandlers(): void {
   })
   handle('profiles:fromProject', async (_event, { path }) => profileFromProject(path))
   handle('profiles:action', async (_event, { id, action }) => profileAction(id, action))
+  for (const channel of ['repoConfig:read', 'repoConfig:import'])
+    handle(channel, async (_event, { path }) => {
+      const settings = settingsService.getSettings()
+      const procs = await processProvider.listProcesses({
+        userIgnoreList: settings.ignoreList,
+        customAllowlist: settings.customAllowlist
+      })
+      const roots = [
+        ...procs.flatMap((p) => (p.projectPath ? [p.projectPath] : [])),
+        ...(settings.profiles || []).flatMap((p) =>
+          p.members.flatMap((m) => (m.cwd ? [m.cwd] : []))
+        )
+      ]
+      const root = verifyProjectPath(path, roots)
+      if (!root)
+        return {
+          ok: false,
+          error: { code: 'DENIED', message: 'Choose an active or saved project folder.' }
+        }
+      return repoConfigRequest(root, channel === 'repoConfig:import')
+    })
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
     if (!isSenderAuthorized(event)) {

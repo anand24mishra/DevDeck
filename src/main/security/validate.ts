@@ -122,7 +122,7 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       /^[a-zA-Z0-9_-]{1,80}$/.test(value.id) &&
       ['start', 'stop', 'restart'].includes(value.action as string)
     )
-  if (channel === 'profiles:fromProject')
+  if (['profiles:fromProject', 'repoConfig:read', 'repoConfig:import'].includes(channel))
     return (
       keys(value, ['path']) &&
       typeof value.path === 'string' &&
