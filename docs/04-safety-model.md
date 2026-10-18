@@ -34,3 +34,10 @@ blocked, IPC sender + input validation, Electron fuses set (see `docs/10-release
 
 ## Testing this model
 Unit tests for allowlist, `.app` filter, PID-reuse guard, and validators are mandatory (`docs/09`).
+
+### Extended tool coverage
+Default executable coverage includes common watchers, databases and local development services.
+Versioned Python names are accepted as exact `python` plus numeric versions. Generic Erlang is
+not allowlisted: `beam.smp` needs RabbitMQ command markers unless explicitly added by the user.
+Android emulators and Xcode simulators remain opt-in through the custom executable allowlist.
+The app-bundle exclusion, current-user check, ignores and self-tree protection always remain active.

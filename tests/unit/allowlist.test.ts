@@ -70,3 +70,57 @@ describe('DevDeck process-tree protection', () => {
     expect(protectedProcessTree([{ pid: 15, ppid: 10 }], { pid: 10, ppid: 9 }).has(15)).toBe(true)
   })
 })
+
+it.each([
+  'metro',
+  'storybook',
+  'jest',
+  'vitest',
+  'tsserver',
+  'gradle',
+  'kotlin',
+  'kotlinc',
+  'watchman',
+  'postgres',
+  'pg_ctl',
+  'redis-server',
+  'mysqld',
+  'mariadbd',
+  'mongod',
+  'kafka-server-start',
+  'rabbitmq-server',
+  'elasticsearch',
+  'minio',
+  'mailpit',
+  'mailhog',
+  'air',
+  'cargo-watch',
+  'python3.12'
+])(
+  'allows explicit development executable %s while preserving ignores and app exclusions',
+  (name) => {
+    expect(isProcessAllowed(200, `${name} --dev`).allowed).toBe(true)
+    expect(isProcessAllowed(200, `${name} --dev`, { userIgnoreList: [name] }).allowed).toBe(false)
+    expect(isProcessAllowed(200, `/Applications/Tools.app/Contents/MacOS/${name}`).allowed).toBe(
+      false
+    )
+  }
+)
+it('keeps emulator/simulator opt-in and limits Erlang coverage to RabbitMQ commands', () => {
+  expect(
+    isProcessAllowed(
+      200,
+      '/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/Contents/MacOS/Simulator'
+    ).allowed
+  ).toBe(false)
+  expect(
+    isProcessAllowed(
+      200,
+      '/Applications/Xcode.app/Contents/Developer/Applications/Simulator.app/Contents/MacOS/Simulator',
+      { customAllowlist: ['simulator'] }
+    ).allowed
+  ).toBe(true)
+  expect(isProcessAllowed(200, 'emulator -avd test').allowed).toBe(false)
+  expect(isProcessAllowed(200, 'beam.smp -s rabbit boot').allowed).toBe(true)
+  expect(isProcessAllowed(200, 'beam.smp unrelated-service').allowed).toBe(false)
+})

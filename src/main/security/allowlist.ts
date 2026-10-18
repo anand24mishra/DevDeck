@@ -21,7 +21,30 @@ export const DEFAULT_ALLOWLIST = new Set([
   'vite',
   'next',
   'webpack',
-  'esbuild'
+  'esbuild',
+  'metro',
+  'storybook',
+  'jest',
+  'vitest',
+  'tsserver',
+  'gradle',
+  'kotlin',
+  'kotlinc',
+  'watchman',
+  'postgres',
+  'pg_ctl',
+  'redis-server',
+  'mysqld',
+  'mariadbd',
+  'mongod',
+  'kafka-server-start',
+  'rabbitmq-server',
+  'elasticsearch',
+  'minio',
+  'mailpit',
+  'mailhog',
+  'air',
+  'cargo-watch'
 ])
 
 export interface FilterProcessOptions {
@@ -116,7 +139,10 @@ export function isProcessAllowed(
   }
 
   // 4. Check allowlist (defaults + custom additions)
-  const isDefault = DEFAULT_ALLOWLIST.has(binaryName)
+  const isDefault =
+    DEFAULT_ALLOWLIST.has(binaryName) ||
+    /^python(?:\d+(?:\.\d+)*)?$/.test(binaryName) ||
+    (binaryName === 'beam.smp' && /(?:\brabbitmq\b|\s-s\s+rabbit\s+boot\b)/i.test(command))
   const isCustom = customAllowlist.map((c) => c.toLowerCase()).includes(binaryName)
 
   if (!isDefault && !isCustom) {

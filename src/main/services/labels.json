@@ -109,11 +109,11 @@
   },
   {
     "label": "Kafka",
-    "pattern": "\\bkafka\\.Kafka\\b"
+    "pattern": "\\b(?:kafka\\.Kafka|kafka-server-start)\\b"
   },
   {
     "label": "RabbitMQ",
-    "pattern": "\\brabbitmq\\b"
+    "pattern": "(?:\\brabbitmq\\b|\\s-s\\s+rabbit\\s+boot\\b)"
   },
   {
     "label": "Elasticsearch",
@@ -145,7 +145,7 @@
   },
   {
     "label": "Rust watcher",
-    "pattern": "\\bcargo\\s+watch\\b"
+    "pattern": "\\bcargo(?:\\s+|-)watch\\b"
   },
   {
     "label": "Laravel",

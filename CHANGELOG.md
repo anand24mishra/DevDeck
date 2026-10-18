@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P2-10: Expanded explicit watcher, database and local-service executable coverage, versioned Python names, and labels while preserving ignore, app-bundle, ownership and self-tree checks.
 - P2-9: Added cached Node, Python virtualenv, Go, Rust and Java version hints from bounded project metadata reads and display only in verified process Details.
 - P2-8: Added asynchronous verified-root Git context with strict HEAD parsing, fixed bounded git status invocation, ten-second caching and project-row branch/modified labels.
 - P2-7: Added conservative orphan hints, read-only zombie status, a leftovers filter and confirmed bulk stopping of only manageable hinted rows.
