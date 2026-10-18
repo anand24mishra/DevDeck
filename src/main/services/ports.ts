@@ -1,5 +1,5 @@
 import { detectTunnel } from './tunnels'
-import type { ListeningSocket, PortOwner, Container } from '../../shared/types'
+import type { ListeningSocket, PortOwner, Container, Proc } from '../../shared/types'
 
 export function parseListeners(output: string): Map<number, ListeningSocket[]> {
   const listeners = new Map<number, ListeningSocket[]>()
@@ -170,4 +170,42 @@ export function parseOpenFiles(output: string): OpenFileSnapshot {
   }
   flush()
   return result
+}
+
+export function readOnlyPortProcesses(
+  snapshot: OpenFileSnapshot,
+  currentUid: string,
+  excluded: ReadonlySet<number>,
+  ignores: string[] = []
+): Proc[] {
+  return [...snapshot.listeners].flatMap(([pid, sockets]) => {
+    const name = sockets[0]?.name || 'Unknown process'
+    if (
+      excluded.has(pid) ||
+      ignores.some((ignore) => ignore && name.toLowerCase().includes(ignore.toLowerCase()))
+    )
+      return []
+    return [
+      {
+        pid,
+        ppid: 0,
+        startTime: '',
+        command: '',
+        name,
+        cpu: 0,
+        memMB: 0,
+        uptimeSec: 0,
+        cwd: null,
+        project: 'Read-only ports',
+        projectPath: null,
+        ports: [...new Set(sockets.map((socket) => socket.port))],
+        sockets,
+        manageable: false,
+        readOnlyReason:
+          snapshot.users.get(pid) === currentUid
+            ? 'Protected by DevDeck or outside your executable allowlist.'
+            : 'Owned by another user or the system.'
+      }
+    ]
+  })
 }

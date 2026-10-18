@@ -122,6 +122,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <section className="settings-section">
             <h3 className="section-title">General</h3>
             <label className="setting-row">
+              <span>Show processes DevDeck cannot stop</span>
+              <input
+                type="checkbox"
+                checked={!!settings.showUnmanageable}
+                onChange={(event) => void triggerSave({ showUnmanageable: event.target.checked })}
+              />
+            </label>
+            <label className="setting-row">
               <span>Enable environment viewer (values hidden by default)</span>
               <input
                 type="checkbox"

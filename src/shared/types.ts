@@ -42,6 +42,7 @@ export interface Settings {
   dockerSocketPath?: string
   theme: 'system' | 'light' | 'dark'
   openAtLogin: boolean
+  showUnmanageable?: boolean
   showEnvViewer?: boolean
   onboardingComplete?: boolean
   hintsEnabled?: boolean

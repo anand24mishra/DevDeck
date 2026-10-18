@@ -20,14 +20,16 @@ function Branch({
         {node.process.name} · {node.process.project} · {node.children.length} direct children
       </summary>
       <ProcessRow proc={node.process} onStop={onStop} />
-      <button
-        className="quiet-btn"
-        onClick={() =>
-          onStopTree(node.process, descendantsChildrenFirst(allProcesses, node.process.pid))
-        }
-      >
-        Stop tree
-      </button>
+      {node.process.manageable !== false && (
+        <button
+          className="quiet-btn"
+          onClick={() =>
+            onStopTree(node.process, descendantsChildrenFirst(allProcesses, node.process.pid))
+          }
+        >
+          Stop tree
+        </button>
+      )}
       <div className="tree-children">
         {node.children.map((child) => (
           <Branch

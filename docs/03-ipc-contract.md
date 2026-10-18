@@ -225,3 +225,10 @@ Proc adds `tunnel?: {kind:ssh|kubectl|ngrok|cloudflared|tailscale,target?:string
 forwarding, kubectl port-forward and Tailscale funnel commands receive conditional default
 allowlist coverage; generic SSH sessions, kubectl operations and the VPN daemon remain refused.
 Targets strip URL credentials/query/fragment, appear in a Tunnels section and port explanations.
+
+## P2-12 read-only port owners
+`Settings.showUnmanageable?:boolean` defaults false. When enabled, process scans may synthesize
+read-only rows from unprivileged lsof listener records. They contain no arguments or environment,
+have empty command/startTime, `manageable:false` and a reason. Stop, tree/group signals, details
+and environment cannot use these rows as an authority. Main ownership, allowlist and self-tree
+checks remain mandatory; no privilege escalation or other-user ps inspection is added.

@@ -32,6 +32,7 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
   const [showEnvironment, setShowEnvironment] = useState(false)
   const [revealed, setRevealed] = useState(false)
   useEffect(() => {
+    if (proc.manageable === false) return
     let active = true
     void window.api
       .getProcessDetails(proc.pid, proc.startTime)
@@ -46,7 +47,17 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
     return () => {
       active = false
     }
-  }, [proc.pid, proc.startTime])
+  }, [proc.pid, proc.startTime, proc.manageable])
+  if (proc.manageable === false)
+    return (
+      <section className="details-panel" aria-label="Read-only process details">
+        <p>{proc.readOnlyReason || 'DevDeck cannot manage this process.'}</p>
+        <p>
+          Only its visible listening addresses are shown. Arguments and environment are not
+          collected.
+        </p>
+      </section>
+    )
   if (error)
     return (
       <div className="details-panel" role="alert">

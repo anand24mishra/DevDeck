@@ -38,11 +38,13 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
           <span className="status-indicator">
             <span className="status-dot running" aria-hidden="true" />
             <span className="status-text">
-              {proc.status === 'paused'
-                ? 'Paused'
-                : proc.status === 'zombie'
-                  ? 'Waiting for cleanup'
-                  : 'Running'}
+              {proc.manageable === false && proc.status !== 'zombie'
+                ? 'Read-only'
+                : proc.status === 'paused'
+                  ? 'Paused'
+                  : proc.status === 'zombie'
+                    ? 'Waiting for cleanup'
+                    : 'Running'}
             </span>
           </span>
         </div>

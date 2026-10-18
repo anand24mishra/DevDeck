@@ -51,6 +51,7 @@ export const DEFAULT_ALLOWLIST = new Set([
 ])
 
 export interface FilterProcessOptions {
+  showUnmanageable?: boolean
   hintsEnabled?: boolean
   protectedPids?: ReadonlySet<number>
   currentPid?: number

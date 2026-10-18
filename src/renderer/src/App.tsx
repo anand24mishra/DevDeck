@@ -572,7 +572,7 @@ const App: React.FC = () => {
         onRefresh={activeTab === 'processes' ? refreshProcs : refreshDocker}
         onStopAll={
           activeTab === 'processes'
-            ? procs.length > 0
+            ? procs.some((proc) => proc.manageable !== false)
               ? handleStopAllProcesses
               : undefined
             : dockerRunningCount > 0

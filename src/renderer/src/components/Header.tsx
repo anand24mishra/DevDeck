@@ -149,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="header-right">
-        {onStopAll && totalCount > 0 && (
+        {onStopAll && (
           <button
             type="button"
             className="stop-all-btn"

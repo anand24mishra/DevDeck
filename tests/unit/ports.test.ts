@@ -1,6 +1,11 @@
 import { expect, it } from 'vitest'
 import { parsePortInput, isLocalUrl, isNetworkExposed } from '../../src/shared/ports'
-import { parseListeners, explainPortOwner, parseOpenFiles } from '../../src/main/services/ports'
+import {
+  parseListeners,
+  explainPortOwner,
+  parseOpenFiles,
+  readOnlyPortProcesses
+} from '../../src/main/services/ports'
 import { validIpcInput } from '../../src/main/security/validate'
 
 it('accepts the supported local port forms and rejects arbitrary hosts or shell text', () => {
@@ -90,4 +95,12 @@ it('retains UDP binds and separates established TCP connections from listeners',
   expect(files.listeners.get(123)?.map((socket) => socket.port)).toEqual([5353])
   expect(files.listeners.get(123)?.[0].protocol).toBe('UDP')
   expect(files.connections.get(123)).toBe(1)
+})
+
+it('keeps other-user listener rows read-only with no restartable identity or arguments', () => {
+  const snapshot = parseOpenFiles('p123\ncprotected\nu0\nf10u\ntIPv4\nPTCP\nn*:3000\nTST=LISTEN\n')
+  const rows = readOnlyPortProcesses(snapshot, '501', new Set())
+  expect(rows[0]).toMatchObject({ manageable: false, command: '', startTime: '', ports: [3000] })
+  expect(rows[0].readOnlyReason).toContain('another user')
+  expect(readOnlyPortProcesses(snapshot, '501', new Set(), ['protected'])).toHaveLength(0)
 })

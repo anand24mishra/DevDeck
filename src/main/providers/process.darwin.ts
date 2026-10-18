@@ -13,7 +13,7 @@ import {
   ProcessContext
 } from '../security/allowlist'
 import { labelProcess } from '../services/labeler'
-import { parseOpenFiles, type OpenFileSnapshot } from '../services/ports'
+import { parseOpenFiles, readOnlyPortProcesses, type OpenFileSnapshot } from '../services/ports'
 import { resolveProjectFromCwd } from '../services/project'
 
 const execFileAsync = promisify(execFile)
@@ -66,6 +66,7 @@ export class DarwinProcessProvider implements ProcessProvider {
    * Fetches raw processes for the current user using macOS ps command.
    */
   private async getRawProcesses(): Promise<RawProcess[]> {
+    if (os.userInfo().uid === 0) return []
     const user = os.userInfo().username
     const { stdout } = await execFileAsync(
       'ps',
@@ -222,6 +223,23 @@ export class DarwinProcessProvider implements ProcessProvider {
       }
     })
 
+    if (options.showUnmanageable) {
+      const ignored = rawProcesses
+        .filter((proc) =>
+          (options.userIgnoreList || []).some(
+            (ignore) => ignore && proc.command.toLowerCase().includes(ignore.toLowerCase())
+          )
+        )
+        .map((proc) => proc.pid)
+      result.push(
+        ...readOnlyPortProcesses(
+          openFiles,
+          String(os.userInfo().uid),
+          new Set([...result.map((proc) => proc.pid), ...ignored]),
+          options.userIgnoreList
+        )
+      )
+    }
     this.previousParents = new Map(
       rawProcesses.map((proc) => [proc.pid, { ppid: proc.ppid, startTime: proc.startTime }])
     )
