@@ -16,14 +16,14 @@ export function ansiSegments(text: string): { text: string; color?: string }[] {
   const pattern = /\x1b\[([0-9;]*)m/g
   const segments: { text: string; color?: string }[] = []
   const colors: Record<number, string> = {
-    30: 'var(--text-secondary)',
+    30: 'var(--muted)',
     31: 'var(--danger)',
-    32: 'var(--success)',
-    33: 'var(--warning)',
+    32: 'var(--accent)',
+    33: 'var(--warn)',
     34: 'var(--accent)',
     35: 'var(--accent)',
     36: 'var(--accent)',
-    37: 'var(--text-primary)'
+    37: 'var(--text)'
   }
   let from = 0,
     color: string | undefined,

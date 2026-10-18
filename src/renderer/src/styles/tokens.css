@@ -92,9 +92,9 @@
 .profile-editor {
   width: 100%;
   min-height: var(--profile-editor-height);
-  color: var(--text-primary);
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 :root {
   --capture-height: 20rem;
@@ -103,5 +103,5 @@
   height: var(--capture-height);
   overflow: auto;
   line-height: 1.5;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
 }

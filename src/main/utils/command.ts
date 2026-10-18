@@ -1,50 +1,41 @@
-/**
- * Utility for parsing command lines into executable path and argument array.
- * Handles single quotes, double quotes, and escaped characters.
- */
-export function parseCommandLine(command: string): { executable: string; args: string[] } {
-  const trimmed = command.trim()
-  if (!trimmed) {
-    return { executable: '', args: [] }
-  }
-
+/** Tokenize argv without expansion or shell evaluation. */
+export function parseCommandLine(
+  command: string,
+  strict = false
+): { executable: string; args: string[] } {
   const tokens: string[] = []
-  let current = ''
-  let inDouble = false
-  let inSingle = false
-  let escaped = false
-
-  for (let i = 0; i < trimmed.length; i++) {
-    const char = trimmed[i]
+  let current = '',
+    quote = '',
+    escaped = false,
+    started = false
+  for (const char of command.trim()) {
     if (escaped) {
       current += char
       escaped = false
-    } else if (char === '\\') {
+      started = true
+    } else if (char === '\\' && quote !== "'") {
       escaped = true
-    } else if (char === '"' && !inSingle) {
-      inDouble = !inDouble
-    } else if (char === "'" && !inDouble) {
-      inSingle = !inSingle
-    } else if (/\s/.test(char) && !inDouble && !inSingle) {
-      if (current.length > 0) {
+      started = true
+    } else if (quote) {
+      if (char === quote) quote = ''
+      else current += char
+      started = true
+    } else if (char === '"' || char === "'") {
+      quote = char
+      started = true
+    } else if (/\s/.test(char)) {
+      if (started) {
         tokens.push(current)
         current = ''
+        started = false
       }
     } else {
       current += char
+      started = true
     }
   }
-
-  if (current.length > 0) {
-    tokens.push(current)
-  }
-
-  if (tokens.length === 0) {
-    return { executable: '', args: [] }
-  }
-
-  return {
-    executable: tokens[0],
-    args: tokens.slice(1)
-  }
+  if (strict && (quote || escaped)) throw new Error('Unfinished quoted argument')
+  if (escaped) current += '\\'
+  if (started) tokens.push(current)
+  return { executable: tokens[0] || '', args: tokens.slice(1) }
 }

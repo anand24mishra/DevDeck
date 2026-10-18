@@ -67,7 +67,15 @@ export async function launchMember(
       error: { code: 'DENIED', message: 'Choose an existing project folder with a project file.' }
     }
   }
-  const parsed = parseCommandLine(member.command)
+  let parsed: ReturnType<typeof parseCommandLine>
+  try {
+    parsed = parseCommandLine(member.command, true)
+  } catch {
+    return {
+      ok: false,
+      error: { code: 'INVALID_INPUT', message: 'Close every quote and escape in the command.' }
+    }
+  }
   let file: string | undefined
   for (const candidate of path.isAbsolute(parsed.executable)
     ? [parsed.executable]
@@ -94,10 +102,25 @@ export async function launchMember(
         message: 'The executable was not found. Use its full path in the profile.'
       }
     }
+  if (
+    !isProcessAllowed(2, `"${file}" ${parsed.args.join(' ')}`, {
+      userIgnoreList: settings.ignoreList,
+      customAllowlist: settings.customAllowlist
+    }).allowed ||
+    process.getuid?.() === 0
+  )
+    return {
+      ok: false,
+      error: { code: 'DENIED', message: 'This executable is outside the safe process scope.' }
+    }
   if (launches.size >= 200)
     return {
       ok: false,
-      error: { code: 'DENIED', message: 'Clear old launch logs before starting more processes.' }
+      error: {
+        code: 'DENIED',
+        message:
+          'Quit and reopen DevDeck to clear old launch records before starting more processes.'
+      }
     }
   return new Promise((resolve) => {
     const worker = utilityProcess.fork(path.join(__dirname, 'launch-worker.js'), [], {
