@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P3-1: Electron launch-stop test passes with real helper reparenting and normal safety checks; clone env before structured IPC and capture post-launch identity.
 - P3-1: Strict profiles, native command review, safe captured stop targets, short-lived argv-only launcher and Profiles editor.
 - P2-14: Added masked inspection and fixed-argv Docker shell launch via private static terminal bridge.
 - P2-13: Added per-visible-container CPU, memory and network stats, one-second IPC batching and 60-sample CPU history, with viewport/window/provider cleanup and pending-stream cancellation.

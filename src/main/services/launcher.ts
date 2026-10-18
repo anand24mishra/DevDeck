@@ -1,11 +1,13 @@
 import fs from 'fs/promises'
+import { randomUUID } from 'crypto'
+import { defaultKillDeps } from './kill'
 import { constants } from 'fs'
 import path from 'path'
 import { utilityProcess } from 'electron'
 import { parseCommandLine } from '../utils/command'
 import { isProcessAllowed } from '../security/allowlist'
 import { settingsService } from './settings'
-import type { ProfileMember, Result } from '../../shared/types'
+import type { ProfileMember, Result, ProcessIdentity } from '../../shared/types'
 export interface LaunchedProcess {
   id: string
   name: string
@@ -13,6 +15,8 @@ export interface LaunchedProcess {
   cwd: string
   lines: string[]
   partial: string
+  command: string
+  identity?: ProcessIdentity
   startedAt: number
 }
 export const launches = new Map<string, LaunchedProcess>()
@@ -101,7 +105,7 @@ export async function launchMember(
     })
     let pid = 0,
       settled = false
-    const id = crypto.randomUUID()
+    const id = randomUUID()
     const entry: LaunchedProcess = {
       id,
       name: member.name,
@@ -109,6 +113,7 @@ export async function launchMember(
       cwd,
       lines: [],
       partial: '',
+      command: member.command!,
       startedAt: Date.now()
     }
     const append = (chunk: Buffer): void => {
@@ -136,11 +141,12 @@ export async function launchMember(
         })
       }
     }, 5000)
-    worker.once('exit', (code) => {
+    worker.once('exit', async (code) => {
       clearTimeout(timer)
       if (settled) return
       settled = true
       if (code === 0 && pid) {
+        entry.identity = (await defaultKillDeps.revalidate([pid])).ok.find((p) => p.pid === pid)
         launches.set(id, entry)
         resolve({ ok: true, data: { pid, id } })
       } else
@@ -149,6 +155,6 @@ export async function launchMember(
           error: { code: 'INTERNAL', message: 'The process could not be started.' }
         })
     })
-    worker.postMessage({ file, args: parsed.args, cwd, env: process.env })
+    worker.postMessage({ file, args: parsed.args, cwd, env: { ...process.env } })
   })
 }

@@ -2,7 +2,7 @@ import { dialog } from 'electron'
 import { randomUUID } from 'crypto'
 import { settingsService } from './settings'
 import { dockerService } from './docker'
-import { launchMember } from './launcher'
+import { launchMember, launches } from './launcher'
 import { DarwinProcessProvider } from '../providers/process.darwin'
 import { terminate, defaultKillDeps } from './kill'
 import { notificationService } from './notifications'
@@ -17,6 +17,25 @@ const read = async (): Promise<Awaited<ReturnType<typeof provider.listProcesses>
     customAllowlist: s.customAllowlist
   })
 }
+function matched(
+  member: StackProfile['members'][number],
+  procs: Awaited<ReturnType<typeof read>>
+): typeof procs {
+  const known = [...launches.values()].filter(
+    (l) => l.cwd === member.cwd && l.command === member.command && l.identity
+  )
+  const pids = new Set(profileProcesses(member, procs).map((p) => p.pid))
+  return procs.filter(
+    (p) =>
+      pids.has(p.pid) ||
+      known.some(
+        (l) =>
+          l.identity!.pid === p.pid &&
+          l.identity!.startTime === p.startTime &&
+          l.identity!.command === p.command
+      )
+  )
+}
 export async function listProfiles(): Promise<ProfileStatus[]> {
   const [procs, containers] = await Promise.all([
     read(),
@@ -29,7 +48,7 @@ export async function listProfiles(): Promise<ProfileStatus[]> {
       running: member.containerId
         ? containers.ok &&
           containers.data.some((c) => c.id === member.containerId && c.state === 'running')
-        : profileProcesses(member, procs).length > 0
+        : matched(member, procs).length > 0
     }))
   }))
 }
@@ -92,7 +111,7 @@ export async function profileAction(
     const snapshot = await read()
     const captured = profile.members.map((member) => ({
       member,
-      procs: profileProcesses(member, snapshot)
+      procs: matched(member, snapshot)
     }))
     const answer = await dialog.showMessageBox({
       type: action === 'start' ? 'question' : 'warning',
