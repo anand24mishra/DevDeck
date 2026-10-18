@@ -16,3 +16,9 @@ it('bounds memory, retains fragmented lines, clears partials and masks recognize
   expect(stripAnsi('\x1b[31mred\x1b[0m')).toBe('red')
   expect(ansiSegments('\x1b[31mred')[1].color).toBe('var(--danger)')
 })
+it('masks JSON values and full Basic authorization without exposing credentials', () => {
+  expect(redactLog('{"token":"example-secret","password":"has spaces"}')).not.toMatch(
+    /example-secret|has spaces/
+  )
+  expect(redactLog('Authorization: Basic dXNlcjpwYXNz')).not.toContain('dXNlcjpwYXNz')
+})

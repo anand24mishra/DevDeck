@@ -1,10 +1,11 @@
 export function redactLog(text: string): string {
   return text
     .replace(
-      /((?:password|passwd|secret|token|api[_-]?key|authorization)\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
-      '$1[hidden]'
+      /(["']?(?:password|passwd|secret|token|api[_-]?key)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi,
+      '$1"[hidden]"'
     )
-    .replace(/(Bearer\s+)[\w.+/=-]+/gi, '$1[hidden]')
+    .replace(/(["']?authorization["']?\s*[:=]\s*)(?:"[^"\n]*"|'[^'\n]*'|[^\n,;}]+)/gi, '$1[hidden]')
+    .replace(/((?:Bearer|Basic)\s+)[\w.+/=-]+/gi, '$1[hidden]')
     .replace(/(https?:\/\/)[^\s/@]+:[^\s/@]+@/gi, '$1[hidden]@')
 }
 export function stripAnsi(text: string): string {

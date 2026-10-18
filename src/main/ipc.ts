@@ -114,7 +114,8 @@ export function registerIpcHandlers(): void {
       const settings = settingsService.getSettings()
       const procs = await processProvider.listProcesses({
         userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist
+        customAllowlist: settings.customAllowlist,
+        hintsEnabled: settings.hintsEnabled
       })
       const root = verifyProjectPath(
         path,
@@ -161,7 +162,8 @@ export function registerIpcHandlers(): void {
     const [owners, containers] = await Promise.all([
       processProvider.lookupPort(port, {
         userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist
+        customAllowlist: settings.customAllowlist,
+        hintsEnabled: settings.hintsEnabled
       }),
       dockerService.listContainers(settings.dockerSocketPath)
     ])
@@ -239,7 +241,8 @@ export function registerIpcHandlers(): void {
     const settings = settingsService.getSettings()
     const processes = await processProvider.listProcesses({
       userIgnoreList: settings.ignoreList,
-      customAllowlist: settings.customAllowlist
+      customAllowlist: settings.customAllowlist,
+      hintsEnabled: settings.hintsEnabled
     })
     const current = processes.find((proc) => proc.pid === pid && proc.startTime === startTime)
     if (!current)
@@ -281,7 +284,8 @@ export function registerIpcHandlers(): void {
       data: buildProcessTree(
         await processProvider.listProcesses({
           userIgnoreList: settings.ignoreList,
-          customAllowlist: settings.customAllowlist
+          customAllowlist: settings.customAllowlist,
+          hintsEnabled: settings.hintsEnabled
         })
       )
     }
@@ -317,7 +321,8 @@ export function registerIpcHandlers(): void {
         const settings = settingsService.getSettings()
         const procs = await processProvider.listProcesses({
           userIgnoreList: settings.ignoreList,
-          customAllowlist: settings.customAllowlist
+          customAllowlist: settings.customAllowlist,
+          hintsEnabled: settings.hintsEnabled
         })
         let treeMembers: Set<number> | undefined
         if (channel === 'proc:treeStop') {
@@ -400,7 +405,8 @@ export function registerIpcHandlers(): void {
       const settings = settingsService.getSettings()
       const processes = await processProvider.listProcesses({
         userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist
+        customAllowlist: settings.customAllowlist,
+        hintsEnabled: settings.hintsEnabled
       })
       const root = processes.find(
         (proc) =>
@@ -518,7 +524,8 @@ export function registerIpcHandlers(): void {
     const settings = settingsService.getSettings()
     const procs = await processProvider.listProcesses({
       userIgnoreList: settings.ignoreList,
-      customAllowlist: settings.customAllowlist
+      customAllowlist: settings.customAllowlist,
+      hintsEnabled: settings.hintsEnabled
     })
     const root = verifyProjectPath(
       path,
@@ -579,7 +586,8 @@ export function registerIpcHandlers(): void {
       const settings = settingsService.getSettings()
       const procs = await processProvider.listProcesses({
         userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist
+        customAllowlist: settings.customAllowlist,
+        hintsEnabled: settings.hintsEnabled
       })
       const roots = [
         ...procs.flatMap((p) => (p.projectPath ? [p.projectPath] : [])),
@@ -675,11 +683,18 @@ export function registerIpcHandlers(): void {
       if (typeof id !== 'string' || !id) {
         return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid item ID' } }
       }
-      const settings = settingsService.getSettings()
-      return await recentlyStoppedService.restart(id, {
-        customAllowlist: settings.customAllowlist,
-        userIgnoreList: settings.ignoreList
-      })
+      const item = recentlyStoppedService.getItem(id)
+      if (!item)
+        return {
+          ok: false,
+          error: { code: 'NOT_FOUND', message: 'This stopped item has expired.' }
+        }
+      if (!item.cwd)
+        return {
+          ok: false,
+          error: { code: 'DENIED', message: 'The original project folder is unavailable.' }
+        }
+      return launchMember({ name: item.name, command: item.command, cwd: item.cwd, ports: [] })
     }
   )
 

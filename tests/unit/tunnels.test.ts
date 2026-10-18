@@ -18,3 +18,7 @@ it('strips credentials and URL secrets from displayed tunnel targets', () => {
   expect(tunnel?.target).toBe('https://localhost:3000')
   expect(JSON.stringify(tunnel)).not.toContain('secret')
 })
+it('refuses kubectl resource names posing as a forwarding subcommand', () => {
+  expect(detectTunnel('kubectl get pod port-forward')).toBeUndefined()
+  expect(detectTunnel('kubectl --namespace dev port-forward svc/web 3000:80')?.kind).toBe('kubectl')
+})

@@ -48,7 +48,7 @@ export async function listProfiles(): Promise<ProfileStatus[]> {
       name: member.name,
       running: member.containerId
         ? containers.ok &&
-          containers.data.some((c) => c.id === member.containerId && c.state === 'running')
+          containers.data.some((c) => member.containerId!.startsWith(c.id) && c.state === 'running')
         : matched(member, procs).length > 0
     }))
   }))

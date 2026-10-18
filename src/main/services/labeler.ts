@@ -1,5 +1,4 @@
-import fs from 'fs'
-import path from 'path'
+import { readMetadata } from './metadata'
 import rules from './labels.json'
 
 const compiled = rules.map((rule) => ({ ...rule, expression: new RegExp(rule.pattern, 'i') }))
@@ -9,9 +8,9 @@ function projectScripts(root: string): Record<string, string> {
   if (cached && Date.now() - cached.at < 10_000) return cached.scripts
   let scripts: Record<string, string> = {}
   try {
-    const file = path.join(root, 'package.json')
-    if (fs.statSync(file).size <= 65_536) {
-      const raw = JSON.parse(fs.readFileSync(file, 'utf8'))
+    const metadata = readMetadata(root, 'package.json')
+    if (metadata) {
+      const raw = JSON.parse(metadata)
       if (raw.scripts && typeof raw.scripts === 'object') scripts = raw.scripts
     }
   } catch {

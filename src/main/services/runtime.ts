@@ -1,14 +1,7 @@
-import fs from 'fs/promises'
-import path from 'path'
+import { readMetadata } from './metadata'
 
 async function text(root: string, file: string): Promise<string> {
-  try {
-    const target = path.join(root, file)
-    if ((await fs.stat(target)).size > 65536) return ''
-    return await fs.readFile(target, 'utf8')
-  } catch {
-    return ''
-  }
+  return readMetadata(root, file)
 }
 export async function runtimeHints(root: string): Promise<string[]> {
   const [nvm, nodeVersion, packageText, python, virtualenv, go, rustToml, rust, java, sdkman] =
@@ -27,7 +20,10 @@ export async function runtimeHints(root: string): Promise<string[]> {
       ].map((file) => text(root, file))
     )
   const hints: string[] = []
-  const short = (value: string): string => value.trim().split('\n')[0].slice(0, 100)
+  const short = (value: string): string => {
+    const first = value.trim().split('\n')[0]
+    return /^[a-zA-Z0-9.*+_<>~=^| -]{1,100}$/.test(first) ? first : ''
+  }
   let node = short(nvm || nodeVersion)
   if (!node)
     try {
@@ -45,9 +41,9 @@ export async function runtimeHints(root: string): Promise<string[]> {
   const goVersion = go.match(/^go\s+([\d.]+)\s*$/m)?.[1]
   if (goVersion) hints.push(`Go requested: ${goVersion}`)
   const rustVersion =
-    rustToml.match(/^\s*channel\s*=\s*["']([^"']{1,100})["']/m)?.[1] || short(rust)
+    short(rustToml.match(/^\s*channel\s*=\s*["']([^"']{1,100})["']/m)?.[1] || '') || short(rust)
   if (rustVersion) hints.push(`Rust toolchain: ${rustVersion}`)
-  const javaVersion = short(java) || sdkman.match(/^java=([^\n]{1,100})$/m)?.[1]
+  const javaVersion = short(java) || short(sdkman.match(/^java=([^\n]{1,100})$/m)?.[1] || '')
   if (javaVersion) hints.push(`Java requested: ${javaVersion}`)
   return hints
 }

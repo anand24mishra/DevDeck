@@ -1,3 +1,4 @@
+import { hasProjectMarker } from './metadata'
 import { LogRing } from '../../shared/logs'
 import { launchOutput } from './launchOutput'
 import fs from 'fs/promises'
@@ -51,16 +52,7 @@ export async function launchMember(
       !(await fs.stat(cwd)).isDirectory()
     )
       throw new Error()
-    const markers = await Promise.all(
-      ['.git', 'package.json', 'go.mod', 'Cargo.toml', 'pyproject.toml', '.devdeck.json'].map(
-        (name) =>
-          fs.access(path.join(cwd, name)).then(
-            () => true,
-            () => false
-          )
-      )
-    )
-    if (!markers.some(Boolean)) throw new Error()
+    if (!hasProjectMarker(cwd)) throw new Error()
   } catch {
     return {
       ok: false,
@@ -87,7 +79,14 @@ export async function launchMember(
       await fs.access(candidate, constants.X_OK)
       const real = await fs.realpath(candidate)
       if ((await fs.stat(real)).isFile()) {
-        file = candidate
+        if (
+          !isProcessAllowed(2, `"${real}" ${parsed.args.join(' ')}`, {
+            userIgnoreList: settings.ignoreList,
+            customAllowlist: settings.customAllowlist
+          }).allowed
+        )
+          continue
+        file = real
         break
       }
     } catch {

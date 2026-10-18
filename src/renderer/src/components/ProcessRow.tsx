@@ -27,7 +27,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
         tabIndex={0}
         aria-expanded={expanded}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault()
             setExpanded(!expanded)
           }

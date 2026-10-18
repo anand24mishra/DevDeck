@@ -5,7 +5,7 @@ import { DarwinProcessProvider } from '../../src/main/providers/process.darwin'
 describe('DarwinProcessProvider Integration', () => {
   it('detects a real spawned child node server on an assigned port', async () => {
     // Choose an unused port
-    const testPort = 49281
+    let testPort = 0
     const child = spawn(
       process.execPath,
       [
@@ -13,9 +13,9 @@ describe('DarwinProcessProvider Integration', () => {
         `
         const http = require('http');
         const server = http.createServer((req, res) => res.end('ok'));
-        server.listen(${testPort}, '127.0.0.1', () => {
+        server.listen(0, '127.0.0.1', () => {
           if (process.send) process.send('ready');
-          console.log('ready');
+          console.log('ready:'+server.address().port);
         });
         `
       ],
@@ -23,11 +23,26 @@ describe('DarwinProcessProvider Integration', () => {
     )
 
     await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        child.kill()
+        reject(new Error('Server did not become ready'))
+      }, 3000)
       child.stdout?.on('data', (d) => {
-        if (d.toString().includes('ready')) resolve()
+        const match = d.toString().match(/ready:(\d+)/)
+        if (match) {
+          testPort = Number(match[1])
+          clearTimeout(timer)
+          resolve()
+        }
       })
-      child.on('error', reject)
-      setTimeout(() => resolve(), 1000)
+      child.once('error', (error) => {
+        clearTimeout(timer)
+        reject(error)
+      })
+      child.once('exit', (code) => {
+        clearTimeout(timer)
+        reject(new Error(`Fixture exited: ${code}`))
+      })
     })
 
     const provider = new DarwinProcessProvider({ pid: 0, ppid: 0 })

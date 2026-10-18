@@ -42,7 +42,7 @@ export function parseRepoConfig(
         throw new Error('Invalid command')
       const cwd = path.resolve(root, m.cwd || '.')
       if (cwd !== root && !cwd.startsWith(root + path.sep)) throw new Error('Outside project')
-      return { name: m.name, command: m.command, cwd, ports: value.expectedPorts }
+      return { name: m.name, command: m.command, cwd, ports: [] }
     })
   }
   if (

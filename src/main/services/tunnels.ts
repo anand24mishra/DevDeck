@@ -34,9 +34,39 @@ export function detectTunnel(command: string): Proc['tunnel'] {
       }
     }
   }
-  const at = args.indexOf('port-forward')
-  if (name === 'kubectl' && at >= 0)
-    return { kind: 'kubectl', target: at >= 0 ? safeTarget(args[at + 1]) : undefined }
+  if (name === 'kubectl') {
+    let index = 0
+    const withValue = new Set([
+      '--context',
+      '--namespace',
+      '-n',
+      '--kubeconfig',
+      '--cluster',
+      '--user',
+      '--server',
+      '-s',
+      '--request-timeout'
+    ])
+    while (index < args.length && args[index].startsWith('-')) {
+      const flag = args[index]
+      if (flag.includes('=') && withValue.has(flag.split('=')[0])) {
+        index++
+        continue
+      }
+      if (withValue.has(flag) && args[index + 1] && !args[index + 1].startsWith('-')) {
+        index += 2
+        continue
+      }
+      return undefined
+    }
+    if (
+      args[index] === 'port-forward' &&
+      args[index + 1] &&
+      !args[index + 1].startsWith('-') &&
+      args.slice(index + 2).some((arg) => /^(?:\d+:)?\d+$/.test(arg))
+    )
+      return { kind: 'kubectl', target: safeTarget(args[index + 1]) }
+  }
   if (name === 'ngrok') {
     const at = args.findIndex((arg) => arg === 'http' || arg === 'tcp')
     return { kind: 'ngrok', target: safeTarget(args[at + 1]) }
@@ -47,7 +77,7 @@ export function detectTunnel(command: string): Proc['tunnel'] {
       (args.includes('--url') ? args[args.indexOf('--url') + 1] : undefined)
     return { kind: 'cloudflared', target: safeTarget(url) }
   }
-  if (name === 'tailscale' && args.includes('funnel'))
+  if (name === 'tailscale' && args[0] === 'funnel')
     return { kind: 'tailscale', target: safeTarget(args[args.indexOf('funnel') + 1]) }
   return undefined
 }

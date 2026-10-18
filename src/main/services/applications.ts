@@ -1,3 +1,4 @@
+import { hasProjectMarker } from './metadata'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -66,9 +67,7 @@ export function verifyProjectPath(requested: string, activeRoots: string[]): str
       })
     )
       return null
-    return fs.existsSync(path.join(root, '.git')) || fs.existsSync(path.join(root, 'package.json'))
-      ? root
-      : null
+    return hasProjectMarker(root) ? root : null
   } catch {
     return null
   }
