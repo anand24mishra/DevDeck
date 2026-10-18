@@ -1,6 +1,19 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
+import {
+  DevDeckApi,
+  Result,
+  Proc,
+  Settings,
+  RecentlyStoppedItem,
+  FocusTarget
+} from '../shared/types'
 
+let pendingFocus: FocusTarget | undefined
+const focusCallbacks = new Set<(target: FocusTarget) => void>()
+ipcRenderer.on('app:focus', (_event, target: FocusTarget) => {
+  if (focusCallbacks.size) for (const callback of focusCallbacks) callback(target)
+  else pendingFocus = target
+})
 const api: DevDeckApi = {
   projectHistory: (project) => ipcRenderer.invoke('project:history', { project }),
   startLaunch: (member) => ipcRenderer.invoke('launch:start', { member }),
@@ -41,10 +54,16 @@ const api: DevDeckApi = {
   composeAction: (project, action, ids) =>
     ipcRenderer.invoke('docker:composeAction', { project, action, ids }),
   onFocusTarget: (callback) => {
-    const handler = (_event, target): void => callback(target)
-    ipcRenderer.on('app:focus', handler)
+    focusCallbacks.add(callback)
+    if (pendingFocus) {
+      const target = pendingFocus
+      pendingFocus = undefined
+      queueMicrotask(() => {
+        if (focusCallbacks.has(callback)) callback(target)
+      })
+    }
     return () => {
-      ipcRenderer.removeListener('app:focus', handler)
+      focusCallbacks.delete(callback)
     }
   },
   getInstalledApps: () => ipcRenderer.invoke('project:apps'),

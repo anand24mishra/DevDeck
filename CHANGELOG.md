@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P3-7: Early deep links remain pending in preload until App installs its focus callback, avoiding initial-load event loss.
 - P3-7: Strict focus-only links queue until renderer load; CLI human output strips terminal controls from logs, names and errors.
 - P3-6: User-only Unix transport, bounded authenticated requests, masked ls/port/logs and captured identity stops with --yes or native confirmation.
 - Review: Regression cases cover cancelled and changed repository approval, altered imported commands, FIFO/symlink metadata, colored and database secrets, bundle aliases and legitimate package-manager shims.
