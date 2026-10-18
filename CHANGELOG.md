@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Review: Regression cases cover cancelled and changed repository approval, altered imported commands, FIFO/symlink metadata, colored and database secrets, bundle aliases and legitimate package-manager shims.
 - Review: Independent review fixes: bounded regular project metadata, canonical executable scope, full secret masking, precise tunnels, per-member repo matching, full Docker IDs, independent Undo and nested button keyboard support.
 - P3-5: One-hour bounded CPU and memory history, theme sparkline and explicit crossing alerts reuse visible scans.
 - P3-4: Private 0700 directory, 0600 socket and random-token handshake transfer captured stdout descriptors to independent servers; live Electron capture-stop test passes.

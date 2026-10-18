@@ -22,7 +22,11 @@ export async function runtimeHints(root: string): Promise<string[]> {
   const hints: string[] = []
   const short = (value: string): string => {
     const first = value.trim().split('\n')[0]
-    return /^[a-zA-Z0-9.*+_<>~=^| -]{1,100}$/.test(first) ? first : ''
+    return /^(?:(?:v?\d|[<>=~^*]).*|lts\/[a-z*]+|node|current|stable|beta|nightly(?:-[\w-]+)?)$/.test(
+      first
+    ) && /^[a-zA-Z0-9.*+_<>~=^| /-]{1,100}$/.test(first)
+      ? first
+      : ''
   }
   let node = short(nvm || nodeVersion)
   if (!node)

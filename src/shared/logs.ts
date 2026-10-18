@@ -1,12 +1,14 @@
 export function redactLog(text: string): string {
-  return text
+  const plain = stripAnsi(text)
+  const hidden = plain
     .replace(
-      /(["']?(?:password|passwd|secret|token|api[_-]?key)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi,
+      /(["']?[\w-]*(?:password|passwd|secret|token|api[_-]?key|access[_-]?key)[\w-]*["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi,
       '$1"[hidden]"'
     )
     .replace(/(["']?authorization["']?\s*[:=]\s*)(?:"[^"\n]*"|'[^'\n]*'|[^\n,;}]+)/gi, '$1[hidden]')
     .replace(/((?:Bearer|Basic)\s+)[\w.+/=-]+/gi, '$1[hidden]')
-    .replace(/(https?:\/\/)[^\s/@]+:[^\s/@]+@/gi, '$1[hidden]@')
+    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/gi, '$1[hidden]@')
+  return hidden === plain ? text : hidden
 }
 export function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex

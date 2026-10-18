@@ -22,3 +22,10 @@ it('masks JSON values and full Basic authorization without exposing credentials'
   )
   expect(redactLog('Authorization: Basic dXNlcjpwYXNz')).not.toContain('dXNlcjpwYXNz')
 })
+it('masks colored secrets and database URI credentials while preserving harmless color', () => {
+  expect(redactLog('\x1b[32mtoken\x1b[0m=example-secret')).not.toContain('example-secret')
+  expect(redactLog('DATABASE_URL=postgres://user:example-secret@localhost/db')).not.toContain(
+    'example-secret'
+  )
+  expect(redactLog('\x1b[32mready\x1b[0m')).toBe('\x1b[32mready\x1b[0m')
+})

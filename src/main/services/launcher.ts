@@ -1,3 +1,4 @@
+import { safeResolvedExecutable } from '../security/launchExecutable'
 import { hasProjectMarker } from './metadata'
 import { LogRing } from '../../shared/logs'
 import { launchOutput } from './launchOutput'
@@ -79,14 +80,8 @@ export async function launchMember(
       await fs.access(candidate, constants.X_OK)
       const real = await fs.realpath(candidate)
       if ((await fs.stat(real)).isFile()) {
-        if (
-          !isProcessAllowed(2, `"${real}" ${parsed.args.join(' ')}`, {
-            userIgnoreList: settings.ignoreList,
-            customAllowlist: settings.customAllowlist
-          }).allowed
-        )
-          continue
-        file = real
+        if (!safeResolvedExecutable(candidate, real, parsed.args, settings)) continue
+        file = candidate
         break
       }
     } catch {

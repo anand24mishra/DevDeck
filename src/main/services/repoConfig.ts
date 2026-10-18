@@ -1,3 +1,4 @@
+import { readMetadata } from './metadata'
 import fs from 'fs/promises'
 import path from 'path'
 import { createHash } from 'crypto'
@@ -57,25 +58,16 @@ export function parseRepoConfig(
 export async function readRepoProfile(root: string): Promise<ReturnType<typeof parseRepoConfig>> {
   const real = await fs.realpath(root)
   if (real !== root) throw new Error('Noncanonical root')
-  const file = path.join(root, '.devdeck.json')
-  const handle = await fs.open(file, 'r')
-  try {
-    const stat = await handle.stat()
-    if (!stat.isFile() || stat.size > 65536 || (await fs.realpath(file)) !== file)
-      throw new Error('Unsafe config')
-    const data = Buffer.alloc(65537)
-    const { bytesRead } = await handle.read(data, 0, data.length, 0)
-    const profile = parseRepoConfig(data.subarray(0, bytesRead).toString(), root)
-    for (const member of profile.members) {
-      const cwd = await fs.realpath(member.cwd!)
-      if (cwd !== root && !cwd.startsWith(root + path.sep)) throw new Error('Outside root')
-      if (!(await fs.stat(cwd)).isDirectory()) throw new Error('Invalid folder')
-      member.cwd = cwd
-    }
-    return profile
-  } finally {
-    await handle.close()
+  const raw = readMetadata(root, '.devdeck.json')
+  if (!raw) throw new Error('Config is missing, nonregular or oversized')
+  const profile = parseRepoConfig(raw, root)
+  for (const member of profile.members) {
+    const cwd = await fs.realpath(member.cwd!)
+    if (cwd !== root && !cwd.startsWith(root + path.sep)) throw new Error('Outside root')
+    if (!(await fs.stat(cwd)).isDirectory()) throw new Error('Invalid folder')
+    member.cwd = cwd
   }
+  return profile
 }
 export async function repoApprovalCurrent(profile: StackProfile): Promise<boolean> {
   if (!profile.repo) return true
