@@ -109,9 +109,10 @@ export function validThresholds(
 
 function savedIdentity(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-  const p = value as import('./types').ProcessIdentity
+  const p = value as import('./types').ProcessIdentity & { sourceHash: string }
   return (
-    Object.keys(p).sort().join(',') === 'command,pid,startTime' &&
+    Object.keys(p).sort().join(',') === 'command,pid,sourceHash,startTime' &&
+    /^[a-f0-9]{64}$/.test(p.sourceHash) &&
     Number.isSafeInteger(p.pid) &&
     p.pid > 1 &&
     text(p.startTime, 64) &&
@@ -120,7 +121,10 @@ function savedIdentity(value: unknown): boolean {
 }
 export function validProfileLaunches(
   value: unknown
-): value is Record<string, Record<string, import('./types').ProcessIdentity>> {
+): value is Record<
+  string,
+  Record<string, import('./types').ProcessIdentity & { sourceHash: string }>
+> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length > 50)
     return false
   return Object.entries(value).every(

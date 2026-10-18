@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Review: Persisted identity records include a SHA256 binding to member cwd and command so edited profiles cannot select stale prior targets. Live Electron test covers restart recognition with spaced arguments, cancellation and independent member failures.
 - Crosscut: Windowed rows retain project controls, exact-PID focus reaches offscreen targets, keyboard Delete confirms, exports focus Cancel, private settings preserve profile identities and provider changes close Docker streams.
 - P4: Added five bounded design notes covering identity, permissions, UI states and provider-specific QA.
 - P3-9: Whitelist-only JSON/text exports hide all commands, omit environments and paths, and require reviewing exact clipboard text before copy.

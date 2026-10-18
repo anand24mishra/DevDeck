@@ -14,33 +14,50 @@ test('profile launches independently and stops through normal identity guards', 
   await writeFile(path.join(root, 'package.json'), '{}')
   await writeFile(
     path.join(root, 'server.cjs'),
-    "console.log('launch-ready'); setInterval(()=>console.log('still-running'),500)"
+    "console.log('launch-ready'); const output=setInterval(()=>console.log('still-running'),500); setTimeout(()=>clearInterval(output),1500); setInterval(()=>{},1000)"
   )
-  const app = await electron.launch({
+  let app = await electron.launch({
     args: [path.resolve('e2e/main.cjs')],
     env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined, DEVDECK_TEST_DATA: data }
   })
   let pid: number | undefined
   try {
-    const page = await app.firstWindow()
+    let page = await app.firstWindow()
     await app.evaluate(({ dialog }) => {
       dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false })
     })
-    const command = `"${process.execPath}" server.cjs`
+    const command = `"${process.execPath}" server.cjs "argument with spaces"`
     const saved = await page.evaluate(
       async ({ root, command }) =>
         window.api.saveProfile({
           id: 'fixture',
           name: 'Fixture',
-          members: [{ name: 'Web', cwd: root, command, ports: [] }]
+          members: [
+            { name: 'Web', cwd: root, command, ports: [] },
+            {
+              name: 'Missing folder',
+              cwd: root + '/missing',
+              command: 'node example.js',
+              ports: []
+            }
+          ]
         }),
       { root, command }
     )
     expect(saved.ok).toBe(true)
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = async () => ({ response: 0, checkboxChecked: false })
+    })
+    const cancelled = await page.evaluate(() => window.api.profileAction('fixture', 'start'))
+    expect(cancelled.ok && cancelled.data).toEqual([])
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false })
+    })
     const started = await page.evaluate(() => window.api.profileAction('fixture', 'start'))
     expect(started.ok).toBe(true)
     if (!started.ok) throw new Error('Start failed')
     expect(started.data[0].ok, started.data[0].message).toBe(true)
+    expect(started.data[1].ok).toBe(false)
     pid = started.data[0].pid
     expect(pid).toBeGreaterThan(1)
     await expect
@@ -75,6 +92,18 @@ test('profile launches independently and stops through normal identity guards', 
     })
     expect(JSON.parse(await cli(['stop', `pid:${pid}`, '--json'])).cancelled).toBe(true)
     process.kill(pid!, 0)
+    await app.evaluate(({ dialog }) => {
+      dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false })
+    })
+    // A quiet fixture can survive app quit; captured logs intentionally do not persist.
+    await app.close()
+    app = await electron.launch({
+      args: [path.resolve('e2e/main.cjs')],
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined, DEVDECK_TEST_DATA: data }
+    })
+    page = await app.firstWindow()
+    const statuses = await page.evaluate(() => window.api.listProfiles())
+    expect(statuses.ok && statuses.data[0].members[0].running).toBe(true)
     await app.evaluate(({ dialog }) => {
       dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false })
     })

@@ -1,6 +1,6 @@
 import { repoApprovalCurrent } from './repoConfig'
 import { dialog } from 'electron'
-import { randomUUID } from 'crypto'
+import { randomUUID, createHash } from 'crypto'
 import { settingsService } from './settings'
 import { dockerService } from './docker'
 import { launchMember, launches } from './launcher'
@@ -18,6 +18,11 @@ const read = async (): Promise<Awaited<ReturnType<typeof provider.listProcesses>
     customAllowlist: s.customAllowlist
   })
 }
+function sourceHash(member: StackProfile['members'][number]): string {
+  return createHash('sha256')
+    .update(JSON.stringify([member.cwd, member.command]))
+    .digest('hex')
+}
 function matched(
   member: StackProfile['members'][number],
   procs: Awaited<ReturnType<typeof read>>,
@@ -33,7 +38,10 @@ function matched(
   return procs.filter(
     (p) =>
       pids.has(p.pid) ||
-      (saved?.pid === p.pid && saved.startTime === p.startTime && saved.command === p.command) ||
+      (saved?.sourceHash === sourceHash(member) &&
+        saved.pid === p.pid &&
+        saved.startTime === p.startTime &&
+        saved.command === p.command) ||
       known.some(
         (l) =>
           l.identity!.pid === p.pid &&
@@ -134,7 +142,7 @@ export async function profileAction(
         .map(({ member, procs }) =>
           member.containerId
             ? `${member.name}: container ${member.containerId}`
-            : `${member.name}: ${procs.length} running process(es)\n${action === 'stop' ? '' : `${member.cwd}\n${member.command}`}`
+            : `${member.name}: ${procs.length} running process(es)\n${procs.map((p) => `${p.name} · ${p.project} · PID ${p.pid}`).join('\n')}\n${action === 'stop' ? '' : `${member.cwd}\n${member.command}`}`
         )
         .join('\n\n'),
       buttons: ['Cancel', action[0].toUpperCase() + action.slice(1)],
@@ -197,7 +205,7 @@ export async function profileAction(
                     ...current,
                     [profile.id]: {
                       ...current[profile.id],
-                      [member.name]: { pid, startTime, command }
+                      [member.name]: { pid, startTime, command, sourceHash: sourceHash(member) }
                     }
                   }
                 })
