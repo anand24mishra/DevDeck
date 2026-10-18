@@ -76,43 +76,50 @@ export const ProjectHeading: React.FC<ProjectGroupProps> = ({
           <span className="mono">
             {totals.memMB} MB · {totals.cpu.toFixed(1)}% CPU
           </span>
-          {projectPath && (
-            <>
-              <ProjectActions path={projectPath} />
-              <button
-                className="quiet-btn"
-                onClick={() => {
-                  void window.api
-                    .profileFromProject(projectPath)
-                    .then((result) =>
-                      setProfileStatus(result.ok ? 'Profile save finished' : result.error.message)
-                    )
-                }}
-              >
-                Save as profile
-              </button>
-              {profileStatus && <span role="status">{profileStatus}</span>}
-            </>
-          )}
           <span className="process-count-badge mono">
-            {processes.length} {processes.length === 1 ? 'proc' : 'procs'}
+            {processes.length} {processes.length === 1 ? 'process' : 'processes'}
           </span>
           {projectPath && (
-            <button
-              className="quiet-btn"
-              onClick={() => {
-                void window.api
-                  .importRepoConfig(projectPath)
-                  .then((result) =>
-                    setProfileStatus(
-                      result.ok ? 'Repository import finished' : result.error.message
-                    )
-                  )
-              }}
-            >
-              Import .devdeck.json
-            </button>
+            <details className="actions-disclosure">
+              <summary>Project actions</summary>
+              <div className="action-options">
+                <ProjectActions path={projectPath} />
+                <button
+                  className="quiet-btn"
+                  onClick={() => {
+                    void window.api
+                      .profileFromProject(projectPath)
+                      .then((r) =>
+                        setProfileStatus(
+                          r.ok
+                            ? 'Profile review finished. Find saved stacks in Profiles.'
+                            : r.error.message
+                        )
+                      )
+                  }}
+                >
+                  Save as profile
+                </button>
+                <button
+                  className="quiet-btn"
+                  onClick={() => {
+                    void window.api
+                      .importRepoConfig(projectPath)
+                      .then((r) =>
+                        setProfileStatus(
+                          r.ok
+                            ? 'Repository review finished. Find approved stacks in Profiles.'
+                            : r.error.message
+                        )
+                      )
+                  }}
+                >
+                  Import .devdeck.json
+                </button>
+              </div>
+            </details>
           )}
+          {profileStatus && <span role="status">{profileStatus}</span>}
           {onStopProject && processes.some((proc) => proc.manageable !== false) && (
             <button
               type="button"

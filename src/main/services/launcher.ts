@@ -4,7 +4,7 @@ import { LogRing } from '../../shared/logs'
 import { launchOutput } from './launchOutput'
 import fs from 'fs/promises'
 import { randomUUID } from 'crypto'
-import { defaultKillDeps } from './kill'
+import { defaultKillDeps, waitForIdentity } from './kill'
 import { constants } from 'fs'
 import path from 'path'
 import { utilityProcess } from 'electron'
@@ -144,12 +144,21 @@ export async function launchMember(
       stdio: 'ignore',
       serviceName: 'DevDeck launcher'
     })
+    let expectedIdentity: ProcessIdentity | undefined
     let pid = 0,
       settled = false
     worker.on('message', (message) => {
       if (Number.isSafeInteger(message.pid) && message.pid > 1) {
         pid = message.pid
         entry.pid = pid
+        if (
+          typeof message.startTime === 'string' &&
+          message.startTime.length <= 64 &&
+          typeof message.command === 'string' &&
+          message.command.length <= 131072
+        ) {
+          expectedIdentity = { pid, startTime: message.startTime, command: message.command }
+        }
       }
     })
     const timer = setTimeout(() => {
@@ -168,7 +177,10 @@ export async function launchMember(
       if (settled) return
       settled = true
       if (code === 0 && pid) {
-        entry.identity = (await defaultKillDeps.revalidate([pid])).ok.find((p) => p.pid === pid)
+        // Worker exit can arrive before macOS reparents its detached child. Keep the
+        // normal self-tree guard, and adopt only the exact identity captured by the worker.
+        if (expectedIdentity)
+          entry.identity = await waitForIdentity(expectedIdentity, defaultKillDeps)
         launches.set(id, entry)
         resolve({ ok: true, data: { pid, id } })
       } else {

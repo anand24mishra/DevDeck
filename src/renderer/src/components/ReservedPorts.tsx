@@ -14,7 +14,11 @@ export function ReservedPorts(): React.ReactElement | null {
     const timer = setInterval(() => {
       if (!document.hidden) read()
     }, 3000)
-    return () => clearInterval(timer)
+    window.addEventListener('devdeck:reserved-changed', read)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('devdeck:reserved-changed', read)
+    }
   }, [])
   if (!ports.length && !error) return null
   return (
@@ -28,7 +32,9 @@ export function ReservedPorts(): React.ReactElement | null {
               void window.api.unreservePort(p.port).then(read)
             }}
           >
-            ★
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z" />
+            </svg>
           </button>
           <span className="mono">{p.port}</span>{' '}
           {p.owners.length ? `${p.conflict ? 'Conflict: ' : ''}${p.owners.join(', ')}` : 'is free'}{' '}

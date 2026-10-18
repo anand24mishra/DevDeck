@@ -1,3 +1,4 @@
+import { useDialogFocus } from '../hooks/useDialogFocus'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Settings, InstalledApplication, DEFAULT_NOTIFICATIONS } from '../../../shared/types'
 
@@ -28,24 +29,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         })
         .catch(() => {})
   }, [isOpen])
+  const [category, setCategory] = useState('General')
   const [saveError, setSaveError] = useState('')
   const [saveIndicator, setSaveIndicator] = useState(false)
 
   const ignoreInputRef = useRef<HTMLInputElement>(null)
   const allowInputRef = useRef<HTMLInputElement>(null)
-
-  // Esc key closes modal
-  useEffect(() => {
-    if (!isOpen) return
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
 
   const triggerSave = useCallback(
     async (partial: Partial<Settings>) => {
@@ -54,31 +43,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         setSaveError('')
         setSaveIndicator(true)
         setTimeout(() => setSaveIndicator(false), 1200)
+        return true
       } catch (error) {
         setSaveError(error instanceof Error ? error.message : 'Could not save settings.')
+        return false
       }
     },
     [onUpdate]
   )
 
-  const handleAddIgnore = (e: React.FormEvent): void => {
+  const handleAddIgnore = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     const val = newIgnoreItem.trim().toLowerCase()
     if (!val || settings.ignoreList.includes(val)) return
-    triggerSave({ ignoreList: [...settings.ignoreList, val] })
-    setNewIgnoreItem('')
+    if (await triggerSave({ ignoreList: [...settings.ignoreList, val] })) setNewIgnoreItem('')
   }
 
   const handleRemoveIgnore = (item: string): void => {
     triggerSave({ ignoreList: settings.ignoreList.filter((x) => x !== item) })
   }
 
-  const handleAddAllow = (e: React.FormEvent): void => {
+  const handleAddAllow = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     const val = newAllowItem.trim().toLowerCase()
     if (!val || settings.customAllowlist.includes(val)) return
-    triggerSave({ customAllowlist: [...settings.customAllowlist, val] })
-    setNewAllowItem('')
+    if (await triggerSave({ customAllowlist: [...settings.customAllowlist, val] }))
+      setNewAllowItem('')
   }
 
   const handleRemoveAllow = (item: string): void => {
@@ -93,15 +83,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   }
 
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogFocus(dialogRef, isOpen, onClose)
+
   if (!isOpen) return null
 
   return (
-    <div className="modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="modal-card settings-modal" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+    >
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="modal-card settings-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="settings-header">
           <div className="settings-header-title">
-            <h2>Settings</h2>
+            <h2 id="settings-title">Settings</h2>
             {saveIndicator && <span className="settings-saved-badge">Saved</span>}
           </div>
           <button
@@ -118,91 +122,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Scrolling page with 4 short sections */}
         <div className="settings-content">
           {saveError && <p role="alert">{saveError}</p>}
-          {/* Section 1: General */}
-          <section className="settings-section">
-            <h3 className="section-title">General</h3>
-            <label className="setting-row">
-              <span>Show processes DevDeck cannot stop</span>
-              <input
-                type="checkbox"
-                checked={!!settings.showUnmanageable}
-                onChange={(event) => void triggerSave({ showUnmanageable: event.target.checked })}
-              />
-            </label>
-            <label className="setting-row">
-              <span>Enable environment viewer (values hidden by default)</span>
-              <input
-                type="checkbox"
-                checked={!!settings.showEnvViewer}
-                onChange={(event) => void triggerSave({ showEnvViewer: event.target.checked })}
-              />
-            </label>
-            <button className="quiet-btn" onClick={onReplayOnboarding}>
-              Show the welcome guide
-            </button>
-            <label className="setting-row">
-              <span>Show possibly idle process hints</span>
-              <input
-                type="checkbox"
-                checked={settings.hintsEnabled !== false}
-                onChange={(event) => void triggerSave({ hintsEnabled: event.target.checked })}
-              />
-            </label>
-            <fieldset>
-              <legend>Silent notifications</legend>
-              {(['serverStopped', 'memory', 'actionResults', 'networkExposure'] as const).map(
-                (key) => (
-                  <label className="setting-row" key={key}>
-                    <span>
-                      {key === 'serverStopped'
-                        ? 'A watched server stopped unexpectedly'
-                        : key === 'memory'
-                          ? 'A process crosses the memory warning'
-                          : key === 'networkExposure'
-                            ? 'A new port is visible on the network'
-                            : 'Stop actions finish'}
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={(settings.notifications || DEFAULT_NOTIFICATIONS)[key]}
-                      onChange={(event) =>
-                        void triggerSave({
-                          notifications: {
-                            ...(settings.notifications || DEFAULT_NOTIFICATIONS),
-                            [key]: event.target.checked
-                          }
-                        })
-                      }
-                    />
-                  </label>
-                )
-              )}
-            </fieldset>
-            <div className="setting-row">
-              <label htmlFor="memory-threshold">Memory warning (MB)</label>
-              <input
-                id="memory-threshold"
-                className="settings-input mono"
-                type="number"
-                min={64}
-                max={1048576}
-                defaultValue={settings.memoryThresholdMb || 4096}
-                onBlur={(event) => {
-                  const value = Number(event.target.value)
-                  if (Number.isInteger(value) && value >= 64 && value <= 1048576)
-                    void triggerSave({ memoryThresholdMb: value })
-                }}
-              />
-            </div>
+          <nav className="settings-categories" aria-label="Settings sections">
+            {['General', 'Processes', 'Notifications', 'Docker'].map((item) => (
+              <button
+                key={item}
+                className="quiet-btn"
+                aria-pressed={category === item}
+                onClick={() => setCategory(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </nav>
+          <section className="settings-section" hidden={category !== 'General'}>
+            <h3 className="section-title">General</h3>{' '}
             <div className="setting-row">
               <label htmlFor="global-hotkey">Global shortcut</label>
+              <span id="hotkey-help" className="setting-description">
+                Press a shortcut with Control, Option or Command. Tab moves on.
+              </span>
               <input
                 id="global-hotkey"
                 className="settings-input mono"
                 readOnly
                 value={settings.hotkey || ''}
                 placeholder="Disabled"
+                aria-describedby="hotkey-help"
                 onKeyDown={(event) => {
+                  if (event.key === 'Tab' || event.key === 'Escape') return
                   event.preventDefault()
                   event.stopPropagation()
                   const modifiers = [
@@ -254,7 +201,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </select>
               </div>
             ))}
-
             <div className="setting-row">
               <div className="setting-info">
                 <span className="setting-label">Refresh Interval</span>
@@ -278,7 +224,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </select>
               </div>
             </div>
-
             <div className="setting-row">
               <div className="setting-info">
                 <span className="setting-label">Theme</span>
@@ -299,7 +244,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </select>
               </div>
             </div>
-
             <div className="setting-row">
               <div className="setting-info">
                 <span className="setting-label">Launch at Login</span>
@@ -319,7 +263,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </label>
               </div>
             </div>
+            <button className="quiet-btn" onClick={onReplayOnboarding}>
+              Show the welcome guide
+            </button>
+          </section>
+          <section className="settings-section" hidden={category !== 'Processes'}>
+            <h3 className="section-title">Processes and safety</h3>
+            <label className="setting-row">
+              <span>Show processes DevDeck cannot stop</span>
+              <input
+                type="checkbox"
+                checked={!!settings.showUnmanageable}
+                onChange={(event) => void triggerSave({ showUnmanageable: event.target.checked })}
+              />
+            </label>
+            <label className="setting-row">
+              <span>Enable environment viewer (values hidden by default)</span>
+              <input
+                type="checkbox"
+                checked={!!settings.showEnvViewer}
+                onChange={(event) => void triggerSave({ showEnvViewer: event.target.checked })}
+              />
+            </label>
 
+            <label className="setting-row">
+              <span>Show possibly idle process hints</span>
+              <input
+                type="checkbox"
+                checked={settings.hintsEnabled !== false}
+                onChange={(event) => void triggerSave({ hintsEnabled: event.target.checked })}
+              />
+            </label>
             <div className="setting-row">
               <div className="setting-info">
                 <span className="setting-label">Remember Stopped Processes</span>
@@ -341,9 +315,62 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
           </section>
+          <section className="settings-section" hidden={category !== 'Notifications'}>
+            <h3 className="section-title">Notifications</h3>{' '}
+            <fieldset>
+              <legend>Silent notifications</legend>
+              {(['serverStopped', 'memory', 'actionResults', 'networkExposure'] as const).map(
+                (key) => (
+                  <label className="setting-row" key={key}>
+                    <span>
+                      {key === 'serverStopped'
+                        ? 'A watched server stopped unexpectedly'
+                        : key === 'memory'
+                          ? 'A process crosses the memory warning'
+                          : key === 'networkExposure'
+                            ? 'A new port is visible on the network'
+                            : 'Stop actions finish'}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={(settings.notifications || DEFAULT_NOTIFICATIONS)[key]}
+                      onChange={(event) =>
+                        void triggerSave({
+                          notifications: {
+                            ...(settings.notifications || DEFAULT_NOTIFICATIONS),
+                            [key]: event.target.checked
+                          }
+                        })
+                      }
+                    />
+                  </label>
+                )
+              )}
+            </fieldset>
+            <div className="setting-row">
+              <label htmlFor="memory-threshold">Memory warning (MB)</label>
+              <input
+                id="memory-threshold"
+                className="settings-input mono"
+                type="number"
+                min={64}
+                max={1048576}
+                defaultValue={settings.memoryThresholdMb || 4096}
+                onBlur={(event) => {
+                  const value = Number(event.target.value)
+                  if (Number.isInteger(value) && value >= 64 && value <= 1048576)
+                    void triggerSave({ memoryThresholdMb: value })
+                  else {
+                    setSaveError('Enter a whole memory limit from 64 to 1,048,576 MB.')
+                    event.currentTarget.value = String(settings.memoryThresholdMb || 4096)
+                  }
+                }}
+              />
+            </div>
+          </section>
 
           {/* Section 2: Process Ignore List */}
-          <section className="settings-section">
+          <section className="settings-section" hidden={category !== 'Processes'}>
             <h3 className="section-title">Process Ignore List</h3>
             <p className="section-desc">
               Processes matching these executable names or command substrings are hidden from view.
@@ -386,7 +413,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </section>
 
           {/* Section 3: Extra Allowlist */}
-          <section className="settings-section">
+          <section className="settings-section" hidden={category !== 'Processes'}>
             <h3 className="section-title">Custom Allowlist</h3>
             <p className="section-desc">
               Allow these additional binaries beyond standard dev tools (node, python, go, vite,
@@ -430,7 +457,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </section>
 
           {/* Section 4: Docker Socket */}
-          <section className="settings-section">
+          <section className="settings-section" hidden={category !== 'Docker'}>
             <h3 className="section-title">Docker</h3>
             <p className="section-desc">
               DevDeck auto-discovers Docker Desktop, OrbStack, and Colima sockets. Override here if

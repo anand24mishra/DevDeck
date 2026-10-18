@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react'
+import { useDialogFocus } from '../hooks/useDialogFocus'
+import React, { useRef } from 'react'
 
 export interface ConfirmDialogProps {
   isOpen: boolean
@@ -24,22 +25,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const cancelBtnRef = useRef<HTMLButtonElement>(null)
   const confirmBtnRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    if (!isOpen) return
-
-    // Focus Cancel button by default on open (safe by default)
-    cancelBtnRef.current?.focus()
-
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onCancel()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onCancel])
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogFocus(dialogRef, isOpen, () => {
+    if (!isBusy) onCancel()
+  })
 
   if (!isOpen) return null
 
@@ -56,8 +45,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   }
 
   return (
-    <div className="modal-backdrop" onClick={onCancel} role="presentation">
+    <div className="modal-backdrop" onClick={isBusy ? undefined : onCancel} role="presentation">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="modal-content"
         role="dialog"
         aria-modal="true"
@@ -82,6 +73,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <div className="modal-actions">
           <button
             ref={cancelBtnRef}
+            data-dialog-initial
             type="button"
             className="dialog-btn dialog-cancel-btn"
             onClick={onCancel}
@@ -96,7 +88,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             onClick={onConfirm}
             disabled={isBusy}
           >
-            {isBusy ? 'Stopping...' : confirmLabel}
+            {isBusy ? 'Working…' : confirmLabel}
           </button>
         </div>
       </div>

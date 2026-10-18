@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useDialogFocus } from '../hooks/useDialogFocus'
+import React, { useState, useRef, useCallback } from 'react'
 import { RecentlyStoppedItem } from '../../../shared/types'
 
 interface RecentlyStoppedDrawerProps {
   isOpen: boolean
   items: RecentlyStoppedItem[]
   loading: boolean
+  error?: string | null
   restartingId: string | null
   onClose: () => void
   onRestart: (id: string) => Promise<void>
@@ -25,6 +27,7 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
   isOpen,
   items,
   loading,
+  error,
   restartingId,
   onClose,
   onRestart,
@@ -32,17 +35,8 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
 }) => {
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set())
 
-  // Keyboard shortcut: Escape to close
-  useEffect(() => {
-    if (!isOpen) return
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogFocus(dialogRef, isOpen, onClose)
 
   const toggleReveal = useCallback((id: string) => {
     setRevealedIds((prev) => {
@@ -61,6 +55,8 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
   return (
     <div className="modal-backdrop" onClick={onClose} role="presentation">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="modal-content drawer-content"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -88,13 +84,14 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
                 onClick={onClear}
                 title="Clear recently stopped processes"
               >
-                Clear
+                Clear history
               </button>
             )}
             <button
               type="button"
               className="btn btn-quiet btn-close"
               onClick={onClose}
+              data-dialog-initial
               aria-label="Close recently stopped drawer"
             >
               ✕
@@ -103,7 +100,11 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
         </div>
 
         <div className="drawer-body">
-          {loading ? (
+          {error ? (
+            <p role="alert" className="inline-error">
+              {error} Close and reopen History to try again.
+            </p>
+          ) : loading ? (
             <div className="drawer-empty-state">
               <span className="text-muted">Loading stopped processes...</span>
             </div>

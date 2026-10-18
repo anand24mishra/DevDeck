@@ -1,6 +1,5 @@
 import { VirtualProcesses } from './components/VirtualProcesses'
 import { VirtualContainers } from './components/VirtualContainers'
-import { ExportPanel } from './components/ExportPanel'
 import { ReservedPorts } from './components/ReservedPorts'
 import { ProfilesPanel } from './components/ProfilesPanel'
 import { ProcessTreeView } from './components/ProcessTreeView'
@@ -92,6 +91,7 @@ const App: React.FC = () => {
   const {
     items: recentItems,
     loading: recentLoading,
+    error: recentError,
     restartingId,
     restartItem,
     clearAll: clearRecent
@@ -173,6 +173,18 @@ const App: React.FC = () => {
     }
   }, [settings.theme])
 
+  const activeFilterCount =
+    Number(heavyOnly) +
+    Number(leftoversOnly) +
+    Number(socketProtocol !== 'all') +
+    Number(socketState !== 'all')
+  const resetFilters = (): void => {
+    setSearchQuery('')
+    setHeavyOnly(false)
+    setLeftoversOnly(false)
+    setSocketProtocol('all')
+    setSocketState('all')
+  }
   // 1. Process filtering & grouping
   const totals = processTotals(procs)
   const filteredProcesses = useMemo(() => {
@@ -585,18 +597,30 @@ const App: React.FC = () => {
         onOpenRecentlyStopped={() => setIsRecentOpen(true)}
         settings={settings}
         onIntervalChange={changeInterval}
-        onRefresh={activeTab === 'processes' ? refreshProcs : refreshDocker}
+        onRefresh={
+          activeTab === 'profiles'
+            ? undefined
+            : activeTab === 'processes'
+              ? refreshProcs
+              : refreshDocker
+        }
         onStopAll={
           activeTab === 'processes'
             ? procs.some((proc) => proc.manageable !== false)
               ? handleStopAllProcesses
               : undefined
-            : dockerRunningCount > 0
+            : activeTab === 'docker' && dockerRunningCount > 0
               ? handleStopAllContainers
               : undefined
         }
         onOpenSettings={() => setIsSettingsOpen(true)}
-        loading={activeTab === 'processes' ? procsLoading : dockerLoading}
+        loading={
+          activeTab === 'profiles'
+            ? false
+            : activeTab === 'processes'
+              ? procsLoading
+              : dockerLoading
+        }
       />
 
       {(!settings.onboardingComplete || replayOnboarding) && (
@@ -626,41 +650,6 @@ const App: React.FC = () => {
             />{' '}
             Process tree
           </label>
-          <select
-            className="settings-select"
-            aria-label="Socket protocol"
-            value={socketProtocol}
-            onChange={(event) => setSocketProtocol(event.target.value as typeof socketProtocol)}
-          >
-            <option value="all">TCP and UDP</option>
-            <option>TCP</option>
-            <option>UDP</option>
-          </select>
-          <select
-            className="settings-select"
-            aria-label="Connection state"
-            value={socketState}
-            onChange={(event) => setSocketState(event.target.value as typeof socketState)}
-          >
-            <option value="all">All connections</option>
-            <option value="LISTEN">Listening</option>
-            <option value="ESTABLISHED">Established</option>
-          </select>
-          <label>
-            <input
-              type="checkbox"
-              checked={leftoversOnly}
-              onChange={(event) => setLeftoversOnly(event.target.checked)}
-            />{' '}
-            Possibly leftover
-          </label>
-          <button
-            className="quiet-btn"
-            disabled={!procs.some((proc) => proc.leftoverReason && proc.manageable !== false)}
-            onClick={handleStopLeftovers}
-          >
-            Stop leftovers
-          </button>
           <label htmlFor="process-sort">Sort by</label>
           <select
             id="process-sort"
@@ -674,14 +663,64 @@ const App: React.FC = () => {
               </option>
             ))}
           </select>
-          <label title="At least 50% CPU or 512 MB memory">
-            <input
-              type="checkbox"
-              checked={heavyOnly}
-              onChange={(event) => setHeavyOnly(event.target.checked)}
-            />{' '}
-            Heavy only
-          </label>
+          <details className="filter-disclosure">
+            <summary>Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</summary>
+            <div className="filter-options">
+              {' '}
+              <select
+                className="settings-select"
+                aria-label="Socket protocol"
+                value={socketProtocol}
+                onChange={(event) => setSocketProtocol(event.target.value as typeof socketProtocol)}
+              >
+                <option value="all">TCP and UDP</option>
+                <option>TCP</option>
+                <option>UDP</option>
+              </select>
+              <select
+                className="settings-select"
+                aria-label="Connection state"
+                value={socketState}
+                onChange={(event) => setSocketState(event.target.value as typeof socketState)}
+              >
+                <option value="all">All connections</option>
+                <option value="LISTEN">Listening</option>
+                <option value="ESTABLISHED">Established</option>
+              </select>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={leftoversOnly}
+                  onChange={(event) => setLeftoversOnly(event.target.checked)}
+                />{' '}
+                Possibly leftover
+              </label>
+              <button
+                className="quiet-btn"
+                disabled={!procs.some((proc) => proc.leftoverReason && proc.manageable !== false)}
+                onClick={handleStopLeftovers}
+              >
+                Stop leftovers
+              </button>
+              <label title="At least 50% CPU or 512 MB memory">
+                <input
+                  type="checkbox"
+                  checked={heavyOnly}
+                  onChange={(event) => setHeavyOnly(event.target.checked)}
+                />{' '}
+                High resource use
+              </label>
+              <p>High resource use means at least 50% CPU or 512 MB memory.</p>
+              <button className="quiet-btn" onClick={resetFilters}>
+                Reset filters
+              </button>
+            </div>
+          </details>
+          {activeFilterCount > 0 && (
+            <button className="quiet-btn" onClick={resetFilters}>
+              Clear filters
+            </button>
+          )}
           <span className="mono">
             {totals.memMB} MB total · {totals.cpu.toFixed(1)}% CPU
           </span>
@@ -692,8 +731,7 @@ const App: React.FC = () => {
                 className="quiet-btn"
                 onClick={() => {
                   setSortBy('memory')
-                  setHeavyOnly(false)
-                  setSearchQuery('')
+                  resetFilters()
                 }}
               >
                 Review
@@ -702,12 +740,18 @@ const App: React.FC = () => {
           )}
         </div>
       )}
-      <ExportPanel />
-      <ReservedPorts />
+      {activeTab === 'processes' && <ReservedPorts />}
       <main className="app-content" tabIndex={-1}>
-        {activeTab === 'profiles' ? (
-          <ProfilesPanel />
-        ) : activeTab === 'processes' ? (
+        <div hidden={activeTab !== 'profiles'}>
+          <ProfilesPanel
+            active={activeTab === 'profiles'}
+            projectFolders={[
+              ...new Set(procs.flatMap((p) => (p.projectPath ? [p.projectPath] : [])))
+            ]}
+            containers={containers}
+          />
+        </div>
+        {activeTab === 'profiles' ? null : activeTab === 'processes' ? (
           /* Processes View */
           procsLoading && procs.length === 0 ? (
             <LoadingState />
@@ -716,7 +760,13 @@ const App: React.FC = () => {
           ) : procs.length === 0 ? (
             <EmptyState />
           ) : filteredProcesses.length === 0 ? (
-            <EmptyState searchQuery={searchQuery} onClearSearch={() => setSearchQuery('')} />
+            <section className="empty-state-container" role="status">
+              <h2>No processes match these filters</h2>
+              <p>Change the search or filters to show running processes.</p>
+              <button className="state-btn" onClick={resetFilters}>
+                Clear filters
+              </button>
+            </section>
           ) : filteredProcesses.length > 200 ? (
             <VirtualProcesses
               groups={groupedProjects}
@@ -750,7 +800,7 @@ const App: React.FC = () => {
           )
         ) : /* Docker View */
         dockerLoading && containers.length === 0 ? (
-          <LoadingState />
+          <LoadingState label="Loading containers…" />
         ) : dockerError && containers.length === 0 ? (
           <DockerErrorState message={dockerError} code={dockerErrorCode} onRetry={refreshDocker} />
         ) : containers.length === 0 ? (
@@ -795,27 +845,32 @@ const App: React.FC = () => {
       )}
 
       {/* Recently Stopped Drawer */}
-      <RecentlyStoppedDrawer
-        isOpen={isRecentOpen}
-        items={recentItems}
-        loading={recentLoading}
-        restartingId={restartingId}
-        onClose={() => setIsRecentOpen(false)}
-        onRestart={handleRestartStopped}
-        onClear={handleClearRecent}
-      />
+      {isRecentOpen && (
+        <RecentlyStoppedDrawer
+          isOpen={isRecentOpen}
+          items={recentItems}
+          loading={recentLoading}
+          error={recentError}
+          restartingId={restartingId}
+          onClose={() => setIsRecentOpen(false)}
+          onRestart={handleRestartStopped}
+          onClear={handleClearRecent}
+        />
+      )}
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        settings={settings}
-        onClose={() => setIsSettingsOpen(false)}
-        onUpdate={handleUpdateSettings}
-        onReplayOnboarding={() => {
-          setIsSettingsOpen(false)
-          setReplayOnboarding(true)
-        }}
-      />
+      {isSettingsOpen && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          settings={settings}
+          onClose={() => setIsSettingsOpen(false)}
+          onUpdate={handleUpdateSettings}
+          onReplayOnboarding={() => {
+            setIsSettingsOpen(false)
+            setReplayOnboarding(true)
+          }}
+        />
+      )}
 
       {/* Confirmation Modal */}
       <ConfirmDialog

@@ -25,6 +25,16 @@ export function Onboarding({ onComplete }: { onComplete: () => Promise<void> }):
       </div>
       <div className="onboarding-actions">
         <span>Step {step + 1} of 3</span>
+        <button
+          className="quiet-btn"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            void onComplete().finally(() => setBusy(false))
+          }}
+        >
+          Skip guide
+        </button>
         {step > 0 && (
           <button className="quiet-btn" onClick={() => setStep(step - 1)}>
             Back

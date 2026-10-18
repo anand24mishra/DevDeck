@@ -95,14 +95,24 @@ export function PortLookup({
           <button
             className="quiet-btn"
             onClick={() => {
-              void window.api
-                .reservePort(port, project)
-                .then((result) =>
-                  setStatus(result.ok ? `Reserved ${port} for ${project}` : result.error.message)
-                )
+              void window.api.reservePort(port, project).then((result) => {
+                setStatus(result.ok ? `Reserved ${port} for ${project}` : result.error.message)
+                if (result.ok) window.dispatchEvent(new Event('devdeck:reserved-changed'))
+              })
             }}
           >
-            ☆ Reserve port
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9Z" />
+            </svg>{' '}
+            Reserve port
           </button>
         )}
         {input && (

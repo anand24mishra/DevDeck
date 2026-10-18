@@ -1,13 +1,14 @@
 import React from 'react'
 
-export const LoadingState: React.FC = () => {
+export const LoadingState: React.FC<{ label?: string }> = ({ label = 'Loading processes…' }) => {
   return (
-    <div className="loading-state-container" aria-label="Loading processes">
-      <div className="skeleton-group-header">
+    <div className="loading-state-container" role="status" aria-label={label}>
+      <p>{label}</p>
+      <div className="skeleton-group-header" aria-hidden="true">
         <div className="skeleton-box skeleton-title" />
         <div className="skeleton-box skeleton-badge" />
       </div>
-      <div className="skeleton-rows">
+      <div className="skeleton-rows" aria-hidden="true">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="skeleton-row">
             <div className="skeleton-box skeleton-state" />

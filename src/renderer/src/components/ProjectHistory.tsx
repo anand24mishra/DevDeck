@@ -40,6 +40,10 @@ export function ProjectHistory({ project }: { project: string }): React.ReactEle
       {open && (
         <>
           <p>Up to one hour, sampled while DevDeck is visible. Memory only.</p>
+          <p className="field-help">Memory history</p>
+          {!samples.length && (
+            <p role="status">History starts collecting while this window is visible.</p>
+          )}
           <svg
             viewBox="0 0 120 30"
             className="history-chart"

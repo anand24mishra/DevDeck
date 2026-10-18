@@ -1,3 +1,4 @@
+import { ExportPanel } from './ExportPanel'
 import React, { useEffect, useRef } from 'react'
 import { Settings } from '../../../shared/types'
 
@@ -14,7 +15,7 @@ interface HeaderProps {
   onOpenRecentlyStopped?: () => void
   settings: Settings
   onIntervalChange: (interval: 2 | 3 | 5 | 10) => void
-  onRefresh: () => void
+  onRefresh?: () => void
   onStopAll?: () => void
   onOpenSettings?: () => void
   loading: boolean
@@ -106,6 +107,8 @@ export const Header: React.FC<HeaderProps> = ({
                 {projectCount} {projectCount === 1 ? 'project' : 'projects'}
               </span>
             </>
+          ) : activeTab === 'profiles' ? (
+            <span>Saved stacks</span>
           ) : (
             <>
               <span>{dockerRunningCount} running</span>
@@ -118,47 +121,51 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      <div className="header-center">
-        <div className="search-wrapper">
-          <svg
-            className="search-icon"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            ref={searchInputRef}
-            type="text"
-            className="search-input"
-            placeholder="Filter processes, ports, projects..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            aria-label="Filter processes"
-          />
-          {searchQuery ? (
-            <button
-              className="clear-search-btn"
-              onClick={() => onSearchChange('')}
-              aria-label="Clear search"
+      {activeTab !== 'profiles' && (
+        <div className="header-center">
+          <div className="search-wrapper">
+            <svg
+              className="search-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              ×
-            </button>
-          ) : (
-            <kbd className="search-shortcut" title="Press / to search">
-              /
-            </kbd>
-          )}
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              ref={searchInputRef}
+              type="text"
+              className="search-input"
+              placeholder={
+                activeTab === 'docker' ? 'Filter containers, ports…' : 'Filter processes, ports…'
+              }
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              aria-label={activeTab === 'docker' ? 'Filter containers' : 'Filter processes'}
+            />
+            {searchQuery ? (
+              <button
+                className="clear-search-btn"
+                onClick={() => onSearchChange('')}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            ) : (
+              <kbd className="search-shortcut" title="Press / to search">
+                /
+              </kbd>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="header-right">
         {onStopAll && (
@@ -172,45 +179,50 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        <div className="refresh-control">
-          <label htmlFor="refresh-select" className="refresh-label">
-            Poll:
-          </label>
-          <select
-            id="refresh-select"
-            className="refresh-select mono"
-            value={settings.refreshIntervalSec}
-            onChange={(e) => onIntervalChange(Number(e.target.value) as 2 | 3 | 5 | 10)}
-            aria-label="Auto-refresh interval"
-          >
-            <option value={2}>2s</option>
-            <option value={3}>3s</option>
-            <option value={5}>5s</option>
-            <option value={10}>10s</option>
-          </select>
-        </div>
+        {activeTab !== 'profiles' && (
+          <div className="refresh-control">
+            <label htmlFor="refresh-select" className="refresh-label">
+              Poll:
+            </label>
+            <select
+              id="refresh-select"
+              className="refresh-select mono"
+              value={settings.refreshIntervalSec}
+              onChange={(e) => onIntervalChange(Number(e.target.value) as 2 | 3 | 5 | 10)}
+              aria-label="Auto-refresh interval"
+            >
+              <option value={2}>2s</option>
+              <option value={3}>3s</option>
+              <option value={5}>5s</option>
+              <option value={10}>10s</option>
+            </select>
+          </div>
+        )}
 
-        <button
-          className={`refresh-btn ${loading ? 'loading' : ''}`}
-          onClick={onRefresh}
-          aria-label="Refresh process list"
-          title="Refresh now"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        {onRefresh && (
+          <button
+            className={`refresh-btn ${loading ? 'loading' : ''}`}
+            onClick={onRefresh}
+            aria-label={activeTab === 'docker' ? 'Refresh container list' : 'Refresh process list'}
+            title="Refresh now"
           >
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-          </svg>
-        </button>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+            </svg>
+          </button>
+        )}
 
+        <ExportPanel />
         {onOpenRecentlyStopped && (
           <button
             type="button"

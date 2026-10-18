@@ -2,6 +2,9 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Complete the feature UX pass: scoped navigation, structured profiles, grouped actions, filter recovery, accessible dialogs, organized settings, readable details and command remasking.
+- Bind independent launches to their live child identity and wait safely for reparenting so saved profiles survive app restarts.
+- Verify 177 unit/integration tests and four Electron scenarios; document remaining signed-release, hardware and Docker-provider checks.
 - Review: Persisted identity records include a SHA256 binding to member cwd and command so edited profiles cannot select stale prior targets. Live Electron test covers restart recognition with spaced arguments, cancellation and independent member failures.
 - Crosscut: Windowed rows retain project controls, exact-PID focus reaches offscreen targets, keyboard Delete confirms, exports focus Cancel, private settings preserve profile identities and provider changes close Docker streams.
 - P4: Added five bounded design notes covering identity, permissions, UI states and provider-specific QA.

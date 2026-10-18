@@ -52,18 +52,38 @@ References: [Electron fuses](https://www.electronjs.org/docs/latest/tutorial/fus
 | Process/project list, search, CPU, memory and ports | Implemented | Unit tests and real-server Electron smoke |
 | Confirmed safe stop, self-tree protection | Implemented | Identity/refusal tests and real-child tests |
 | Docker lifecycle and live logs | Implemented | Parser tests; real daemon matrix pending |
-| Tray, settings and recently stopped restart | Implemented | Unit/integration tests; manual visual matrix pending |
+| Tray, settings and recently stopped restart | Implemented | Unit/integration and Electron cancel/restart checks |
 | Signed universal release and updates | Prepared | Credentials, clean-Mac and signed update chain pending |
-| Additional P1–P3 capabilities | In progress | See `features/missing-features.md` |
+| P1–P3 process tools, profiles, capture, CLI and exports | Implemented locally | Unit/integration and Electron UX scenarios; provider matrix pending |
+| P4 future integrations | Design notes only | See `docs/future/` |
 
 Download a verified DMG from the repository's published Releases when available, drag DevDeck into
 Applications, then open it. No published release or Homebrew tap is asserted by this source checkout.
 For a local development copy, use the source commands above. Requires macOS and Node 22 or later.
 
-The window is a compact project table with Processes and Docker tabs, a search field, Stop actions,
-and expandable details. Release screenshots will be captured from a verified build; test captures
-are kept out of Git. For test evidence and outstanding provider/accessibility/hardware checks, see
-[the release matrix](docs/testing/release-matrix.md).
+The window has Processes, Docker and Profiles tabs. Processes includes port lookup, sorting,
+filters, a process tree, project actions, resource history and expandable details. Docker includes
+stack actions, live logs, visible-container stats and inspection. Profiles saves commands and
+containers together, with a form and per-member results. Settings groups preferences into General,
+Processes, Notifications and Docker. Share previews redacted exports before copying.
+
+The interface supports System, Light and Dark themes, keyboard navigation, reduced motion and 200%
+zoom. Release screenshots will come from a verified build; synthetic QA captures stay out of Git.
+See [the release matrix](docs/testing/release-matrix.md) for evidence and remaining external checks.
+
+### Profiles and captured output
+
+Choose **New profile** in Profiles, or **Save as profile** in a running project's actions. Add named
+process members with an absolute folder and command, or select container IDs. Expected ports are
+optional. Starting a profile requires reviewing its exact commands in a native dialog. Member results
+remain visible if part of the stack fails. Repository `.devdeck.json` files need explicit import
+and approval; changed files must be reviewed again.
+
+Expand **Start a process and capture output** to launch a single command. Shell pipelines and inline
+shell scripts are unsupported. Keep DevDeck running in the menu bar while capturing output. Logs and
+resource history are bounded in memory and disappear when the app quits. Already launched servers
+can keep running; saved launch identities let profiles find them again. Processes started elsewhere
+have details and resource history, but their past terminal output cannot be recovered.
 
 DevDeck never uses sudo. Only allowlisted processes belonging to your user can be stopped; app
 bundles and DevDeck's own tree are protected. Command arguments are masked by default. All process

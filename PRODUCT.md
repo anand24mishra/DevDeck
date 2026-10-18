@@ -19,7 +19,7 @@ Project-first, not process-first ("Stop everything for api-server" beats a flat 
 macOS desktop application (Apple Silicon and Intel) packaged with Electron. Lives in the macOS menu bar and windowed interface. Integrates locally with the system process table, local listening ports (`lsof`), and Docker daemon socket.
 
 ## Capabilities and Constraints
-- 3 primary areas: Processes, Docker, Settings (Terminal in v2).
+- 3 primary tabs: Processes, Docker and Profiles. Settings is a dialog with General, Processes, Notifications and Docker sections. Captured output is available for commands launched through DevDeck.
 - Safe kill: never kill outside the explicit dev allowlist (node, python, go, rust, docker, postgres, redis, etc.).
 - Sandboxed renderer with `contextIsolation`; no direct Node or shell execution in renderer. All privileged work is in the main process behind validated IPC.
 - Plain language in UI ("Stop", "Restart", "In use by"); technical values (PID, signal names) behind a "Details" disclosure in monospace.

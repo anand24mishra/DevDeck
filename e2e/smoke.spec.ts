@@ -95,6 +95,10 @@ test('launch, search, native tray cancel, and confirmed process stop', async () 
     await page.getByRole('textbox', { name: 'Free a port', exact: true }).fill('')
 
     await page.getByRole('button', { name: 'Open settings', exact: true }).click()
+    await page
+      .getByRole('navigation', { name: 'Settings sections' })
+      .getByRole('button', { name: 'Processes', exact: true })
+      .click()
     await page.getByLabel('Enable environment viewer (values hidden by default)').check()
     await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
     await page.locator('.process-row').click()

@@ -1,3 +1,4 @@
+import { useDialogFocus } from '../hooks/useDialogFocus'
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Container, DockerLogMessage } from '../../../shared/types'
 
@@ -19,6 +20,9 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
   const [filterText, setFilterText] = useState('')
   const [isPaused, setIsPaused] = useState(false)
   const [wrapLines, setWrapLines] = useState(false)
+  const [streamError, setStreamError] = useState('')
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogFocus(dialogRef, true, onClose)
   const [copied, setCopied] = useState(false)
 
   const logContainerRef = useRef<HTMLDivElement>(null)
@@ -28,7 +32,12 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
   useEffect(() => {
     if (!window.api?.startContainerLogs) return
 
-    window.api.startContainerLogs(container.id)
+    void window.api
+      .startContainerLogs(container.id)
+      .then((result) => {
+        if (!result.ok) setStreamError(result.error.message)
+      })
+      .catch(() => setStreamError('Could not read logs. Check Docker and reopen this viewer.'))
 
     const unsubscribe = window.api.onDockerLog?.((msg: DockerLogMessage) => {
       if (msg.id !== container.id) return
@@ -56,18 +65,6 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
     }
   }, [lines, isPaused])
 
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
-
   // Filter lines
   const filteredLines = useMemo(() => {
     if (!filterText.trim()) return lines
@@ -82,7 +79,7 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Ignore clipboard write failure
+      setStreamError('Could not copy logs. Select the output and copy it manually.')
     }
   }, [filteredLines])
 
@@ -91,8 +88,19 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
   }, [])
 
   return (
-    <div className="log-viewer-backdrop" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="log-viewer-modal" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="log-viewer-backdrop"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Logs for ${container.name}`}
+    >
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        className="log-viewer-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="log-viewer-header">
           <div className="log-header-left">
@@ -110,6 +118,7 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
               className="btn-modal-close"
               onClick={onClose}
               title="Close log viewer (Esc)"
+              data-dialog-initial
               aria-label="Close"
             >
               ✕
@@ -117,6 +126,11 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
           </div>
         </div>
 
+        {streamError && (
+          <p role="alert" className="inline-error">
+            {streamError}
+          </p>
+        )}
         {/* Toolbar */}
         <div className="log-viewer-toolbar">
           <div className="log-search-wrapper">
@@ -145,15 +159,17 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
             <button
               type="button"
               className={`log-btn ${isPaused ? 'active' : ''}`}
+              aria-pressed={isPaused}
               onClick={() => setIsPaused(!isPaused)}
               title={isPaused ? 'Resume auto-scroll' : 'Pause auto-scroll'}
             >
-              {isPaused ? 'Resume' : 'Pause'}
+              {isPaused ? 'Follow output' : 'Pause scrolling'}
             </button>
 
             <button
               type="button"
               className={`log-btn ${wrapLines ? 'active' : ''}`}
+              aria-pressed={wrapLines}
               onClick={() => setWrapLines(!wrapLines)}
               title="Toggle line wrapping"
             >

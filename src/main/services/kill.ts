@@ -42,6 +42,22 @@ export function validIdentities(value: unknown): value is ProcessIdentity[] {
   })
 }
 
+/** Wait for a spawned identity to leave the protected helper tree; never adopt a replacement. */
+export async function waitForIdentity(
+  expected: ProcessIdentity,
+  deps: Pick<KillDeps, 'revalidate' | 'sleep'>
+): Promise<RevalidatedProcess | undefined> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const fresh = (await deps.revalidate([expected.pid])).ok.find((p) => p.pid === expected.pid)
+    if (fresh)
+      return fresh.startTime === expected.startTime && fresh.command === expected.command
+        ? fresh
+        : undefined
+    if (attempt < 9) await deps.sleep(100)
+  }
+  return undefined
+}
+
 export async function terminate(targets: ProcessIdentity[], deps: KillDeps): Promise<KillReport> {
   const report: KillReport = {
     requested: targets.map((target) => target.pid),

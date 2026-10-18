@@ -1,5 +1,6 @@
-import { spawn } from 'child_process'
+import { spawn, execFile } from 'child_process'
 import { createConnection } from 'net'
+import { spawnedIdentity } from './security/launchExecutable'
 // Fixed bundled code. Main validates argv/cwd; output is a private authenticated local pipe.
 process.parentPort.once('message', ({ data }) => {
   const output = createConnection(data.outputPath)
@@ -20,8 +21,20 @@ process.parentPort.once('message', ({ data }) => {
         })
         child.once('spawn', () => {
           child.unref()
-          process.parentPort.postMessage({ pid: child.pid })
-          setTimeout(() => process.exit(0), 50)
+          execFile(
+            '/bin/ps',
+            ['-p', String(child.pid), '-o', 'ppid=,lstart=,command='],
+            {
+              encoding: 'utf8',
+              timeout: 1000,
+              maxBuffer: 1024 * 1024
+            },
+            (_error, stdout) => {
+              const identity = !_error ? spawnedIdentity(stdout, process.pid, child) : undefined
+              process.parentPort.postMessage({ pid: child.pid, ...identity })
+              setTimeout(() => process.exit(0), 50)
+            }
+          )
         })
       } catch {
         process.parentPort.postMessage({ error: true })

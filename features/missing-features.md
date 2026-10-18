@@ -15,16 +15,17 @@ Checkboxes below represent **merged** work and remain unchecked until the mainta
 Signed release, clean-Mac installation, hardware/provider QA and update verification require external
 credentials or systems; record those as pending rather than claiming verification.
 
-## Local implementation status — 2026-10-18
+## Local implementation status — 2026-10-19
 
-P0-1–P0-6: implemented and locally checked. P0-7: test implemented; daemon run skipped locally.
-P0-8: pipeline, updater, and hardening implemented; unsigned arm64 package inspected. Signing,
-notarization, clean-Mac and signed-update acceptance are blocked on maintainer-owned credentials
-and external QA. Repository secret-name inspection returned no configured secrets.
-P0-9 documentation is reconciled. P1–P3 implementation and P4 design notes are in progress.
-The maintainer requested continuing all features with signed-release verification deferred.
-See `docs/testing/release-matrix.md` for external checks.
-Checkboxes below remain unchecked because these local changes have not been merged.
+P0-1 through P3-9 are implemented locally in separate feature commits, followed by integration,
+safety and UX fixes. P4 has the requested design notes in `docs/future/`; no P4 runtime code was added.
+The UX pass covers navigation, structured profile forms, filtered empty states, settings, process
+and Docker details, logs, keyboard focus, themes, large lists and accessible zoom.
+
+Signing, notarization, clean-Mac installation, signed updates, Intel hardware and real Docker
+provider checks remain external acceptance work. The maintainer requested continuing features
+with signed-release verification deferred. See `docs/testing/release-matrix.md` for local evidence
+and pending checks. Checkboxes remain unchecked because local changes have not been merged.
 
 ## 0. How to work on this file
 

@@ -14,9 +14,13 @@ per-arch (if `ssh2`/native modules block universal, ship arm64 and x64 separatel
 Disable `runAsNode`, `NODE_OPTIONS`, and inspect args; enable ASAR integrity and only-load-from-ASAR.
 
 ## CI (tag `v*`)
-checkout → setup-node 20 → `npm ci` → typecheck → test → build → `electron-builder --mac --publish always`
-→ draft release. Human downloads the DMG from the draft on a clean Mac, verifies `spctl -a -vv`, tests update
-from the previous version, then publishes.
+The draft workflow uses Node 22, requires all signing secrets and a tag matching `package.json`,
+then runs typecheck, lint, unit/integration and Electron checks. It builds a signed universal app
+with publishing disabled, verifies signature/architectures/fuses/feed, validates the app ticket,
+checks Gatekeeper, notarizes and staples the DMG, and uploads artifacts only to a draft release.
+A human installs that draft on a clean Mac, tests Intel and Apple Silicon and verifies an update
+from the previous signed version before publishing. See `.github/workflows/release.yml` for exact
+commands and `docs/testing/release-matrix.md` for current evidence.
 
 ## Updates
 `electron-updater` checks GitHub Releases; only works for signed, notarized builds.

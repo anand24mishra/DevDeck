@@ -1,5 +1,5 @@
 import { _electron as electron, expect, test } from '@playwright/test'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 test('large lists window rows and support keyboard, reduced motion, zoom and export preview', async () => {
@@ -43,6 +43,7 @@ test('large lists window rows and support keyboard, reduced motion, zoom and exp
     await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(2)
     )
+    await page.getByText('Share…', { exact: true }).click()
     await expect(page.getByRole('button', { name: 'Copy snapshot…', exact: true })).toBeVisible()
     const motion = await page.evaluate(() => ({
       reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -56,9 +57,18 @@ test('large lists window rows and support keyboard, reduced motion, zoom and exp
     await expect(preview.getByLabel('Exact clipboard preview')).toHaveValue(/appVersion/)
     await expect(preview.getByRole('button', { name: 'Cancel', exact: true })).toBeFocused()
     await preview.getByRole('button', { name: 'Cancel', exact: true }).click()
-    await page.locator('.app-content').scrollIntoViewIfNeeded()
-    await expect(page.locator('[data-process-id="100239"] .process-row')).toBeVisible()
-    await page.screenshot({ path: '/tmp/devdeck-accessibility-200-percent.png', fullPage: true })
+    const target = page.locator('[data-process-id="100239"] .process-row')
+    await target.scrollIntoViewIfNeeded()
+    await expect(target).toBeInViewport()
+    await expect(target.getByRole('button', { name: 'Stop', exact: true })).toBeInViewport()
+    // Native capture preserves Electron's physical viewport at non-default zoom.
+    const capture = await app.evaluate(async ({ BrowserWindow }) =>
+      (await BrowserWindow.getAllWindows()[0].capturePage()).toDataURL()
+    )
+    await writeFile(
+      '/tmp/devdeck-accessibility-200-percent.png',
+      Buffer.from(capture.split(',')[1], 'base64')
+    )
   } finally {
     await app.close()
     await rm(data, { recursive: true, force: true })

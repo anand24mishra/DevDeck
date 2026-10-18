@@ -1,31 +1,43 @@
 import React, { useEffect, useState } from 'react'
 import { LogLines } from './LogLines'
 import { stripAnsi } from '../../../shared/logs'
-export function LaunchPanel(): React.ReactElement {
-  const [items, setItems] = useState<{ id: string; name: string; pid: number }[]>([])
-  const [selected, setSelected] = useState('')
-  const [lines, setLines] = useState<string[]>([])
-  const [query, setQuery] = useState('')
+export function LaunchPanel({ active = true }: { active?: boolean }): React.ReactElement {
+  const [items, setItems] = useState<{ id: string; name: string; pid: number }[]>([]),
+    [selected, setSelected] = useState(''),
+    [lines, setLines] = useState<string[]>([]),
+    [query, setQuery] = useState('')
   const [name, setName] = useState(''),
     [cwd, setCwd] = useState(''),
-    [command, setCommand] = useState('')
-  const [status, setStatus] = useState('')
+    [command, setCommand] = useState(''),
+    [revealed, setRevealed] = useState(false),
+    [busy, setBusy] = useState(false),
+    [status, setStatus] = useState(''),
+    [error, setError] = useState('')
+  const [previousActive, setPreviousActive] = useState(active)
+  // Conceal commands on tab changes without discarding an unfinished launch form.
+  if (previousActive !== active) {
+    setPreviousActive(active)
+    if (!active) setRevealed(false)
+  }
   useEffect(() => {
-    let active = true,
+    if (!active) return
+    let alive = true,
       inFlight = false
     const read = async (): Promise<void> => {
       if (document.hidden || inFlight) return
       inFlight = true
       try {
         const list = await window.api.listLaunches()
-        if (active && list.ok) setItems(list.data)
+        if (alive && list.ok) setItems(list.data)
         if (selected) {
           const logs = await window.api.launchLogs(selected)
-          if (active) {
+          if (alive) {
             if (logs.ok) setLines(logs.data)
-            else setStatus(logs.error.message)
+            else setError(logs.error.message)
           }
         }
+      } catch {
+        if (alive) setError('Could not read captured output. Reopen this section to try again.')
       } finally {
         inFlight = false
       }
@@ -35,95 +47,164 @@ export function LaunchPanel(): React.ReactElement {
       void read()
     }, 1000)
     return () => {
-      active = false
+      alive = false
       clearInterval(timer)
     }
-  }, [selected])
+  }, [selected, active])
   const filtered = lines.filter((line) =>
     stripAnsi(line).toLowerCase().includes(query.toLowerCase())
   )
   return (
-    <section aria-label="Launch and capture">
-      <h3>Launch and capture output</h3>
+    <section aria-label="Launch and capture" className="launch-panel">
       <p>
-        Only processes started here or by a profile have captured output. Output stays in memory and
-        expires when DevDeck quits.
+        Capture output from a process started here or by a profile. Output stays in memory. Keep
+        DevDeck running in the menu bar while using capture.
       </p>
       <form
+        className="form-grid"
         onSubmit={(e) => {
           e.preventDefault()
-          void window.api.startLaunch({ name, cwd, command, ports: [] }).then((r) => {
-            if (r.ok) {
-              setSelected(r.data.id)
-              setStatus(`Started ${name}`)
-            } else setStatus(r.error.message)
-          })
+          if (busy) return
+          setBusy(true)
+          setError('')
+          setStatus('')
+          void window.api
+            .startLaunch({ name, cwd, command, ports: [] })
+            .then((r) => {
+              if (r.ok) {
+                setSelected(r.data.id)
+                setStatus(`Started ${name}`)
+              } else setError(r.error.message)
+            })
+            .catch(() => setError('Could not launch this process. Check the command and folder.'))
+            .finally(() => setBusy(false))
         }}
       >
         <label>
-          Name{' '}
-          <input required value={name} maxLength={120} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          Project folder <input required value={cwd} onChange={(e) => setCwd(e.target.value)} />
-        </label>
-        <label>
-          Command{' '}
+          Name
           <input
             required
-            type="password"
             autoComplete="off"
-            value={command}
-            onChange={(e) => setCommand(e.target.value)}
+            placeholder="Web server"
+            value={name}
+            maxLength={120}
+            onChange={(e) => setName(e.target.value)}
           />
         </label>
-        <button className="quiet-btn" type="submit">
-          Review and start
-        </button>
+        <label>
+          Absolute project folder
+          <input
+            required
+            autoComplete="off"
+            spellCheck={false}
+            list="devdeck-project-folders"
+            placeholder="/Users/you/code/storefront"
+            value={cwd}
+            onChange={(e) => setCwd(e.target.value)}
+          />
+        </label>
+        <label className="form-wide">
+          Command
+          <div className="field-with-action">
+            <input
+              required
+              aria-label="Start command"
+              type={revealed ? 'text' : 'password'}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="npm run dev"
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+            />
+            <button
+              type="button"
+              className="quiet-btn"
+              aria-pressed={revealed}
+              onClick={() => setRevealed(!revealed)}
+            >
+              {revealed ? 'Hide' : 'Reveal'}
+            </button>
+          </div>
+        </label>
+        <p className="field-help form-wide">
+          Use a command and its arguments. Pipes, redirects and shell substitutions are not
+          expanded.
+        </p>
+        <div className="form-wide">
+          <button className="state-btn" type="submit" disabled={busy}>
+            {busy ? 'Reviewing…' : 'Review and start'}
+          </button>
+        </div>
       </form>
+      <hr />
       <label>
-        Captured process{' '}
+        Captured process
         <select
           value={selected}
           onChange={(e) => {
             setSelected(e.target.value)
             setLines([])
+            setError('')
           }}
         >
           <option value="">Choose a process</option>
           {items.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.name} ({item.pid})
+              {item.name} (PID {item.pid})
             </option>
           ))}
         </select>
       </label>
+      {!items.length && !selected && (
+        <p className="field-help">
+          No captured output yet. Start a process above or from a saved profile.
+        </p>
+      )}
       {selected && (
         <>
-          <label>
-            Search captured logs <input value={query} onChange={(e) => setQuery(e.target.value)} />
-          </label>
-          <button
-            className="quiet-btn"
-            onClick={() => {
-              void navigator.clipboard.writeText(filtered.map(stripAnsi).join('\n')).then(
-                () => setStatus('Copied logs'),
-                () => setStatus('Could not copy logs')
-              )
-            }}
-          >
-            Copy
-          </button>
-          <button
-            className="quiet-btn"
-            onClick={() => {
-              void window.api.clearLaunchLogs(selected).then(() => setLines([]))
-            }}
-          >
-            Clear
-          </button>
-          <LogLines lines={filtered} />
+          <div className="log-controls">
+            <label>
+              Search captured logs
+              <input autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </label>
+            <button
+              className="quiet-btn"
+              onClick={() => {
+                void navigator.clipboard.writeText(filtered.map(stripAnsi).join('\n')).then(
+                  () => setStatus('Copied logs'),
+                  () => setError('Could not copy logs.')
+                )
+              }}
+            >
+              Copy
+            </button>
+            <button
+              className="quiet-btn"
+              onClick={() => {
+                void window.api.clearLaunchLogs(selected).then((r) => {
+                  if (r.ok) setLines([])
+                  else setError(r.error.message)
+                })
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          {!filtered.length ? (
+            <p role="status">
+              {query
+                ? 'No log lines match your search.'
+                : 'Waiting for this process to write output…'}
+            </p>
+          ) : (
+            <LogLines lines={filtered} />
+          )}
         </>
+      )}
+      {error && (
+        <p role="alert" className="inline-error">
+          {error}
+        </p>
       )}
       <p role="status">{status}</p>
     </section>

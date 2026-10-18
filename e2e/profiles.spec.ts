@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { _electron as electron, expect, test } from '@playwright/test'
-import { mkdtemp, writeFile, mkdir, rm } from 'node:fs/promises'
+import { mkdtemp, writeFile, readFile, mkdir, rm } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import path from 'node:path'
 
@@ -14,7 +14,7 @@ test('profile launches independently and stops through normal identity guards', 
   await writeFile(path.join(root, 'package.json'), '{}')
   await writeFile(
     path.join(root, 'server.cjs'),
-    "console.log('launch-ready'); const output=setInterval(()=>console.log('still-running'),500); setTimeout(()=>clearInterval(output),1500); setInterval(()=>{},1000)"
+    "console.log('launch-ready'); const output=setInterval(()=>console.log('still-running'),500); setTimeout(()=>{clearInterval(output); console.log('output-complete')},1500); setInterval(()=>{},1000)"
   )
   let app = await electron.launch({
     args: [path.resolve('e2e/main.cjs')],
@@ -95,7 +95,19 @@ test('profile launches independently and stops through normal identity guards', 
     await app.evaluate(({ dialog }) => {
       dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false })
     })
+    // Wait for the fixture's explicit quiet phase before closing its output receiver.
+    await expect
+      .poll(async () => {
+        const logs = await page.evaluate((id) => window.api.launchLogs(id), launchId)
+        return logs.ok && logs.data.some((line) => line.includes('output-complete'))
+      })
+      .toBe(true)
     // A quiet fixture can survive app quit; captured logs intentionally do not persist.
+    const stored = JSON.parse(await readFile(path.join(data, 'settings.json'), 'utf8'))
+    expect(
+      !!stored.profileLaunches?.fixture?.Web,
+      'Captured launch identity must be persisted'
+    ).toBe(true)
     await app.close()
     app = await electron.launch({
       args: [path.resolve('e2e/main.cjs')],
@@ -103,7 +115,24 @@ test('profile launches independently and stops through normal identity guards', 
     })
     page = await app.firstWindow()
     const statuses = await page.evaluate(() => window.api.listProfiles())
-    expect(statuses.ok && statuses.data[0].members[0].running).toBe(true)
+    const fresh = await page.evaluate(() => window.api.getProcesses())
+    const visible = fresh.ok ? fresh.data.find((p) => p.pid === pid) : undefined
+    let alive = false
+    try {
+      process.kill(pid!, 0)
+      alive = true
+    } catch {
+      /* Fixture exited. */
+    }
+    expect(
+      statuses.ok && statuses.data[0].members[0].running,
+      JSON.stringify({
+        alive,
+        visible: !!visible,
+        commandMatches: visible?.command === stored.profileLaunches.fixture.Web.command,
+        startMatches: visible?.startTime === stored.profileLaunches.fixture.Web.startTime
+      })
+    ).toBe(true)
     await app.evaluate(({ dialog }) => {
       dialog.showMessageBox = async () => ({ response: 1, checkboxChecked: false })
     })

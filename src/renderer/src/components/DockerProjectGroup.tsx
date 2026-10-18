@@ -32,37 +32,35 @@ export const DockerProjectGroup: React.FC<DockerProjectGroupProps> = ({
 
   return (
     <div className="project-group">
-      <div
-        className="project-header"
-        role="button"
-        tabIndex={0}
-        aria-expanded={!collapsed}
-        onKeyDown={(e) => {
-          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-            e.preventDefault()
-            setCollapsed(!collapsed)
-          }
-        }}
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        <div className="project-header-left">
+      <div className="docker-project-header">
+        <button
+          className="docker-project-toggle"
+          type="button"
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed(!collapsed)}
+        >
           <span className={`collapse-chevron ${collapsed ? 'collapsed' : ''}`} aria-hidden="true">
-            ▼
+            ▾
           </span>
           <span className="project-name">{projectName}</span>
           <span className="project-badge mono">
             {runningCount}/{totalCount} running
           </span>
-        </div>
+        </button>
 
-        <div className="project-header-right" onClick={(e) => e.stopPropagation()}>
+        <div className="docker-stack-actions">
           {containers.some((item) => item.project) && (
             <>
-              <button className="quiet-btn" onClick={() => onStartProject(projectName, containers)}>
+              <button
+                className="quiet-btn"
+                disabled={!!actionLoadingId || runningCount === totalCount}
+                onClick={() => onStartProject(projectName, containers)}
+              >
                 Start stack
               </button>
               <button
                 className="quiet-btn"
+                disabled={!!actionLoadingId || runningCount === 0}
                 onClick={() => onRestartProject(projectName, containers)}
               >
                 Restart stack
@@ -72,8 +70,9 @@ export const DockerProjectGroup: React.FC<DockerProjectGroupProps> = ({
           {runningCount > 0 && containers.some((item) => item.project) && (
             <button
               type="button"
-              className="stop-project-btn"
+              className="quiet-btn danger-text"
               onClick={() => onStopProject(projectName, containers)}
+              disabled={!!actionLoadingId}
               title={`Stop all running containers in ${projectName}`}
             >
               Stop stack

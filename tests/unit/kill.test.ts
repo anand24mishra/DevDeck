@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
-import { terminate, validIdentities, type KillDeps } from '../../src/main/services/kill'
+import {
+  terminate,
+  validIdentities,
+  waitForIdentity,
+  type KillDeps
+} from '../../src/main/services/kill'
 import type { ProcessIdentity } from '../../src/shared/types'
 
 const original: ProcessIdentity = {
@@ -73,5 +78,38 @@ describe('safe process termination', () => {
       expect(validIdentities(invalid)).toBe(false)
     }
     expect(validIdentities([original])).toBe(true)
+  })
+})
+
+describe('independent launch identity handoff', () => {
+  it('waits for the exact spawned identity without relaxing protected-tree checks', async () => {
+    const deps = dependencies()
+    vi.mocked(deps.revalidate)
+      .mockResolvedValueOnce({ ok: [], refused: [original.pid] })
+      .mockResolvedValue({ ok: [original], refused: [] })
+    expect(await waitForIdentity(original, deps)).toEqual(original)
+    expect(deps.sleep).toHaveBeenCalledExactlyOnceWith(100)
+    expect(deps.signal).not.toHaveBeenCalled()
+  })
+  it.each(['command', 'startTime'] as const)(
+    'never adopts a replacement with changed %s',
+    async (field) => {
+      const deps = dependencies()
+      vi.mocked(deps.revalidate).mockResolvedValue({
+        ok: [{ ...original, [field]: 'changed' }],
+        refused: []
+      })
+      expect(await waitForIdentity(original, deps)).toBeUndefined()
+      expect(deps.revalidate).toHaveBeenCalledTimes(1)
+      expect(deps.signal).not.toHaveBeenCalled()
+    }
+  )
+  it('bounds refusal retries and leaves the process untouched', async () => {
+    const deps = dependencies()
+    vi.mocked(deps.revalidate).mockResolvedValue({ ok: [], refused: [original.pid] })
+    expect(await waitForIdentity(original, deps)).toBeUndefined()
+    expect(deps.revalidate).toHaveBeenCalledTimes(10)
+    expect(deps.sleep).toHaveBeenCalledTimes(9)
+    expect(deps.signal).not.toHaveBeenCalled()
   })
 })

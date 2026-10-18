@@ -28,6 +28,7 @@ function CopyField({ name, value }: { name: string; value: string }): React.JSX.
 export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element {
   const [details, setDetails] = useState<ProcessDetails | null>(null)
   const [actionStatus, setActionStatus] = useState('')
+  const [signalBusy, setSignalBusy] = useState(false)
   const [error, setError] = useState('')
   const [showEnvironment, setShowEnvironment] = useState(false)
   const [revealed, setRevealed] = useState(false)
@@ -47,7 +48,7 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
     return () => {
       active = false
     }
-  }, [proc.pid, proc.startTime, proc.manageable])
+  }, [proc.pid, proc.startTime, proc.manageable, proc.status])
   if (proc.manageable === false)
     return (
       <section className="details-panel" aria-label="Read-only process details">
@@ -82,32 +83,68 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
   return (
     <section className="details-panel" aria-label="Process details">
       <div className="process-tools">
-        {(['pause', 'resume', 'reload', 'group'] as const).map((action) => (
-          <button
-            className="quiet-btn"
-            key={action}
-            onClick={() => {
-              void window.api
-                .signalProcess(action, {
-                  pid: current.pid,
-                  startTime: current.startTime,
-                  command: current.command
-                })
-                .then((result) =>
-                  setActionStatus(
-                    result.ok
-                      ? result.data.cancelled
-                        ? 'Cancelled'
-                        : `${result.data.signaled?.length || result.data.stopped.length} updated; ${result.data.refused.length} skipped; ${result.data.stillRunning.length} still running`
-                      : result.error.message
+        {(['pause', 'resume', 'reload', 'group'] as const)
+          .filter((action) =>
+            action === 'pause'
+              ? current.status !== 'paused'
+              : action === 'resume'
+                ? current.status === 'paused'
+                : true
+          )
+          .map((action) => (
+            <button
+              className={action === 'group' ? 'quiet-btn danger-text' : 'quiet-btn'}
+              title={
+                action === 'reload' ? 'Ask this process to reload its configuration.' : undefined
+              }
+              key={action}
+              disabled={signalBusy}
+              onClick={() => {
+                setSignalBusy(true)
+                void window.api
+                  .signalProcess(action, {
+                    pid: current.pid,
+                    startTime: current.startTime,
+                    command: current.command
+                  })
+                  .then((result) => {
+                    if (
+                      result.ok &&
+                      !result.data.cancelled &&
+                      result.data.signaled?.includes(current.pid) &&
+                      (action === 'pause' || action === 'resume')
+                    ) {
+                      setDetails((old) =>
+                        old
+                          ? {
+                              ...old,
+                              process: {
+                                ...old.process,
+                                status: action === 'pause' ? 'paused' : 'running'
+                              }
+                            }
+                          : old
+                      )
+                    }
+                    setActionStatus(
+                      result.ok
+                        ? result.data.cancelled
+                          ? 'Cancelled'
+                          : `${result.data.signaled?.length || result.data.stopped.length} updated; ${result.data.refused.length} skipped; ${result.data.stillRunning.length} still running`
+                        : result.error.message
+                    )
+                  })
+                  .catch(() =>
+                    setActionStatus('Could not apply this action. Refresh and try again.')
                   )
-                )
-                .catch(() => setActionStatus('Could not apply this action. Refresh and try again.'))
-            }}
-          >
-            {action === 'group' ? 'Stop process group' : action[0].toUpperCase() + action.slice(1)}
-          </button>
-        ))}
+                  .finally(() => setSignalBusy(false))
+              }}
+            >
+              {action === 'group'
+                ? 'Stop process group'
+                : action[0].toUpperCase() + action.slice(1)}
+            </button>
+          ))}
       </div>
       {actionStatus && <p role="status">{actionStatus}</p>}
       {current.idleHint && <p>{current.idleHint}. This is a hint, never an automatic stop.</p>}

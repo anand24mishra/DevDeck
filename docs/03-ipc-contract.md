@@ -271,3 +271,10 @@ The packaged app registers `devdeck://port/3000` and `devdeck://project/<encoded
 Profile executable/argv matching normalizes bare executables against absolute process listings and known package-manager shims. Successful profile launches also save pid/startTime/command in a main-owned `profileLaunches` map so quoted arguments retain exact identity across app restarts. Renderer settings cannot write that map. Records are limited to saved profiles; settings are atomically replaced with mode0600 and failed writes do not report Saved. Logs and resource history remain memory-only.
 
 Lists over 200 process/container rows use measured windowing with the same project controls. Notification focus clears conflicting filters and selects an exact PID, so offscreen rows remain reachable. Arrow keys move between rows, Enter opens Details, and Delete requests the usual confirmed Stop. Large-text layouts permit scrolling to every control and the list.
+
+### Internal launcher handoff
+The fixed bundled utility worker reports its spawned child's PID plus a `ps` start-time/command
+snapshot while it is still the worker's live direct child before exiting. Main waits briefly for normal revalidation to see that exact identity
+outside DevDeck's protected tree. A changed identity is never adopted. Missing/uncertain identity
+is reported as a launch warning and is not persisted as a profile identity. This internal message
+is not exposed through preload and does not permit renderer commands or relaxed signal checks.

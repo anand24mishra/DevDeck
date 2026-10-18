@@ -20,6 +20,7 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
   loading
 }) => {
   const [inspect, setInspect] = useState(false)
+  const [copyStatus, setCopyStatus] = useState('')
   const [shellError, setShellError] = useState('')
   const isRunning = container.state === 'running'
   const { element, samples } = useContainerStats(container.id, isRunning)
@@ -32,7 +33,11 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
         {/* State indicator: dot + word */}
         <div className="col-status">
           <span className={`status-dot dot-${container.state}`} aria-hidden="true" />
-          <span className="status-label">{container.state}</span>
+          <span className="status-label">
+            {container.state === 'exited'
+              ? 'Stopped'
+              : container.state[0].toUpperCase() + container.state.slice(1)}
+          </span>
         </div>
 
         {/* Container Identity: Name, ID, Image */}
@@ -98,35 +103,7 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
             aria-expanded={inspect}
             onClick={() => setInspect(!inspect)}
           >
-            Inspect
-          </button>
-          {isRunning && (
-            <button
-              className="btn-action"
-              onClick={() => {
-                void window.api
-                  .openContainerShell(container.id)
-                  .then((result) => setShellError(result.ok ? '' : result.error.message))
-              }}
-            >
-              Open shell
-            </button>
-          )}
-
-          <button
-            className="btn-action"
-            onClick={() => {
-              void navigator.clipboard.writeText(container.id).catch(() => {})
-            }}
-          >
-            Copy ID
-          </button>
-          <button
-            className="btn-action btn-danger"
-            disabled={loading}
-            onClick={() => onRemove(container)}
-          >
-            Remove
+            Details
           </button>
           <button
             type="button"
@@ -169,6 +146,43 @@ export const DockerContainerRow: React.FC<DockerContainerRowProps> = ({
               Start
             </button>
           )}
+          <details className="actions-disclosure">
+            <summary>More</summary>
+            <div className="action-options">
+              {' '}
+              {isRunning && (
+                <button
+                  className="btn-action"
+                  onClick={() => {
+                    void window.api
+                      .openContainerShell(container.id)
+                      .then((result) => setShellError(result.ok ? '' : result.error.message))
+                  }}
+                >
+                  Open shell
+                </button>
+              )}
+              <button
+                className="btn-action"
+                onClick={() => {
+                  void navigator.clipboard.writeText(container.id).then(
+                    () => setCopyStatus('Copied ID'),
+                    () => setCopyStatus('Could not copy the ID.')
+                  )
+                }}
+              >
+                Copy ID
+              </button>
+              <button
+                className="btn-action btn-danger"
+                disabled={loading}
+                onClick={() => onRemove(container)}
+              >
+                Remove
+              </button>
+            </div>
+          </details>
+          {copyStatus && <span role="status">{copyStatus}</span>}
         </div>
       </div>
       {shellError && <p role="alert">{shellError}</p>}

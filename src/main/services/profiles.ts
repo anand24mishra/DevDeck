@@ -196,6 +196,7 @@ export async function profileAction(
           let persisted = true
           if (result.ok) {
             const identity = launches.get(result.data.id)?.identity
+            if (!identity) persisted = false
             if (identity) {
               const current = settingsService.getSettings().profileLaunches || {}
               const { pid, startTime, command } = identity

@@ -1897,3 +1897,481 @@ textarea:focus-visible,
 .export-controls {
   flex-shrink: 0;
 }
+
+/* Integrated feature hierarchy: calm lists, secondary controls on demand. */
+.app-header {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.header-left {
+  min-width: 0;
+}
+.brand-badge,
+.app-header .process-stats {
+  display: none;
+}
+.header-center {
+  min-width: 12rem;
+  flex: 1 1 14rem;
+}
+.header-right {
+  margin-inline-start: auto;
+  flex-wrap: wrap;
+}
+.header-tabs {
+  flex-shrink: 0;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+}
+[hidden] {
+  display: none !important;
+}
+:root {
+  color-scheme: dark;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+  }
+}
+input,
+textarea {
+  caret-color: var(--accent);
+}
+::selection {
+  color: var(--text);
+  background: var(--accent-dim);
+}
+.refresh-btn.loading,
+.refresh-btn.loading svg,
+.skeleton-box {
+  animation: none;
+}
+.process-tools {
+  gap: var(--space-3);
+}
+.filter-disclosure,
+.actions-disclosure,
+.share-disclosure {
+  position: relative;
+}
+.filter-disclosure > summary,
+.actions-disclosure > summary,
+.share-disclosure > summary {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.filter-options,
+.action-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.filter-disclosure[open] {
+  flex: 1 1 100%;
+}
+.filter-options p {
+  flex: 1 1 100%;
+  color: var(--muted);
+}
+.action-options {
+  flex-direction: column;
+  align-items: stretch;
+}
+.actions-disclosure[open] .action-options {
+  position: absolute;
+  z-index: 10;
+  min-width: 12rem;
+  inset-inline-end: 0;
+}
+.project-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.project-group-header {
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding-block: var(--space-3);
+}
+.project-title-area {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.project-meta {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.project-path {
+  max-width: 20ch;
+}
+.col-action {
+  min-width: 7.5rem;
+  flex-shrink: 0;
+}
+
+.app-content {
+  position: relative;
+}
+/* Share uses the header, with preview in a native dialog. */
+.export-controls {
+  position: static;
+  display: flex;
+  min-height: 0;
+  padding-block: 2px;
+}
+.share-disclosure[open] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+.profiles-panel {
+  max-width: 62rem;
+  margin-inline: auto;
+  width: 100%;
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-block: var(--space-3);
+}
+.section-heading h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+.section-heading h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.section-heading p,
+.field-help {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 70ch;
+}
+.profiles-empty {
+  padding-block: var(--space-4);
+}
+.profile-form,
+.saved-profile {
+  border-block: 1px solid var(--line);
+  padding-block: var(--space-4);
+  margin-block: var(--space-3);
+}
+.profiles-panel .profile-form {
+  display: block;
+}
+.form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.form-wide {
+  grid-column: 1/-1;
+}
+.profiles-panel label {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+.profile-form > label {
+  max-width: 28rem;
+}
+.profiles-panel input,
+.profiles-panel select {
+  width: 100%;
+  padding: var(--space-2);
+}
+.member-fields {
+  border: 1px solid var(--line);
+  padding: var(--space-3);
+  margin-block: var(--space-4);
+  min-width: 0;
+}
+.member-fields legend {
+  padding-inline: var(--space-2);
+  color: var(--muted);
+  font-size: 12px;
+}
+.field-with-action,
+.form-actions,
+.log-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.field-with-action input {
+  flex: 1 1 12rem;
+}
+.form-actions {
+  justify-content: flex-end;
+}
+.inline-error {
+  color: var(--danger);
+  padding-block: var(--space-2);
+}
+.danger-text {
+  color: var(--danger);
+}
+.profile-members {
+  list-style: none;
+}
+.profile-members li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+}
+.member-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+.member-status .status-dot {
+  background: var(--muted-dim);
+}
+.member-status.is-running .status-dot {
+  background: var(--accent);
+}
+.launch-disclosure {
+  border-block-start: 1px solid var(--line);
+  padding-block: var(--space-4);
+}
+.launch-disclosure > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.launch-panel > p,
+.launch-panel form {
+  margin-block: var(--space-3);
+}
+.launch-panel hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin-block: var(--space-4);
+}
+.settings-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  padding-block: var(--space-3);
+  z-index: 1;
+}
+.settings-categories [aria-pressed='true'] {
+  color: var(--text);
+  background: var(--surface-active);
+  border-color: var(--line-strong);
+}
+.setting-description {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 32ch;
+}
+.settings-modal,
+.log-viewer-modal {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.settings-modal {
+  width: min(42rem, 94vw);
+}
+.settings-content {
+  overscroll-behavior: contain;
+}
+.settings-section fieldset {
+  border: 0;
+}
+.container-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(9rem, 1fr) minmax(8rem, 1fr) 6.5rem auto;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+.container-row .col-status {
+  grid-column: 1;
+  grid-row: 1;
+}
+.container-row .col-name {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+.container-row .col-ports {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+}
+.container-row .col-uptime {
+  grid-column: 4;
+  grid-row: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.container-row .col-actions {
+  grid-column: 5;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.container-row .docker-stats {
+  grid-column: 2/-1;
+  grid-row: 2;
+  font-size: 12px;
+  color: var(--muted);
+}
+.btn-action {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 12px;
+}
+.btn-action:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+}
+.btn-action.btn-danger {
+  color: var(--danger);
+}
+.btn-action.btn-start {
+  color: var(--accent);
+}
+.btn-action:disabled {
+  opacity: 0.5;
+}
+@media (max-width: 700px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .container-row {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+  .container-row .col-status {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .container-row .col-name {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .container-row .col-ports {
+    grid-column: 1/-1;
+    grid-row: 2;
+  }
+  .container-row .col-uptime {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .container-row .col-actions {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .container-row .docker-stats {
+    grid-column: 1/-1;
+    grid-row: 4;
+  }
+}
+.project-group-header {
+  position: static;
+}
+.actions-disclosure[open] .action-options {
+  position: static;
+}
+.field-help {
+  display: block;
+}
+
+.header-right .export-controls {
+  padding: 0;
+}
+
+/* Compose stacks share the same hierarchy and spacing as process groups. */
+.docker-project-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.docker-project-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.docker-stack-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+}
+.detail-item-wide {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.detail-item .detail-label {
+  grid-column: 1/-1;
+}
+.detail-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.member-fields > .quiet-btn {
+  margin-top: var(--space-3);
+}

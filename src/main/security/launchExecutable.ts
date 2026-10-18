@@ -1,6 +1,6 @@
 import path from 'path'
 import { isProcessAllowed } from './allowlist'
-import type { Settings } from '../../shared/types'
+import type { Settings, ProcessIdentity } from '../../shared/types'
 const shims: Record<string, string[]> = {
   npm: ['npm-cli.js'],
   npx: ['npx-cli.js'],
@@ -27,4 +27,23 @@ export function safeResolvedExecutable(
   return !settings.ignoreList.some(
     (n) => n.trim() && `${real} ${args.join(' ')}`.toLowerCase().includes(n.trim().toLowerCase())
   )
+}
+
+/** Bind the first identity snapshot to the still-live direct child that was spawned. */
+export function spawnedIdentity(
+  output: string,
+  workerPid: number,
+  child: { pid?: number; exitCode: number | null; signalCode: string | null }
+): ProcessIdentity | undefined {
+  if (
+    !Number.isSafeInteger(child.pid) ||
+    child.pid! <= 1 ||
+    child.exitCode !== null ||
+    child.signalCode !== null
+  )
+    return undefined
+  const snapshot = output.trim().match(/^(\d+)\s+(.{24})\s+(.+)$/)
+  if (!snapshot || Number(snapshot[1]) !== workerPid || snapshot[3].length > 131072)
+    return undefined
+  return { pid: child.pid!, startTime: snapshot[2].trim(), command: snapshot[3].trim() }
 }

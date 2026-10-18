@@ -36,28 +36,31 @@ export function ExportPanel(): React.ReactElement {
   }, [kind, format])
   return (
     <div className="export-controls">
-      <button
-        className="quiet-btn"
-        onClick={() => {
-          setText('')
-          setStatus('')
-          setLoading(true)
-          setKind('snapshot')
-        }}
-      >
-        Copy snapshot…
-      </button>
-      <button
-        className="quiet-btn"
-        onClick={() => {
-          setText('')
-          setStatus('')
-          setLoading(true)
-          setKind('diagnostics')
-        }}
-      >
-        Copy diagnostics…
-      </button>
+      <details className="share-disclosure">
+        <summary>Share…</summary>
+        <button
+          className="quiet-btn"
+          onClick={() => {
+            setText('')
+            setStatus('')
+            setLoading(true)
+            setKind('snapshot')
+          }}
+        >
+          Copy snapshot…
+        </button>
+        <button
+          className="quiet-btn"
+          onClick={() => {
+            setText('')
+            setStatus('')
+            setLoading(true)
+            setKind('diagnostics')
+          }}
+        >
+          Copy diagnostics…
+        </button>
+      </details>
       <dialog
         ref={dialog}
         className="export-dialog"
