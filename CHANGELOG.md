@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P4: Added five bounded design notes covering identity, permissions, UI states and provider-specific QA.
 - P3-9: Whitelist-only JSON/text exports hide all commands, omit environments and paths, and require reviewing exact clipboard text before copy.
 - P3-8: Search, project focus and localhost actions use the authenticated CLI; Stop requests always retain DevDeck native confirmation. Raycast typecheck/build and Alfred plist validation pass.
 - P3-7: Early deep links remain pending in preload until App installs its focus callback, avoiding initial-load event loss.
@@ -61,3 +62,5 @@ Format: Keep a Changelog. Versions follow semver. Update on every release (docs-
 - Safe process termination with grace period (SIGTERM -> SIGKILL) and accessible confirmation dialogs for single processes, project stacks, and all running dev processes.
 - Process list grouped by project, listening ports, CPU %, memory usage, uptime, and real-time search filtering.
 - Project scaffolded from the DevDeck agent pack.
+
+- Added P4 design notes for local Kubernetes, devcontainers, previewed Docker cleanup, mobile LAN testing, and remote/platform providers. These are design proposals only.
