@@ -201,3 +201,9 @@ recomputes group members, confirms destructive actions in a native Cancel-defaul
 revalidates identity before each individual signal. Group membership is rechecked through fresh
 PGID metadata; negative group-ID signals are never sent. Extra signals and group stops never
 auto-force. Normal stop retains its established escalation policy.
+
+## P2-7 leftover hints
+Proc adds `leftoverReason?`, `manageable?`, and `readOnlyReason?`. A managed orphan with a
+missing working directory or an observed parent transition to launchd is marked possibly leftover.
+Zombie states are shown read-only and never offered Stop. The bulk leftovers action captures
+only manageable hinted rows, lists them in confirmation, and uses the normal safe-stop API.

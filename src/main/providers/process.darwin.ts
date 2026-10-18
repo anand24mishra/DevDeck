@@ -1,3 +1,5 @@
+import fs from 'fs'
+import { leftoverHint } from '../services/leftovers'
 import { execFile } from 'child_process'
 import os from 'os'
 import { promisify } from 'util'
@@ -56,6 +58,7 @@ interface RawProcess {
 }
 
 export class DarwinProcessProvider implements ProcessProvider {
+  private previousParents = new Map<number, { ppid: number; startTime: string }>()
   constructor(private readonly self: ProcessContext = { pid: process.pid, ppid: process.ppid }) {}
 
   /**
@@ -135,7 +138,11 @@ export class DarwinProcessProvider implements ProcessProvider {
 
     // 1. Filter raw processes with safety allowlist
     const filtered = rawProcesses.filter((proc) => {
-      const check = isProcessAllowed(proc.pid, proc.command, {
+      const zombie = proc.status.includes('Z')
+      const displayCommand = zombie
+        ? proc.command.replace(/^\(([^)]+)\)$/, '$1').replace(/ <defunct>$/, '')
+        : proc.command
+      const check = isProcessAllowed(proc.pid, displayCommand, {
         currentPid,
         parentPid: this.self.ppid,
         protectedPids,
@@ -157,6 +164,16 @@ export class DarwinProcessProvider implements ProcessProvider {
       const sockets = openFiles.sockets.get(proc.pid) || []
       const ports = [...new Set((portsMap.get(proc.pid) || []).map((socket) => socket.port))]
 
+      const status = proc.status.includes('T')
+        ? ('paused' as const)
+        : proc.status.includes('Z')
+          ? ('zombie' as const)
+          : ('running' as const)
+      const hint = leftoverHint(
+        { ppid: proc.ppid, startTime: proc.startTime, status, cwd },
+        this.previousParents.get(proc.pid),
+        !!cwd && fs.existsSync(cwd)
+      )
       return {
         pid: proc.pid,
         startTime: proc.startTime,
@@ -166,11 +183,13 @@ export class DarwinProcessProvider implements ProcessProvider {
             .binaryName || 'Unavailable',
         ppid: proc.ppid,
         pgid: proc.pgid,
-        status: proc.status.includes('T')
-          ? 'paused'
-          : proc.status.includes('Z')
-            ? 'zombie'
-            : 'running',
+        status,
+        manageable: status !== 'zombie',
+        readOnlyReason:
+          status === 'zombie'
+            ? 'Waiting for parent cleanup; signals cannot remove a zombie.'
+            : undefined,
+        leftoverReason: hint,
         name: labelProcess(binaryName || 'unknown', proc.command, project.root),
         command: proc.command,
         cpu: proc.cpu,
@@ -192,6 +211,10 @@ export class DarwinProcessProvider implements ProcessProvider {
             : undefined
       }
     })
+
+    this.previousParents = new Map(
+      rawProcesses.map((proc) => [proc.pid, { ppid: proc.ppid, startTime: proc.startTime }])
+    )
 
     // Sort by project name, then by port, then by process name
     result.sort((a, b) => {

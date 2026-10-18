@@ -75,6 +75,7 @@ const App: React.FC = () => {
 
   const [socketProtocol, setSocketProtocol] = useState<'all' | 'TCP' | 'UDP'>('all')
   const [socketState, setSocketState] = useState<'all' | 'LISTEN' | 'ESTABLISHED'>('all')
+  const [leftoversOnly, setLeftoversOnly] = useState(false)
   const [treeView, setTreeView] = useState(false)
   const [sortBy, setSortBy] = useState<ProcessSort>('name')
   const [heavyOnly, setHeavyOnly] = useState(false)
@@ -166,6 +167,7 @@ const App: React.FC = () => {
       procs.filter(
         (proc) =>
           (!heavyOnly || proc.cpu >= 50 || proc.memMB >= 512) &&
+          (!leftoversOnly || !!proc.leftoverReason) &&
           ((socketProtocol === 'all' && socketState === 'all') ||
             (proc.sockets || []).some(
               (socket) =>
@@ -179,7 +181,7 @@ const App: React.FC = () => {
       ),
       sortBy
     )
-  }, [procs, searchQuery, sortBy, heavyOnly, socketProtocol, socketState])
+  }, [procs, searchQuery, sortBy, heavyOnly, socketProtocol, socketState, leftoversOnly])
 
   const groupedProjects = useMemo(() => {
     const map = new Map<string, GroupedProject>()
@@ -330,15 +332,16 @@ const App: React.FC = () => {
   )
 
   const handleStopAllProcesses = useCallback(() => {
+    const targets = procs.filter((proc) => proc.manageable !== false)
     setDialogState({
       isOpen: true,
-      title: `Stop all ${procs.length} dev processes?`,
+      title: `Stop all ${targets.length} dev processes?`,
       description: `This will stop every dev process running on your machine.`,
-      targetList: procs.map((p) => `${p.name} in ${p.project} (PID ${p.pid})`),
+      targetList: targets.map((p) => `${p.name} in ${p.project} (PID ${p.pid})`),
       action: async () => {
         setIsBusy(true)
         try {
-          const res = await stopAll(procs.map(identity))
+          const res = await stopAll(targets.map(identity))
           if (res.ok) {
             showReportToast(res.data)
           } else {
@@ -347,6 +350,26 @@ const App: React.FC = () => {
         } finally {
           setIsBusy(false)
           setDialogState((prev) => ({ ...prev, isOpen: false }))
+        }
+      }
+    })
+  }, [procs, stopAll, showReportToast])
+
+  const handleStopLeftovers = useCallback(() => {
+    const targets = procs.filter((proc) => proc.leftoverReason && proc.manageable !== false)
+    setDialogState({
+      isOpen: true,
+      title: `Stop ${targets.length} possibly leftover processes?`,
+      targetList: targets.map((proc) => `${proc.name} in ${proc.project}`),
+      action: async () => {
+        setIsBusy(true)
+        try {
+          const result = await stopAll(targets.map(identity))
+          if (result.ok) showReportToast(result.data)
+          else setToast({ id: String(Date.now()), text: result.error.message, type: 'error' })
+        } finally {
+          setIsBusy(false)
+          setDialogState((previous) => ({ ...previous, isOpen: false }))
         }
       }
     })
@@ -604,6 +627,21 @@ const App: React.FC = () => {
             <option value="LISTEN">Listening</option>
             <option value="ESTABLISHED">Established</option>
           </select>
+          <label>
+            <input
+              type="checkbox"
+              checked={leftoversOnly}
+              onChange={(event) => setLeftoversOnly(event.target.checked)}
+            />{' '}
+            Possibly leftover
+          </label>
+          <button
+            className="quiet-btn"
+            disabled={!procs.some((proc) => proc.leftoverReason && proc.manageable !== false)}
+            onClick={handleStopLeftovers}
+          >
+            Stop leftovers
+          </button>
           <label htmlFor="process-sort">Sort by</label>
           <select
             id="process-sort"

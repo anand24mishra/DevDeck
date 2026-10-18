@@ -54,11 +54,16 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
           <span className="process-count-badge mono">
             {processes.length} {processes.length === 1 ? 'proc' : 'procs'}
           </span>
-          {onStopProject && processes.length > 0 && (
+          {onStopProject && processes.some((proc) => proc.manageable !== false) && (
             <button
               type="button"
               className="project-stop-btn"
-              onClick={() => onStopProject(projectName, processes)}
+              onClick={() =>
+                onStopProject(
+                  projectName,
+                  processes.filter((proc) => proc.manageable !== false)
+                )
+              }
             >
               Stop project
             </button>

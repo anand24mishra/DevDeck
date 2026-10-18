@@ -26,6 +26,9 @@ export interface Proc extends ProcessIdentity {
   sockets?: ListeningSocket[]
   establishedConnections?: number
   openFilesCount?: number
+  leftoverReason?: string
+  manageable?: boolean
+  readOnlyReason?: string
   idleHint?: string
   user?: string
   parentName?: string

@@ -51,6 +51,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
         <div className="col col-name" title={proc.name}>
           <span className="process-name">
             {proc.name}
+            {proc.leftoverReason && <span title={proc.leftoverReason}> · Possibly leftover</span>}
             {proc.idleHint && <span title={proc.idleHint}> · Possibly idle</span>}
           </span>
         </div>
@@ -106,7 +107,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
 
         {/* Column 7: Actions & Disclosure */}
         <div className="col col-action">
-          {onStop && (
+          {onStop && proc.manageable !== false && (
             <button
               type="button"
               className="row-stop-btn"
