@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P3-1: Strict profiles, native command review, safe captured stop targets, short-lived argv-only launcher and Profiles editor.
 - P2-14: Added masked inspection and fixed-argv Docker shell launch via private static terminal bridge.
 - P2-13: Added per-visible-container CPU, memory and network stats, one-second IPC batching and 60-sample CPU history, with viewport/window/provider cleanup and pending-stream cancellation.
 - P2-12: Added optional read-only listener rows from unprivileged lsof data, explicit ownership/protection reasons, no command/environment data and no Stop or tree-stop controls.

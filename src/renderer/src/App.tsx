@@ -1,3 +1,4 @@
+import { ProfilesPanel } from './components/ProfilesPanel'
 import { ProcessTreeView } from './components/ProcessTreeView'
 import { sortProcesses, processTotals, type ProcessSort } from './utils/processes'
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
@@ -47,7 +48,7 @@ const identity = ({ pid, startTime, command }: Proc): ProcessIdentity => ({
 })
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'processes' | 'docker'>('processes')
+  const [activeTab, setActiveTab] = useState<'processes' | 'docker' | 'profiles'>('processes')
 
   const {
     procs,
@@ -687,7 +688,9 @@ const App: React.FC = () => {
         </div>
       )}
       <main className="app-content" tabIndex={-1}>
-        {activeTab === 'processes' ? (
+        {activeTab === 'profiles' ? (
+          <ProfilesPanel />
+        ) : activeTab === 'processes' ? (
           /* Processes View */
           procsLoading && procs.length === 0 ? (
             <LoadingState />

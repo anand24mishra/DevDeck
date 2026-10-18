@@ -82,3 +82,17 @@
   --danger-dim: oklch(68% 0.2 25 / 0.15);
   --warn: oklch(80% 0.15 85);
 }
+
+:root {
+  --profile-editor-height: 18rem;
+}
+.profiles-panel {
+  padding: var(--space-4);
+}
+.profile-editor {
+  width: 100%;
+  min-height: var(--profile-editor-height);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+}

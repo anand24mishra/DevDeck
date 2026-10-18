@@ -1,3 +1,4 @@
+import { validProfile } from '../../shared/profiles'
 import fs from 'fs'
 import path from 'path'
 import { app } from 'electron'
@@ -6,6 +7,7 @@ import { EDITOR_IDS, TERMINAL_IDS } from './applications'
 import { Settings, DEFAULT_NOTIFICATIONS } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: Settings = {
+  profiles: [],
   refreshIntervalSec: 3,
   ignoreList: [],
   customAllowlist: [],
@@ -97,6 +99,7 @@ export class SettingsService {
       typeof r.persistRecentlyStopped === 'boolean' ? r.persistRecentlyStopped : false
 
     return {
+      profiles: Array.isArray(r.profiles) ? r.profiles.filter(validProfile).slice(0, 50) : [],
       showUnmanageable: r.showUnmanageable === true,
       showEnvViewer: r.showEnvViewer === true,
       onboardingComplete: r.onboardingComplete === true,

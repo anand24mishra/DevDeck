@@ -19,6 +19,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   onStopProcess,
   onStopProject
 }) => {
+  const [profileStatus, setProfileStatus] = useState('')
   const [context, setContext] = useState<ProjectContext>({})
   useEffect(() => {
     let active = true
@@ -75,7 +76,24 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
           <span className="mono">
             {totals.memMB} MB · {totals.cpu.toFixed(1)}% CPU
           </span>
-          {projectPath && <ProjectActions path={projectPath} />}
+          {projectPath && (
+            <>
+              <ProjectActions path={projectPath} />
+              <button
+                className="quiet-btn"
+                onClick={() => {
+                  void window.api
+                    .profileFromProject(projectPath)
+                    .then((result) =>
+                      setProfileStatus(result.ok ? 'Profile save finished' : result.error.message)
+                    )
+                }}
+              >
+                Save as profile
+              </button>
+              {profileStatus && <span role="status">{profileStatus}</span>}
+            </>
+          )}
           <span className="process-count-badge mono">
             {processes.length} {processes.length === 1 ? 'proc' : 'procs'}
           </span>

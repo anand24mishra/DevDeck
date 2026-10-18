@@ -1,3 +1,4 @@
+import { validProfile } from '../../shared/profiles'
 import path from 'path'
 import { isLocalUrl } from '../../shared/ports'
 import { validHotkey } from '../services/hotkey'
@@ -17,6 +18,13 @@ function keys(value: Record<string, unknown>, expected: string[]): boolean {
 function validSettings(value: Record<string, unknown>): boolean {
   return Object.entries(value).every(([key, field]) => {
     switch (key) {
+      case 'profiles':
+        return (
+          Array.isArray(field) &&
+          field.length <= 50 &&
+          field.every(validProfile) &&
+          new Set(field.map((p) => p.id)).size === field.length
+        )
       case 'refreshIntervalSec':
         return [2, 3, 5, 10].includes(field as number)
       case 'notifications':
@@ -72,6 +80,7 @@ function validSettings(value: Record<string, unknown>): boolean {
 export function validIpcInput(channel: string, value: unknown): boolean {
   if (
     [
+      'profiles:list',
       'docker:apps',
       'project:apps',
       'proc:tree',
@@ -99,6 +108,26 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       typeof value.path === 'string' &&
       value.path.length <= 4096 &&
       path.isAbsolute(value.path) &&
+      !value.path.includes('\0')
+    )
+  if (channel === 'profiles:save') return keys(value, ['profile']) && validProfile(value.profile)
+  if (channel === 'profiles:delete')
+    return (
+      keys(value, ['id']) && typeof value.id === 'string' && /^[a-zA-Z0-9_-]{1,80}$/.test(value.id)
+    )
+  if (channel === 'profiles:action')
+    return (
+      keys(value, ['id', 'action']) &&
+      typeof value.id === 'string' &&
+      /^[a-zA-Z0-9_-]{1,80}$/.test(value.id) &&
+      ['start', 'stop', 'restart'].includes(value.action as string)
+    )
+  if (channel === 'profiles:fromProject')
+    return (
+      keys(value, ['path']) &&
+      typeof value.path === 'string' &&
+      path.isAbsolute(value.path) &&
+      value.path.length <= 4096 &&
       !value.path.includes('\0')
     )
   if (channel === 'url:open') return keys(value, ['url']) && isLocalUrl(value.url)

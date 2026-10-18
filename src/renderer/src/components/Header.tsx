@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react'
 import { Settings } from '../../../shared/types'
 
 interface HeaderProps {
-  activeTab: 'processes' | 'docker'
-  onTabChange: (tab: 'processes' | 'docker') => void
+  activeTab: 'processes' | 'docker' | 'profiles'
+  onTabChange: (tab: 'processes' | 'docker' | 'profiles') => void
   searchQuery: string
   onSearchChange: (query: string) => void
   totalCount: number
@@ -80,6 +80,12 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Docker
             <span className="tab-badge mono">{dockerRunningCount}</span>
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'profiles' ? 'active' : ''}`}
+            onClick={() => onTabChange('profiles')}
+          >
+            Profiles
           </button>
         </div>
 

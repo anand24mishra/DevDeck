@@ -51,6 +51,7 @@ export interface Settings {
   hotkey?: string | null
   preferredEditor?: string
   preferredTerminal?: string
+  profiles?: StackProfile[]
   persistRecentlyStopped?: boolean
 }
 
@@ -128,6 +129,14 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  listProfiles: () => Promise<Result<ProfileStatus[]>>
+  saveProfile: (profile: StackProfile) => Promise<Result<null>>
+  deleteProfile: (id: string) => Promise<Result<null>>
+  profileFromProject: (path: string) => Promise<Result<null>>
+  profileAction: (
+    id: string,
+    action: 'start' | 'stop' | 'restart'
+  ) => Promise<Result<MemberReport[]>>
   inspectContainer: (id: string) => Promise<Result<ContainerInspection>>
   openContainerShell: (id: string) => Promise<Result<null>>
   startContainerStats: (ids: string[]) => Promise<Result<null>>
@@ -251,4 +260,27 @@ export interface ContainerInspection {
   restartCount: number
   exitCode: number
   oomKilled: boolean
+}
+
+export interface ProfileMember {
+  name: string
+  command?: string
+  cwd?: string
+  ports: number[]
+  containerId?: string
+}
+export interface StackProfile {
+  id: string
+  name: string
+  members: ProfileMember[]
+}
+export interface MemberReport {
+  name: string
+  ok: boolean
+  message: string
+  pid?: number
+}
+export interface ProfileStatus {
+  profile: StackProfile
+  members: { name: string; running: boolean }[]
 }

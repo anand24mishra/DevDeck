@@ -1,3 +1,4 @@
+import { listProfiles, saveProfile, profileFromProject, profileAction } from './services/profiles'
 import { openContainerShell } from './services/containerShell'
 import { projectContext } from './services/context'
 import { readEnvironment } from './services/environment'
@@ -551,6 +552,19 @@ export function registerIpcHandlers(): void {
     return openContainerShell(id, settings)
   })
 
+  handle('profiles:list', async () => ({ ok: true, data: await listProfiles() }))
+  handle('profiles:save', async (_event, { profile }) => {
+    saveProfile(profile)
+    return { ok: true, data: null }
+  })
+  handle('profiles:delete', async (_event, { id }) => {
+    settingsService.updateSettings({
+      profiles: (settingsService.getSettings().profiles || []).filter((p) => p.id !== id)
+    })
+    return { ok: true, data: null }
+  })
+  handle('profiles:fromProject', async (_event, { path }) => profileFromProject(path))
+  handle('profiles:action', async (_event, { id, action }) => profileAction(id, action))
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
     if (!isSenderAuthorized(event)) {

@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  listProfiles: () => ipcRenderer.invoke('profiles:list'),
+  saveProfile: (profile) => ipcRenderer.invoke('profiles:save', { profile }),
+  deleteProfile: (id) => ipcRenderer.invoke('profiles:delete', { id }),
+  profileFromProject: (path) => ipcRenderer.invoke('profiles:fromProject', { path }),
+  profileAction: (id, action) => ipcRenderer.invoke('profiles:action', { id, action }),
   inspectContainer: (id) => ipcRenderer.invoke('docker:inspect', { id }),
   openContainerShell: (id) => ipcRenderer.invoke('docker:exec', { id }),
   startContainerStats: (ids) => ipcRenderer.invoke('docker:stats:start', { ids }),
