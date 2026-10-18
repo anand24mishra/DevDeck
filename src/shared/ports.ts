@@ -19,3 +19,23 @@ export function isNetworkExposed(address: string): boolean {
     !/^::ffff:127(?:\.\d{1,3}){3}$/.test(normalized)
   )
 }
+
+export function validReservations(value: unknown): value is { port: number; project: string }[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= 200 &&
+    new Set(value.map((p) => p?.port)).size === value.length &&
+    value.every(
+      (p) =>
+        p &&
+        Object.keys(p).sort().join(',') === 'port,project' &&
+        Number.isInteger(p.port) &&
+        p.port > 0 &&
+        p.port <= 65535 &&
+        typeof p.project === 'string' &&
+        p.project.trim().length > 0 &&
+        p.project.length <= 120 &&
+        !p.project.includes('\0')
+    )
+  )
+}

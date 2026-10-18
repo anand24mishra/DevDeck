@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { DevDeckApi, Result, Proc, Settings, RecentlyStoppedItem } from '../shared/types'
 
 const api: DevDeckApi = {
+  reservePort: (port, project) => ipcRenderer.invoke('ports:reserve', { port, project }),
+  unreservePort: (port) => ipcRenderer.invoke('ports:unreserve', { port }),
+  reservedPortStatus: () => ipcRenderer.invoke('ports:reserved'),
   readRepoConfig: (path) => ipcRenderer.invoke('repoConfig:read', { path }),
   importRepoConfig: (path) => ipcRenderer.invoke('repoConfig:import', { path }),
   listProfiles: () => ipcRenderer.invoke('profiles:list'),

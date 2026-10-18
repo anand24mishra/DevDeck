@@ -51,6 +51,7 @@ export interface Settings {
   hotkey?: string | null
   preferredEditor?: string
   preferredTerminal?: string
+  reservedPorts?: { port: number; project: string }[]
   approvedRepoConfigs?: Record<string, string>
   profiles?: StackProfile[]
   persistRecentlyStopped?: boolean
@@ -130,6 +131,9 @@ export interface DevDeckApi {
   restartStopped: (id: string) => Promise<Result<{ pid?: number }>>
   clearRecentlyStopped: () => Promise<Result<null>>
   onRecentlyStoppedChanged: (callback: () => void) => () => void
+  reservePort: (port: number, project: string) => Promise<Result<null>>
+  unreservePort: (port: number) => Promise<Result<null>>
+  reservedPortStatus: () => Promise<Result<ReservedPortStatus[]>>
   readRepoConfig: (path: string) => Promise<Result<RepoConfigPreview>>
   importRepoConfig: (path: string) => Promise<Result<null>>
   listProfiles: () => Promise<Result<ProfileStatus[]>>
@@ -294,4 +298,11 @@ export interface RepoConfigPreview {
   expectedPorts: number[]
   commandCount: number
   approved: boolean
+}
+
+export interface ReservedPortStatus {
+  port: number
+  project: string
+  owners: string[]
+  conflict: boolean
 }

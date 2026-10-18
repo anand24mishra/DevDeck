@@ -12,6 +12,7 @@ type Notice = { title: string; body: string; target: FocusTarget }
 export class NotificationService {
   private previous = new Map<number, Proc>()
   private high = new Set<string>()
+  private reservedConflicts = new Set<string>()
   private exposed = new Set<string>()
   private expected = new Map<number, number>()
   private focus: (target: FocusTarget) => void = () => {}
@@ -73,6 +74,23 @@ export class NotificationService {
           })
       }
     }
+    const conflicts = new Set<string>()
+    for (const reserved of settings.reservedPorts || []) {
+      const owners = processes.filter(
+        (p) => p.ports.includes(reserved.port) && p.project !== reserved.project
+      )
+      for (const owner of owners) {
+        const key = `${reserved.port}:${owner.pid}:${owner.startTime}`
+        conflicts.add(key)
+        if (!this.reservedConflicts.has(key))
+          this.notify({
+            title: `Port ${reserved.port} is reserved for ${reserved.project}`,
+            body: `${owner.tunnel?.kind || owner.name} in ${owner.project} is using it. Review the owner before stopping anything.`,
+            target: { port: reserved.port }
+          })
+      }
+    }
+    this.reservedConflicts = conflicts
     this.previous = current
     this.high = high
     this.exposed = exposed

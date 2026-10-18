@@ -248,3 +248,6 @@ also closes all streams on hide/close/provider change. Pending opens are cancell
 
 ### Repository config (P3-2)
 `repoConfig:read {path}` validates a real active/saved project root and reads at most 64 KiB of `.devdeck.json`. Schema v1: name, expectedPorts, start[{name,command,cwd (relative, default '.') }], optional profile name. No scripts are evaluated. `repoConfig:import {path}` shows exact commands and cwd in a native Cancel-default dialog. Approval is stored only by main as SHA256 of root + exact config bytes. Imported profiles carry their source path/hash; any config change or missing approval prevents start/restart until imported and approved again. The file is re-read after the dialog. Renderer settings cannot write approvals. Unknown fields, traversal, symlinks outside root, oversize/nonregular files and invalid members are refused.
+
+### Reserved ports (P3-3)
+`ports:reserve {port,project}` stars a project reservation (maximum 200); `ports:unreserve {port}` removes it. Strict port/name validation; `ports:reserved` reads reservation status from the latest batched process scan, without another lsof invocation. Reservations remain visible while free. Accessible unexpected owners cause a deduplicated native conflict notice; hidden-window polling stays paused. Renderer cannot stop an unknown owner through a reservation.

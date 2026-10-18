@@ -1,6 +1,6 @@
 import { validProfile } from '../../shared/profiles'
 import path from 'path'
-import { isLocalUrl } from '../../shared/ports'
+import { isLocalUrl, validReservations } from '../../shared/ports'
 import { validHotkey } from '../services/hotkey'
 import { EDITOR_IDS, TERMINAL_IDS } from '../services/applications'
 import { validIdentities } from '../services/kill'
@@ -18,6 +18,8 @@ function keys(value: Record<string, unknown>, expected: string[]): boolean {
 function validSettings(value: Record<string, unknown>): boolean {
   return Object.entries(value).every(([key, field]) => {
     switch (key) {
+      case 'reservedPorts':
+        return validReservations(field)
       case 'profiles':
         return (
           Array.isArray(field) &&
@@ -80,6 +82,7 @@ function validSettings(value: Record<string, unknown>): boolean {
 export function validIpcInput(channel: string, value: unknown): boolean {
   if (
     [
+      'ports:reserved',
       'profiles:list',
       'docker:apps',
       'project:apps',
@@ -129,6 +132,15 @@ export function validIpcInput(channel: string, value: unknown): boolean {
       path.isAbsolute(value.path) &&
       value.path.length <= 4096 &&
       !value.path.includes('\0')
+    )
+  if (channel === 'ports:reserve')
+    return keys(value, ['port', 'project']) && validReservations([value])
+  if (channel === 'ports:unreserve')
+    return (
+      keys(value, ['port']) &&
+      Number.isInteger(value.port) &&
+      Number(value.port) > 0 &&
+      Number(value.port) <= 65535
     )
   if (channel === 'url:open') return keys(value, ['url']) && isLocalUrl(value.url)
   if (channel === 'ports:lookup')

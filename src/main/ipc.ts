@@ -29,6 +29,7 @@ import { dockerService, detectDockerApps } from './services/docker'
 import { terminate, defaultKillDeps, validIdentities, sendControlSignal } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
 
+let latestPortProcesses: Proc[] = []
 const processProvider = new DarwinProcessProvider()
 
 function isSenderAuthorized(event: IpcMainInvokeEvent): boolean {
@@ -87,10 +88,14 @@ export function registerIpcHandlers(): void {
         userIgnoreList: settings.ignoreList,
         customAllowlist: settings.customAllowlist,
         hintsEnabled: settings.hintsEnabled,
-        showUnmanageable: settings.showUnmanageable
+        showUnmanageable: settings.showUnmanageable || !!settings.reservedPorts?.length
       })
+      latestPortProcesses = procs
       notificationService.observe(procs, settings)
-      return { ok: true, data: procs }
+      return {
+        ok: true,
+        data: settings.showUnmanageable ? procs : procs.filter((p) => p.manageable !== false)
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to list processes'
       return {
@@ -587,6 +592,33 @@ export function registerIpcHandlers(): void {
         }
       return repoConfigRequest(root, channel === 'repoConfig:import')
     })
+  handle('ports:reserved', async () => ({
+    ok: true,
+    data: (settingsService.getSettings().reservedPorts || []).map((r) => ({
+      ...r,
+      owners: latestPortProcesses
+        .filter((p) => p.ports.includes(r.port))
+        .map((p) => `${p.name} · ${p.project}`),
+      conflict: latestPortProcesses.some((p) => p.ports.includes(r.port) && p.project !== r.project)
+    }))
+  }))
+  handle('ports:reserve', async (_event, value) => {
+    const current = settingsService.getSettings().reservedPorts || []
+    if (current.length >= 200 && !current.some((p) => p.port === value.port))
+      return { ok: false, error: { code: 'DENIED', message: 'Remove an old reservation first.' } }
+    settingsService.updateSettings({
+      reservedPorts: [...current.filter((p) => p.port !== value.port), value]
+    })
+    return { ok: true, data: null }
+  })
+  handle('ports:unreserve', async (_event, { port }) => {
+    settingsService.updateSettings({
+      reservedPorts: (settingsService.getSettings().reservedPorts || []).filter(
+        (p) => p.port !== port
+      )
+    })
+    return { ok: true, data: null }
+  })
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
     if (!isSenderAuthorized(event)) {

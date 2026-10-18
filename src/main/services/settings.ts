@@ -1,3 +1,4 @@
+import { validReservations } from '../../shared/ports'
 import { validProfile } from '../../shared/profiles'
 import fs from 'fs'
 import path from 'path'
@@ -8,6 +9,7 @@ import { Settings, DEFAULT_NOTIFICATIONS } from '../../shared/types'
 
 export const DEFAULT_SETTINGS: Settings = {
   approvedRepoConfigs: {},
+  reservedPorts: [],
   profiles: [],
   refreshIntervalSec: 3,
   ignoreList: [],
@@ -114,6 +116,7 @@ export class SettingsService {
                 .slice(0, 200)
             )
           : {},
+      reservedPorts: validReservations(r.reservedPorts) ? r.reservedPorts : [],
       profiles: Array.isArray(r.profiles) ? r.profiles.filter(validProfile).slice(0, 50) : [],
       showUnmanageable: r.showUnmanageable === true,
       showEnvViewer: r.showEnvViewer === true,

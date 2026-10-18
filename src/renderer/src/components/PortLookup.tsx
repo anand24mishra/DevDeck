@@ -91,6 +91,20 @@ export function PortLookup({
             <option key={name}>{name}</option>
           ))}
         </select>
+        {port && project && (
+          <button
+            className="quiet-btn"
+            onClick={() => {
+              void window.api
+                .reservePort(port, project)
+                .then((result) =>
+                  setStatus(result.ok ? `Reserved ${port} for ${project}` : result.error.message)
+                )
+            }}
+          >
+            ☆ Reserve port
+          </button>
+        )}
         {input && (
           <button className="quiet-btn" onClick={() => setInput('')}>
             Clear
