@@ -207,3 +207,9 @@ Proc adds `leftoverReason?`, `manageable?`, and `readOnlyReason?`. A managed orp
 missing working directory or an observed parent transition to launchd is marked possibly leftover.
 Zombie states are shown read-only and never offered Stop. The bulk leftovers action captures
 only manageable hinted rows, lists them in confirmation, and uses the normal safe-stop API.
+
+## P2-8 project Git context
+`project:context` takes `{path:absolute string}`, verifies it against active real project roots,
+and returns `Result<ProjectContext>` (`branch?`, `dirty?`). HEAD is parsed strictly; dirty status
+uses fixed git argv with fsmonitor/hooks disabled, a one-second timeout and 64-KB bound. Results
+are cached for ten seconds. Failures return an empty context and never block rendering.

@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- P2-8: Added asynchronous verified-root Git context with strict HEAD parsing, fixed bounded git status invocation, ten-second caching and project-row branch/modified labels.
 - P2-7: Added conservative orphan hints, read-only zombie status, a leftovers filter and confirmed bulk stopping of only manageable hinted rows.
 - P2-6: Added native-confirmed extra signals, a paused status, refreshed PGID checks and individual verified group stopping without negative group signals or automatic force.
 - P2-5: Added an opt-in read-only environment viewer with identity checks before and after collection, secret-key classification, per-key reveal, masked copying, and discarded panel state on close.

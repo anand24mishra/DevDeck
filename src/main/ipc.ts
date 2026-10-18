@@ -1,3 +1,4 @@
+import { projectContext } from './services/context'
 import { readEnvironment } from './services/environment'
 import { buildProcessTree, descendantsChildrenFirst } from '../shared/processTree'
 import { notificationService } from './services/notifications'
@@ -498,6 +499,19 @@ export function registerIpcHandlers(): void {
       return { ok: true, data: report }
     }
   )
+
+  handle('project:context', async (_event, { path }: { path: string }) => {
+    const settings = settingsService.getSettings()
+    const procs = await processProvider.listProcesses({
+      userIgnoreList: settings.ignoreList,
+      customAllowlist: settings.customAllowlist
+    })
+    const root = verifyProjectPath(
+      path,
+      procs.flatMap((proc) => (proc.projectPath ? [proc.projectPath] : []))
+    )
+    return { ok: true, data: root ? await projectContext(root) : {} }
+  })
 
   // recent:list
   handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {

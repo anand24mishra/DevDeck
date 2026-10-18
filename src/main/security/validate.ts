@@ -85,7 +85,14 @@ export function validIpcInput(channel: string, value: unknown): boolean {
     return value === undefined
   }
   if (!object(value)) return false
-  if (['project:openEditor', 'project:openFinder', 'project:openTerminal'].includes(channel))
+  if (
+    [
+      'project:openEditor',
+      'project:openFinder',
+      'project:openTerminal',
+      'project:context'
+    ].includes(channel)
+  )
     return (
       keys(value, ['path']) &&
       typeof value.path === 'string' &&

@@ -98,6 +98,7 @@ export interface DockerLogMessage {
 
 export interface DevDeckApi {
   onFocusTarget: (callback: (target: FocusTarget) => void) => () => void
+  getProjectContext: (path: string) => Promise<Result<ProjectContext>>
   getInstalledApps: () => Promise<Result<InstalledApplication[]>>
   openProjectInEditor: (path: string) => Promise<Result<null>>
   showProjectInFinder: (path: string) => Promise<Result<null>>
@@ -218,3 +219,9 @@ export interface EnvironmentEntry {
 }
 
 export type ProcessSignalAction = 'pause' | 'resume' | 'reload' | 'group' | 'stop'
+
+export interface ProjectContext {
+  branch?: string
+  dirty?: boolean
+  runtime?: string[]
+}
