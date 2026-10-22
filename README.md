@@ -2,6 +2,14 @@
 
 A small macOS app that shows your dev processes, ports and Docker containers, grouped by project, and lets you stop a whole stack in one click.
 
+## Evaluation and codebase guide
+
+Start with [the detailed codebase audit](docs/CODEBASE_AUDIT.md) for architecture, feature flows,
+every named implementation function, the inline callback index, tests, security boundaries and known
+limitations. [The curated AI-assisted development history](docs/AI_DEVELOPMENT_HISTORY.md) records the
+professional requests, development stages and evidence without informal chat or invented authorship.
+[The verification matrix](docs/testing/release-matrix.md) separates local checks from external QA.
+
 ## Run it
 ```bash
 npm ci
@@ -59,7 +67,7 @@ References: [Electron fuses](https://www.electronjs.org/docs/latest/tutorial/fus
 
 Download a verified DMG from the repository's published Releases when available, drag DevDeck into
 Applications, then open it. No published release or Homebrew tap is asserted by this source checkout.
-For a local development copy, use the source commands above. Requires macOS and Node 22 or later.
+For a local development copy, use the source commands above. Requires macOS. For development, use Node 22.12+ within the 22.x line, or Node 24.x; CI uses Node 22.
 
 The window has Processes, Docker and Profiles tabs. Processes includes port lookup, sorting,
 filters, a process tree, project actions, resource history and expandable details. Docker includes

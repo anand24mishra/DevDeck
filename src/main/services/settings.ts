@@ -59,9 +59,9 @@ export class SettingsService {
         const parsed = JSON.parse(raw)
         return this.validate(parsed)
       }
-    } catch (err: unknown) {
-      // Corrupt file or parse failure: log and return defaults
-      console.warn('Failed to load settings file, falling back to defaults:', err)
+    } catch {
+      // Parser errors can contain saved command text; keep diagnostics fixed.
+      console.warn('Failed to load settings file, falling back to defaults')
     }
     return { ...DEFAULT_SETTINGS }
   }

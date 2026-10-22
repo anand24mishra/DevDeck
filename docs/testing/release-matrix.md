@@ -1,13 +1,14 @@
-# Local verification — 2026-10-19
+# Publication verification — 2026-10-23
 
-P0-1 through P3-9 are implemented locally. P4 is design only. Feature checkboxes describe merged
-work and remain unchecked. No release has been published or signed by this implementation run.
+P0-1 through P3-9 are implemented; P4 is design only. The maintainer authorized consolidation
+into GitHub main. Feature checkboxes remain acceptance checklists, not release certification.
+No signed release has been published by this implementation run. Local suite rerun: 2026-10-22.
 
 | Check | Result | Evidence / remaining work |
 |---|---|---|
 | Typecheck | Pass | `npm run typecheck`, main/preload/shared and renderer |
 | Lint | Pass | `npm run lint -- --max-warnings=0` |
-| Unit/integration suite | Pass | 177 passed, 1 real-Docker test skipped; 41 files passed, 1 skipped |
+| Unit/integration suite | Pass | 178 passed, 1 real-Docker test skipped; 41 files passed, 1 skipped |
 | Production build | Pass | `npm run build`; bundled main, independent launch worker, preload and renderer |
 | Electron process smoke | Pass | Disposable real server: discovery/search, native tray Cancel, window Cancel and confirmed stop |
 | Independent profile launch | Pass | Native start Cancel, per-member partial failure, quiet server survives app restart, spaced arguments, capture, CLI and verified stop |
@@ -33,8 +34,10 @@ work and remain unchecked. No release has been published or signed by this imple
 | System accessibility / VoiceOver | Partial | Electron keyboard, media and zoom checks pass; full VoiceOver/system-setting manual run remains |
 | Raycast / Alfred import | Pending external QA | Source builds validate; interactive host installation/import is unverified |
 | Clean-Mac and Intel | Pending external QA | Download signed draft onto clean Mac and run on Intel hardware |
-| GitHub CI / Homebrew tap | Pending | Changes not pushed. Cask is a template requiring published artifact version/hash and maintained tap |
-| Human visual approval and merge | Pending | Local implementation is ready for maintainer review; no merge performed |
+| GitHub CI | Configured | Main-branch publication runs CI; use GitHub Actions for the latest remote execution result |
+| Homebrew tap | Pending | Cask is a template requiring published artifact version/hash and maintained tap |
+| Main consolidation | Authorized | Maintainer requested main publication; verify the current remote main commit |
+| Human visual approval | Pending | Local UI scenarios and theme review pass; maintainer acceptance is separate |
 
 ## Reproduce local checks
 
@@ -58,3 +61,15 @@ Configure the five signing secrets documented in README.md; never paste their va
 The earlier repository secret-name inspection returned none. Verify the signed universal package,
 notarization, clean installation and update chain before distribution. Real Docker provider/hardware
 checks must remain pending until run. P4 proposals are in `docs/future/` and have no runtime code.
+
+## Publication corrections and documentation
+
+The CI main job now uses Node 22, matching the newer locked test toolchain; package and root-lock
+engine declarations agree. Local checks ran on Node 24.15.0: typecheck, strict lint and build passed,
+178 tests passed with one Docker skip, and four Electron scenarios passed in 20.6 seconds.
+Settings/history recovery diagnostics use fixed text rather than caught errors that might contain
+saved command excerpts. The tests assert this privacy behavior.
+
+[CODEBASE_AUDIT.md](../CODEBASE_AUDIT.md) documents functions, data flows, boundaries and limitations.
+[AI_DEVELOPMENT_HISTORY.md](../AI_DEVELOPMENT_HISTORY.md) is a curated, transparent development record
+for evaluation, not a verbatim chat archive.

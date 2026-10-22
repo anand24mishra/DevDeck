@@ -69,8 +69,8 @@ export class RecentlyStoppedService {
           }
         }
       }
-    } catch (err) {
-      console.warn('Failed to load persisted recently stopped processes:', err)
+    } catch {
+      console.warn('Failed to load persisted recently stopped processes')
     }
   }
 
@@ -92,8 +92,8 @@ export class RecentlyStoppedService {
         const encrypted = this.storage.encryptString(json)
         fs.writeFileSync(this.filePath, encrypted)
       }
-    } catch (err) {
-      console.warn('Failed to save persisted recently stopped processes:', err)
+    } catch {
+      console.warn('Failed to save persisted recently stopped processes')
     }
   }
 
@@ -266,8 +266,8 @@ export class RecentlyStoppedService {
     for (const listener of this.listeners) {
       try {
         listener()
-      } catch (err) {
-        console.error('Error in recentlyStopped listener:', err)
+      } catch {
+        console.error('Error in recentlyStopped listener')
       }
     }
   }

@@ -11,11 +11,11 @@
 Implement P0-1 through P3-9 in the specified order, with a separate branch and commit for each ID.
 For each ID: update the contract first when needed, implement main/preload then UI, exercise safety
 and error paths, run typecheck/lint/tests/build, and record evidence in PROJECT.md. P4 is design only.
-Checkboxes below represent **merged** work and remain unchecked until the maintainer merges.
+Checkboxes below retain feature acceptance criteria; they are not signed-release certification.
 Signed release, clean-Mac installation, hardware/provider QA and update verification require external
 credentials or systems; record those as pending rather than claiming verification.
 
-## Local implementation status — 2026-10-19
+## Implementation and publication status — 2026-10-23
 
 P0-1 through P3-9 are implemented locally in separate feature commits, followed by integration,
 safety and UX fixes. P4 has the requested design notes in `docs/future/`; no P4 runtime code was added.
@@ -25,7 +25,9 @@ and Docker details, logs, keyboard focus, themes, large lists and accessible zoo
 Signing, notarization, clean-Mac installation, signed updates, Intel hardware and real Docker
 provider checks remain external acceptance work. The maintainer requested continuing features
 with signed-release verification deferred. See `docs/testing/release-matrix.md` for local evidence
-and pending checks. Checkboxes remain unchecked because local changes have not been merged.
+and pending checks. The maintainer has authorized consolidating the implemented source into main.
+Unchecked acceptance items must be assessed against the verification matrix, especially external
+release/provider checks. See `docs/CODEBASE_AUDIT.md` for the detailed implementation reference.
 
 ## 0. How to work on this file
 

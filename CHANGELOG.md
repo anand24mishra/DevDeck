@@ -2,6 +2,9 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Add a detailed codebase/function audit and a curated AI-assisted development history for evaluation.
+- Align CI and package engines with the locked Node-compatible test toolchain; keep persistence recovery errors from logging command excerpts.
+- Reverify publication: 178 tests and four Electron scenarios pass; generated files and local agent notes remain excluded.
 - Complete the feature UX pass: scoped navigation, structured profiles, grouped actions, filter recovery, accessible dialogs, organized settings, readable details and command remasking.
 - Bind independent launches to their live child identity and wait safely for reparenting so saved profiles survive app restarts.
 - Verify 177 unit/integration tests and four Electron scenarios; document remaining signed-release, hardware and Docker-provider checks.

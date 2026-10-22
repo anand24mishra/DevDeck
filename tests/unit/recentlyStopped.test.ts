@@ -108,6 +108,28 @@ describe('RecentlyStoppedService', () => {
     expect(freshService.getItems()[0].command).toBe('python app.py')
   })
 
+  it('does not log decrypted command text when persisted history is malformed', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      fs.writeFileSync(testFilePath, 'encrypted fixture')
+      const service = new RecentlyStoppedService({
+        filePath: testFilePath,
+        safeStorage: {
+          isEncryptionAvailable: () => true,
+          encryptString: (text) => Buffer.from(text),
+          decryptString: () => '{ malformed synthetic-command-data'
+        }
+      })
+      service.loadIfPersisted(true)
+      expect(service.getItems()).toEqual([])
+      expect(warn).toHaveBeenCalledExactlyOnceWith(
+        'Failed to load persisted recently stopped processes'
+      )
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
   it('refuses to restart disallowed commands', async () => {
     const service = new RecentlyStoppedService({ filePath: testFilePath })
     // Record a process that somehow was recorded or modified with a non-allowlisted binary

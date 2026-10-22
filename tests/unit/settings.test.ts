@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -33,13 +33,18 @@ describe('SettingsService', () => {
   })
 
   it('recovers gracefully from corrupt JSON file and returns defaults', () => {
-    fs.writeFileSync(testFilePath, '{ invalid json string !!!', 'utf-8')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    fs.writeFileSync(testFilePath, '{ invalid json with synthetic-command-data !!!', 'utf-8')
 
     const service = new SettingsService(testFilePath)
     const settings = service.getSettings()
 
     expect(settings.refreshIntervalSec).toBe(3)
     expect(settings.ignoreList).toEqual([])
+    expect(warn).toHaveBeenCalledExactlyOnceWith(
+      'Failed to load settings file, falling back to defaults'
+    )
+    warn.mockRestore()
   })
 
   it('validates and clamps invalid fields upon loading or updating', () => {
