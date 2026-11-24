@@ -18,4 +18,4 @@ Please include steps to reproduce. Expect an acknowledgement within 7 days.
   The ignore list and DevDeck parent/descendant protection cannot be overridden by the renderer.
 - Optional recently stopped persistence is encrypted through macOS safeStorage; it is off by default.
 
-Design details: `docs/04-safety-model.md`.
+Design details: [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
