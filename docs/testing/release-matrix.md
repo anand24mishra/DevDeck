@@ -70,6 +70,4 @@ engine declarations agree. Local checks ran on Node 24.15.0: typecheck, strict l
 Settings/history recovery diagnostics use fixed text rather than caught errors that might contain
 saved command excerpts. The tests assert this privacy behavior.
 
-[CODEBASE_AUDIT.md](../CODEBASE_AUDIT.md) documents functions, data flows, boundaries and limitations.
-[AI_DEVELOPMENT_HISTORY.md](../AI_DEVELOPMENT_HISTORY.md) is a curated, transparent development record
-for evaluation, not a verbatim chat archive.
+[HOW_IT_WORKS.md](../HOW_IT_WORKS.md) explains the architecture, data flows and safety boundaries.

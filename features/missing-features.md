@@ -27,7 +27,7 @@ provider checks remain external acceptance work. The maintainer requested contin
 with signed-release verification deferred. See `docs/testing/release-matrix.md` for local evidence
 and pending checks. The maintainer has authorized consolidating the implemented source into main.
 Unchecked acceptance items must be assessed against the verification matrix, especially external
-release/provider checks. See `docs/CODEBASE_AUDIT.md` for the detailed implementation reference.
+release/provider checks. See `docs/HOW_IT_WORKS.md` for the implementation overview.
 
 ## 0. How to work on this file
 

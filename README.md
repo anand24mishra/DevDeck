@@ -2,12 +2,9 @@
 
 A small macOS app that shows your dev processes, ports and Docker containers, grouped by project, and lets you stop a whole stack in one click.
 
-## Evaluation and codebase guide
+## How it works
 
-Start with [the detailed codebase audit](docs/CODEBASE_AUDIT.md) for architecture, feature flows,
-every named implementation function, the inline callback index, tests, security boundaries and known
-limitations. [The curated AI-assisted development history](docs/AI_DEVELOPMENT_HISTORY.md) records the
-professional requests, development stages and evidence without informal chat or invented authorship.
+[How DevDeck works](docs/HOW_IT_WORKS.md) explains Electron and this project in plain English.
 [The verification matrix](docs/testing/release-matrix.md) separates local checks from external QA.
 
 ## Run it
