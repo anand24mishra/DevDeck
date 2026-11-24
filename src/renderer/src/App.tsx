@@ -254,7 +254,7 @@ const App: React.FC = () => {
     const map = new Map<string, GroupedDockerProject>()
 
     for (const c of filteredContainers) {
-      const key = c.project || 'Standalone Containers'
+      const key = c.project || 'Standalone containers'
       if (!map.has(key)) {
         map.set(key, {
           name: key,

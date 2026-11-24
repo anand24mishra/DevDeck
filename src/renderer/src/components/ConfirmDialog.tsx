@@ -67,7 +67,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           {description && <p className="modal-description">{description}</p>}
           {targetList.length > 0 && (
             <div className="modal-targets mono">
-              <span className="targets-label">Targets:</span> {formattedTargets()}
+              <span className="targets-label">Affects:</span> {formattedTargets()}
             </div>
           )}
         </div>

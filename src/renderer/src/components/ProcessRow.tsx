@@ -142,7 +142,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
             <button
               type="button"
               className="row-stop-btn"
-              title={`Stop ${proc.name} (PID ${proc.pid})`}
+              title={`Stop ${proc.name}`}
               onClick={(e) => {
                 e.stopPropagation()
                 onStop(proc)
@@ -151,11 +151,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
               Stop
             </button>
           )}
-          <button
-            className="details-toggle-btn"
-            aria-label={expanded ? 'Hide process details' : 'Show process details'}
-            tabIndex={0}
-          >
+          <span className="details-toggle-btn" aria-hidden="true">
             <svg
               className={`chevron-icon ${expanded ? 'rotated' : ''}`}
               width="12"
@@ -169,7 +165,7 @@ export const ProcessRow: React.FC<ProcessRowProps> = ({ proc, onStop }) => {
             >
               <polyline points="6 9 12 15 18 9" />
             </svg>
-          </button>
+          </span>
         </div>
       </div>
 

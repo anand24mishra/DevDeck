@@ -58,7 +58,7 @@ test('feature UX: scoped navigation, profile form, filter recovery, modal focus 
     await page.screenshot({ path: '/tmp/devdeck-ux/settings-dark-after.png' })
     await page.keyboard.press('Escape')
     await expect(page.getByRole('button', { name: 'Open settings', exact: true })).toBeFocused()
-    await page.getByRole('button', { name: 'Profiles', exact: true }).click()
+    await page.getByRole('tab', { name: 'Profiles', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Stop all', exact: true })).toHaveCount(0)
     await expect(page.getByRole('textbox', { name: 'Filter processes', exact: true })).toHaveCount(
       0
@@ -78,8 +78,8 @@ test('feature UX: scoped navigation, profile form, filter recovery, modal focus 
       'type',
       'text'
     )
-    await page.getByRole('button', { name: 'Docker', exact: false }).first().click()
-    await page.getByRole('button', { name: 'Profiles', exact: true }).click()
+    await page.getByRole('tab', { name: 'Docker', exact: false }).first().click()
+    await page.getByRole('tab', { name: 'Profiles', exact: true }).click()
     await expect(form.getByLabel('Member 1 start command', { exact: true })).toHaveAttribute(
       'type',
       'password'
@@ -102,8 +102,8 @@ test('feature UX: scoped navigation, profile form, filter recovery, modal focus 
       .getByLabel('Start command', { exact: true })
       .fill('node server.js --token=synthetic')
     await launch.getByRole('button', { name: 'Reveal', exact: true }).click()
-    await page.getByRole('button', { name: 'Docker', exact: false }).first().click()
-    await page.getByRole('button', { name: 'Profiles', exact: true }).click()
+    await page.getByRole('tab', { name: 'Docker', exact: false }).first().click()
+    await page.getByRole('tab', { name: 'Profiles', exact: true }).click()
     await expect(launch.getByLabel('Start command', { exact: true })).toHaveAttribute(
       'type',
       'password'
@@ -121,10 +121,10 @@ test('feature UX: scoped navigation, profile form, filter recovery, modal focus 
     })
     await page.getByRole('button', { name: 'Start', exact: true }).click()
     await expect(page.getByRole('alert')).toContainText('Review the changed profile')
-    await page.getByRole('button', { name: 'Docker', exact: false }).first().click()
-    await page.getByRole('button', { name: 'Profiles', exact: true }).click()
+    await page.getByRole('tab', { name: 'Docker', exact: false }).first().click()
+    await page.getByRole('tab', { name: 'Profiles', exact: true }).click()
     await expect(page.getByRole('alert')).toContainText('Review the changed profile')
-    await page.getByRole('button', { name: 'Docker', exact: false }).first().click()
+    await page.getByRole('tab', { name: 'Docker', exact: false }).first().click()
     await expect(page.locator('.container-row')).toHaveCount(3)
     const row = page.locator('.container-row').first()
     await row.getByRole('button', { name: 'Details', exact: true }).click()
@@ -160,7 +160,7 @@ test('feature UX: scoped navigation, profile form, filter recovery, modal focus 
     await page.screenshot({ path: '/tmp/devdeck-ux/logs-after.png' })
     await page.keyboard.press('Escape')
     await page
-      .getByRole('button', { name: /Processes/ })
+      .getByRole('tab', { name: /Processes/ })
       .first()
       .click()
     await page.locator('.process-row').first().click()

@@ -66,7 +66,7 @@ export function VirtualProcesses({
           >
             {tree && (
               <span className="mono">
-                Depth {row.depth} · {row.proc!.project}{' '}
+                {row.proc!.project}{' '}
                 {Boolean(row.children) && (
                   <button
                     className="quiet-btn"

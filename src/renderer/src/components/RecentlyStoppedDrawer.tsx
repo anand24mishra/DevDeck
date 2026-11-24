@@ -68,7 +68,7 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
           <div>
             <div className="header-title-row">
               <h2 id="recently-stopped-title" className="modal-title">
-                Recently Stopped
+                Recently stopped
               </h2>
               <span className="badge">{items.length}</span>
             </div>
@@ -115,7 +115,7 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
             </p>
           ) : loading ? (
             <div className="drawer-empty-state">
-              <span className="text-muted">Loading stopped processes...</span>
+              <span className="text-muted">Loading stopped processes…</span>
             </div>
           ) : items.length === 0 ? (
             <div className="drawer-empty-state">
@@ -175,7 +175,7 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
                         disabled={isRestarting}
                         onClick={() => onRestart(item.id)}
                       >
-                        {isRestarting ? 'Starting...' : 'Restart'}
+                        {isRestarting ? 'Starting…' : 'Restart'}
                       </button>
                     </div>
                   </div>

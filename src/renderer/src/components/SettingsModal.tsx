@@ -89,15 +89,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   if (!isOpen) return null
 
   return (
-    <div
-      className="modal-backdrop"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="settings-title"
-    >
+    <div className="modal-backdrop" onClick={onClose} role="presentation">
       <div
         ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title"
         tabIndex={-1}
         className="modal-card settings-modal"
         onClick={(e) => e.stopPropagation()}
@@ -106,7 +103,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="settings-header">
           <div className="settings-header-title">
             <h2 id="settings-title">Settings</h2>
-            {saveIndicator && <span className="settings-saved-badge">Saved</span>}
+            {saveIndicator && (
+              <span className="settings-saved-badge" role="status">
+                Saved
+              </span>
+            )}
           </div>
           <button
             type="button"
@@ -203,7 +204,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             ))}
             <div className="setting-row">
               <div className="setting-info">
-                <span className="setting-label">Refresh Interval</span>
+                <span className="setting-label">Refresh interval</span>
                 <span className="setting-desc">
                   How often DevDeck queries processes and containers
                 </span>
@@ -246,7 +247,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div className="setting-row">
               <div className="setting-info">
-                <span className="setting-label">Launch at Login</span>
+                <span className="setting-label">Launch at login</span>
                 <span className="setting-desc">
                   Automatically start DevDeck when you log into macOS
                 </span>
@@ -369,9 +370,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </section>
 
-          {/* Section 2: Process Ignore List */}
+          {/* Section 2: Process ignore list */}
           <section className="settings-section" hidden={category !== 'Processes'}>
-            <h3 className="section-title">Process Ignore List</h3>
+            <h3 className="section-title">Process ignore list</h3>
             <p className="section-desc">
               Processes matching these executable names or command substrings are hidden from view.
             </p>
@@ -401,7 +402,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ref={ignoreInputRef}
                 type="text"
                 className="tag-add-input mono"
-                placeholder="e.g. background-worker, telemetry..."
+                placeholder="e.g. background-worker, telemetry…"
                 value={newIgnoreItem}
                 onChange={(e) => setNewIgnoreItem(e.target.value)}
                 aria-label="Add process to ignore list"
@@ -414,15 +415,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Section 3: Extra Allowlist */}
           <section className="settings-section" hidden={category !== 'Processes'}>
-            <h3 className="section-title">Custom Allowlist</h3>
+            <h3 className="section-title">Custom allowlist</h3>
             <p className="section-desc">
-              Allow these additional binaries beyond standard dev tools (node, python, go, vite,
+              Allow these additional programs beyond standard dev tools (node, python, go, vite,
               cargo, etc.).
             </p>
 
             <div className="tags-container">
               {settings.customAllowlist.length === 0 ? (
-                <span className="tags-empty">No custom allowlisted binaries.</span>
+                <span className="tags-empty">No extra programs allowed.</span>
               ) : (
                 settings.customAllowlist.map((item) => (
                   <span key={item} className="tag-chip">
@@ -445,10 +446,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 ref={allowInputRef}
                 type="text"
                 className="tag-add-input mono"
-                placeholder="e.g. elixir, mix, php-fpm..."
+                placeholder="e.g. elixir, mix, php-fpm…"
                 value={newAllowItem}
                 onChange={(e) => setNewAllowItem(e.target.value)}
-                aria-label="Add binary to custom allowlist"
+                aria-label="Add program to custom allowlist"
               />
               <button type="submit" className="tag-add-btn" disabled={!newAllowItem.trim()}>
                 Add

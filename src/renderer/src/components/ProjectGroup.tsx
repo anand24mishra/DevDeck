@@ -114,7 +114,7 @@ export const ProjectHeading: React.FC<ProjectGroupProps> = ({
                       )
                   }}
                 >
-                  Import .devdeck.json
+                  Import project settings
                 </button>
               </div>
             </details>
@@ -139,13 +139,13 @@ export const ProjectHeading: React.FC<ProjectGroupProps> = ({
 
       <ProjectHistory project={projectName} />
       <div className="table-column-headers mono" aria-hidden="true">
-        <div className="col col-state">STATE</div>
-        <div className="col col-name">PROCESS</div>
-        <div className="col col-ports">PORT</div>
+        <div className="col col-state">State</div>
+        <div className="col col-name">Process</div>
+        <div className="col col-ports">Port</div>
         <div className="col col-cpu">CPU</div>
-        <div className="col col-mem">MEMORY</div>
-        <div className="col col-uptime">UPTIME</div>
-        <div className="col col-action">DETAILS</div>
+        <div className="col col-mem">Memory</div>
+        <div className="col col-uptime">Uptime</div>
+        <div className="col col-action">Details</div>
       </div>
     </>
   )

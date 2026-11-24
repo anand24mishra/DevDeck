@@ -88,15 +88,12 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
   }, [])
 
   return (
-    <div
-      className="log-viewer-backdrop"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Logs for ${container.name}`}
-    >
+    <div className="log-viewer-backdrop" onClick={onClose} role="presentation">
       <div
         ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Logs for ${container.name}`}
         tabIndex={-1}
         className="log-viewer-modal"
         onClick={(e) => e.stopPropagation()}
@@ -138,7 +135,7 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
               ref={filterInputRef}
               type="text"
               className="log-search-input"
-              placeholder="Filter logs..."
+              placeholder="Filter logs…"
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               aria-label="Filter logs"
@@ -182,7 +179,7 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
               onClick={handleCopy}
               title="Copy visible logs to clipboard"
             >
-              {copied ? 'Copied!' : 'Copy'}
+              {copied ? 'Copied' : 'Copy'}
             </button>
 
             <button
@@ -204,7 +201,7 @@ export const DockerLogViewer: React.FC<DockerLogViewerProps> = ({ container, onC
           {filteredLines.length === 0 ? (
             <div className="log-empty-state">
               {lines.length === 0
-                ? 'Waiting for container logs...'
+                ? 'Waiting for container logs…'
                 : 'No logs match the current filter.'}
             </div>
           ) : (

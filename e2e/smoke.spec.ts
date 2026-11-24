@@ -38,7 +38,7 @@ test('launch, search, native tray cancel, and confirmed process stop', async () 
     })
     const page = await app.firstWindow()
     await expect(page).toHaveTitle('DevDeck')
-    await expect(page.getByRole('button', { name: /^Processes/ })).toBeVisible()
+    await expect(page.getByRole('tab', { name: /^Processes/ })).toBeVisible()
     const project = page.getByRole('region', {
       name: `Project ${path.basename(fixture)}`,
       exact: true

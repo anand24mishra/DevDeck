@@ -71,29 +71,43 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="brand-badge">macOS</span>
         </div>
 
-        <div className="header-tabs">
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'processes' ? 'active' : ''}`}
-            onClick={() => onTabChange('processes')}
-          >
-            Processes
-            <span className="tab-badge mono">{totalCount}</span>
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === 'docker' ? 'active' : ''}`}
-            onClick={() => onTabChange('docker')}
-          >
-            Docker
-            <span className="tab-badge mono">{dockerRunningCount}</span>
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'profiles' ? 'active' : ''}`}
-            onClick={() => onTabChange('profiles')}
-          >
-            Profiles
-          </button>
+        <div
+          className="header-tabs"
+          role="tablist"
+          aria-label="Views"
+          onKeyDown={(e) => {
+            const order = ['processes', 'docker', 'profiles'] as const
+            const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+            if (!step) return
+            e.preventDefault()
+            const next = order[(order.indexOf(activeTab) + step + order.length) % order.length]
+            onTabChange(next)
+            requestAnimationFrame(() =>
+              document.querySelector<HTMLElement>(`[data-tab="${next}"]`)?.focus()
+            )
+          }}
+        >
+          {(
+            [
+              ['processes', 'Processes', totalCount],
+              ['docker', 'Docker', dockerRunningCount],
+              ['profiles', 'Profiles', null]
+            ] as const
+          ).map(([id, label, count]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              data-tab={id}
+              aria-selected={activeTab === id}
+              tabIndex={activeTab === id ? 0 : -1}
+              className={`tab-btn ${activeTab === id ? 'active' : ''}`}
+              onClick={() => onTabChange(id)}
+            >
+              {label}
+              {count !== null && <span className="tab-badge mono">{count}</span>}
+            </button>
+          ))}
         </div>
 
         <div className="process-stats mono">
@@ -182,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
         {activeTab !== 'profiles' && (
           <div className="refresh-control">
             <label htmlFor="refresh-select" className="refresh-label">
-              Poll:
+              Refresh every
             </label>
             <select
               id="refresh-select"
