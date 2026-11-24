@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Align the interface with DESIGN.md: type, spacing, layer and colour tokens; no sub-12px text, shadows, glow or blur; static loading indicators; define the shared button classes; readable danger-button text in dark mode.
 - Ask for native confirmation before restarting a stopped process, keep Electron variables out of launched programs, tighten the page security policy, remove the unreachable non-isolated preload path, and trim duplicated IPC checks.
 - Share one process scan between callers and reuse recent scans for read-only requests; alerts, history and the menu-bar count keep updating while the window is hidden; Docker polls only on its tab; cap pending Docker log text; stop piling up log listeners.
 - Show errors for failed container actions, fix the restart wording, show the real process state in each row, disable copying a masked command, queue toasts so Undo is kept, and flag a failed refresh.
