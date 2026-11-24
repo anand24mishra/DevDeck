@@ -12,6 +12,13 @@ import { parseCommandLine } from '../utils/command'
 import { isProcessAllowed } from '../security/allowlist'
 import { settingsService } from './settings'
 import type { ProfileMember, Result, ProcessIdentity } from '../../shared/types'
+/** The environment a launched project program inherits: ours, minus Electron's own variables. */
+export function launchEnvironment(source: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return Object.fromEntries(
+    Object.entries(source).filter(([name]) => !name.startsWith('ELECTRON_'))
+  )
+}
+
 export interface LaunchedProcess {
   id: string
   name: string
@@ -195,7 +202,7 @@ export async function launchMember(
       file,
       args: parsed.args,
       cwd,
-      env: { ...process.env },
+      env: launchEnvironment(process.env),
       outputPath: output.path,
       outputToken: output.token
     })

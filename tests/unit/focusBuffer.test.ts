@@ -1,7 +1,14 @@
 import { it, expect, vi } from 'vitest'
-const harness = vi.hoisted(() => ({ listeners: new Map<string, Function>() }))
+const harness = vi.hoisted(() => ({
+  listeners: new Map<string, Function>(),
+  exposed: {} as Record<string, any>
+}))
 vi.mock('electron', () => ({
-  contextBridge: { exposeInMainWorld: vi.fn() },
+  contextBridge: {
+    exposeInMainWorld: (name: string, api: unknown) => {
+      harness.exposed[name] = api
+    }
+  },
   ipcRenderer: {
     on: (channel, callback) => harness.listeners.set(channel, callback),
     invoke: vi.fn(),
@@ -14,7 +21,7 @@ it('delivers an initial focus link after the renderer subscribes', async () => {
     await import('../../src/preload/index')
     harness.listeners.get('app:focus')!({}, { port: 3000 })
     const callback = vi.fn()
-    const unsubscribe = window.api.onFocusTarget(callback)
+    const unsubscribe = harness.exposed.api.onFocusTarget(callback)
     await Promise.resolve()
     expect(callback).toHaveBeenCalledWith({ port: 3000 })
     unsubscribe()

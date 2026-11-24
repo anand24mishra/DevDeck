@@ -122,13 +122,9 @@ const api: DevDeckApi = {
   }
 }
 
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (fallback)
-  window.api = api
+// The window is always created with contextIsolation, so the bridge is the only way in.
+try {
+  contextBridge.exposeInMainWorld('api', api)
+} catch (error) {
+  console.error(error)
 }

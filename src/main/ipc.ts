@@ -7,6 +7,7 @@ import { openContainerShell } from './services/containerShell'
 import { projectContext } from './services/context'
 import { readEnvironment } from './services/environment'
 import { buildProcessTree, descendantsChildrenFirst } from '../shared/processTree'
+import type { FilterProcessOptions } from './security/allowlist'
 import { trayService } from './services/tray'
 import { notificationService } from './services/notifications'
 import { hotkeyService } from './services/hotkey'
@@ -46,6 +47,18 @@ function isSenderAuthorized(event: IpcMainInvokeEvent): boolean {
       ? new URL(devUrl).href
       : pathToFileURL(join(__dirname, '../renderer/index.html')).href
   return isExpectedPage(event.senderFrame?.url, expected)
+}
+
+/** The scan options every process request derives from the saved settings. */
+function scanOptions(
+  settings: ReturnType<typeof settingsService.getSettings>,
+  hints = true
+): FilterProcessOptions {
+  return {
+    userIgnoreList: settings.ignoreList,
+    customAllowlist: settings.customAllowlist,
+    ...(hints ? { hintsEnabled: settings.hintsEnabled } : {})
+  }
 }
 
 /** Feeds one scan to alerts, history and the menu-bar count, whoever asked for it. */
@@ -112,10 +125,7 @@ export function registerIpcHandlers(): void {
   recentlyStoppedService.loadIfPersisted(!!initialSettings.persistRecentlyStopped)
 
   // procs:list
-  handle('procs:list', async (event): Promise<Result<Proc[]>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
+  handle('procs:list', async (): Promise<Result<Proc[]>> => {
     try {
       const settings = settingsService.getSettings()
       const procs = await processProvider.listProcesses({
@@ -142,11 +152,7 @@ export function registerIpcHandlers(): void {
   for (const channel of ['project:openEditor', 'project:openFinder', 'project:openTerminal']) {
     handle(channel, async (_event, { path }: { path: string }) => {
       const settings = settingsService.getSettings()
-      const procs = await processProvider.listProcesses({
-        userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist,
-        hintsEnabled: settings.hintsEnabled
-      })
+      const procs = await processProvider.listProcesses(scanOptions(settings))
       const root = verifyProjectPath(
         path,
         procs.flatMap((proc) => (proc.projectPath ? [proc.projectPath] : []))
@@ -190,11 +196,7 @@ export function registerIpcHandlers(): void {
   handle('ports:lookup', async (_event, { port, project }: { port: number; project?: string }) => {
     const settings = settingsService.getSettings()
     const [owners, containers] = await Promise.all([
-      processProvider.lookupPort(port, {
-        userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist,
-        hintsEnabled: settings.hintsEnabled
-      }),
+      processProvider.lookupPort(port, scanOptions(settings)),
       dockerService.listContainers(settings.dockerSocketPath)
     ])
     return {
@@ -206,10 +208,7 @@ export function registerIpcHandlers(): void {
   })
 
   // settings:get
-  handle('settings:get', async (event): Promise<Result<Settings>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
+  handle('settings:get', async (): Promise<Result<Settings>> => {
     try {
       return { ok: true, data: settingsService.getSettings() }
     } catch (err: unknown) {
@@ -222,11 +221,8 @@ export function registerIpcHandlers(): void {
   })
 
   // settings:set
-  handle('settings:set', async (event, partial: Partial<Settings>): Promise<Result<Settings>> => {
+  handle('settings:set', async (_event, partial: Partial<Settings>): Promise<Result<Settings>> => {
     const previousHotkey = settingsService.getSettings().hotkey
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
     try {
       if (!partial || typeof partial !== 'object') {
         return {
@@ -272,11 +268,7 @@ export function registerIpcHandlers(): void {
   )
   handle('proc:details', async (_event, { pid, startTime }: { pid: number; startTime: string }) => {
     const settings = settingsService.getSettings()
-    const processes = await processProvider.listProcesses({
-      userIgnoreList: settings.ignoreList,
-      customAllowlist: settings.customAllowlist,
-      hintsEnabled: settings.hintsEnabled
-    })
+    const processes = await processProvider.listProcesses(scanOptions(settings))
     const current = processes.find((proc) => proc.pid === pid && proc.startTime === startTime)
     if (!current)
       return {
@@ -314,21 +306,12 @@ export function registerIpcHandlers(): void {
     const settings = settingsService.getSettings()
     return {
       ok: true,
-      data: buildProcessTree(
-        await processProvider.listProcesses({
-          userIgnoreList: settings.ignoreList,
-          customAllowlist: settings.customAllowlist,
-          hintsEnabled: settings.hintsEnabled
-        })
-      )
+      data: buildProcessTree(await processProvider.listProcesses(scanOptions(settings)))
     }
   })
 
   for (const channel of ['procs:stop', 'procs:stopProject', 'procs:stopAll', 'proc:treeStop']) {
-    handle(channel, async (event, input: unknown): Promise<Result<KillReport>> => {
-      if (!isSenderAuthorized(event)) {
-        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-      }
+    handle(channel, async (_event, input: unknown): Promise<Result<KillReport>> => {
       const value = input as Record<string, unknown> | null
       const keys =
         channel === 'procs:stopProject'
@@ -352,11 +335,7 @@ export function registerIpcHandlers(): void {
       let targets = value.targets
       try {
         const settings = settingsService.getSettings()
-        const procs = await processProvider.listProcesses({
-          userIgnoreList: settings.ignoreList,
-          customAllowlist: settings.customAllowlist,
-          hintsEnabled: settings.hintsEnabled
-        })
+        const procs = await processProvider.listProcesses(scanOptions(settings))
         let treeMembers: Set<number> | undefined
         if (channel === 'proc:treeStop') {
           const root = value.root as ProcessIdentity
@@ -436,11 +415,7 @@ export function registerIpcHandlers(): void {
       { action, target }: { action: ProcessSignalAction; target: ProcessIdentity }
     ) => {
       const settings = settingsService.getSettings()
-      const processes = await processProvider.listProcesses({
-        userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist,
-        hintsEnabled: settings.hintsEnabled
-      })
+      const processes = await processProvider.listProcesses(scanOptions(settings))
       const root = processes.find(
         (proc) =>
           proc.pid === target.pid &&
@@ -556,14 +531,7 @@ export function registerIpcHandlers(): void {
   handle('project:context', async (_event, { path }: { path: string }) => {
     const settings = settingsService.getSettings()
     // Many project headings ask at once; a scan up to 15s old is safe for this read-only check.
-    const procs = await processProvider.listProcesses(
-      {
-        userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist,
-        hintsEnabled: settings.hintsEnabled
-      },
-      { maxAgeMs: 15_000 }
-    )
+    const procs = await processProvider.listProcesses(scanOptions(settings), { maxAgeMs: 15_000 })
     const root = verifyProjectPath(
       path,
       procs.flatMap((proc) => (proc.projectPath ? [proc.projectPath] : []))
@@ -621,11 +589,7 @@ export function registerIpcHandlers(): void {
   for (const channel of ['repoConfig:read', 'repoConfig:import'])
     handle(channel, async (_event, { path }) => {
       const settings = settingsService.getSettings()
-      const procs = await processProvider.listProcesses({
-        userIgnoreList: settings.ignoreList,
-        customAllowlist: settings.customAllowlist,
-        hintsEnabled: settings.hintsEnabled
-      })
+      const procs = await processProvider.listProcesses(scanOptions(settings))
       const roots = [
         ...procs.flatMap((p) => (p.projectPath ? [p.projectPath] : [])),
         ...(settings.profiles || []).flatMap((p) =>
@@ -740,20 +704,14 @@ export function registerIpcHandlers(): void {
     }
   })
   // recent:list
-  handle('recent:list', async (event): Promise<Result<RecentlyStoppedItem[]>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
+  handle('recent:list', async (): Promise<Result<RecentlyStoppedItem[]>> => {
     return { ok: true, data: recentlyStoppedService.getItems() }
   })
 
   // recent:restart
   handle(
     'recent:restart',
-    async (event, { id }: { id: string }): Promise<Result<{ pid?: number }>> => {
-      if (!isSenderAuthorized(event)) {
-        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-      }
+    async (_event, { id }: { id: string }): Promise<Result<{ pid?: number }>> => {
       if (typeof id !== 'string' || !id) {
         return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid item ID' } }
       }
@@ -768,15 +726,23 @@ export function registerIpcHandlers(): void {
           ok: false,
           error: { code: 'DENIED', message: 'The original project folder is unavailable.' }
         }
+      const answer = await dialog.showMessageBox({
+        type: 'question',
+        message: `Start ${item.name} again?`,
+        detail: `Review this exact command before running it.\n\n${item.cwd}\n${item.command}`,
+        buttons: ['Cancel', 'Start'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true
+      })
+      if (answer.response !== 1)
+        return { ok: false, error: { code: 'DENIED', message: 'Restart cancelled.' } }
       return launchMember({ name: item.name, command: item.command, cwd: item.cwd, ports: [] })
     }
   )
 
   // recent:clear
-  handle('recent:clear', async (event): Promise<Result<null>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
+  handle('recent:clear', async (): Promise<Result<null>> => {
     const settings = settingsService.getSettings()
     recentlyStoppedService.clear(!!settings.persistRecentlyStopped)
     return { ok: true, data: null }
@@ -813,10 +779,7 @@ export function registerIpcHandlers(): void {
   )
 
   // docker:list
-  handle('docker:list', async (event): Promise<Result<Container[]>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
+  handle('docker:list', async (): Promise<Result<Container[]>> => {
     const settings = settingsService.getSettings()
     return await dockerService.listContainers(settings.dockerSocketPath)
   })
@@ -825,12 +788,9 @@ export function registerIpcHandlers(): void {
   handle(
     'docker:action',
     async (
-      event,
+      _event,
       { id, action }: { id: string; action: 'start' | 'stop' | 'restart' }
     ): Promise<Result<null>> => {
-      if (!isSenderAuthorized(event)) {
-        return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-      }
       if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
         return {
           ok: false,
@@ -846,19 +806,13 @@ export function registerIpcHandlers(): void {
   )
 
   // docker:stopAll
-  handle('docker:stopAll', async (event): Promise<Result<null>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
+  handle('docker:stopAll', async (): Promise<Result<null>> => {
     const settings = settingsService.getSettings()
     return await dockerService.stopAllContainers(settings.dockerSocketPath)
   })
 
   // docker:logs:start
   handle('docker:logs:start', async (event, { id }: { id: string }): Promise<Result<null>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
     if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
       return {
         ok: false,
@@ -890,10 +844,7 @@ export function registerIpcHandlers(): void {
   })
 
   // docker:logs:stop
-  handle('docker:logs:stop', async (event, { id }: { id: string }): Promise<Result<null>> => {
-    if (!isSenderAuthorized(event)) {
-      return { ok: false, error: { code: 'DENIED', message: 'Unauthorized IPC sender' } }
-    }
+  handle('docker:logs:stop', async (_event, { id }: { id: string }): Promise<Result<null>> => {
     if (typeof id !== 'string' || !/^[a-f0-9]{12,64}$/i.test(id)) {
       return {
         ok: false,
