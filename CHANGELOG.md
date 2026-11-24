@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Add quality gates: strict implicit-any checking, typechecked tests, a formatting check, a coverage report with a floor, and weekly dependency update proposals.
 - Improve plain language and accessibility: proper tabs with arrow-key navigation, dialog roles on the panel, sentence-case labels, fewer technical terms in everyday views, and no extra tab stop in process rows.
 - Align the interface with DESIGN.md: type, spacing, layer and colour tokens; no sub-12px text, shadows, glow or blur; static loading indicators; define the shared button classes; readable danger-button text in dark mode.
 - Ask for native confirmation before restarting a stopped process, keep Electron variables out of launched programs, tighten the page security policy, remove the unreachable non-isolated preload path, and trim duplicated IPC checks.

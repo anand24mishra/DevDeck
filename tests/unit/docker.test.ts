@@ -150,13 +150,13 @@ describe('Compose dependency ordering', () => {
       name: 'db',
       service: 'db',
       dependsOn: []
-    } as import('../../src/shared/types').Container
+    } as unknown as import('../../src/shared/types').Container
     const web = {
       id: 'bbbbbbbbbbbb',
       name: 'app',
       service: 'web',
       dependsOn: ['db']
-    } as import('../../src/shared/types').Container
+    } as unknown as import('../../src/shared/types').Container
     expect(orderCompose([web, db]).map((item) => item.id)).toEqual([db.id, web.id])
     expect(() => orderCompose([{ ...db, dependsOn: ['web'] }, web])).toThrow('Dependency cycle')
   })

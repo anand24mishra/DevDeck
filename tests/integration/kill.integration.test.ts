@@ -1,3 +1,4 @@
+import { once } from 'node:events'
 import { describe, it, expect } from 'vitest'
 import { spawn } from 'child_process'
 import { terminate, createKillDeps } from '../../src/main/services/kill'
@@ -72,7 +73,6 @@ describe('Terminate Integration Test', () => {
 })
 
 it('pauses, resumes and reloads only a real fixture process', async () => {
-  const { once } = await import('node:events')
   const { sendControlSignal } = await import('../../src/main/services/kill')
   const child = spawn(
     process.execPath,

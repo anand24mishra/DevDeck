@@ -5,8 +5,11 @@ import {
   Proc,
   Settings,
   RecentlyStoppedItem,
-  FocusTarget
+  FocusTarget,
+  DockerLogMessage
 } from '../shared/types'
+
+type ContainerStatsMessage = Parameters<Parameters<DevDeckApi['onContainerStats']>[0]>[0]
 
 let pendingFocus: FocusTarget | undefined
 const focusCallbacks = new Set<(target: FocusTarget) => void>()
@@ -36,7 +39,7 @@ const api: DevDeckApi = {
   startContainerStats: (ids) => ipcRenderer.invoke('docker:stats:start', { ids }),
   stopContainerStats: (ids) => ipcRenderer.invoke('docker:stats:stop', { ids }),
   onContainerStats: (callback) => {
-    const handler = (_event, value): void => callback(value)
+    const handler = (_event: unknown, value: ContainerStatsMessage): void => callback(value)
     ipcRenderer.on('docker:stats', handler)
     return () => {
       ipcRenderer.removeListener('docker:stats', handler)
@@ -100,7 +103,7 @@ const api: DevDeckApi = {
   startContainerLogs: (id: string) => ipcRenderer.invoke('docker:logs:start', { id }),
   stopContainerLogs: (id: string) => ipcRenderer.invoke('docker:logs:stop', { id }),
   onDockerLog: (callback) => {
-    const handler = (_event, msg): void => callback(msg)
+    const handler = (_event: unknown, msg: DockerLogMessage): void => callback(msg)
     ipcRenderer.on('docker:log', handler)
     return () => {
       ipcRenderer.removeListener('docker:log', handler)

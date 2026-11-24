@@ -10,7 +10,7 @@ it('aggregates per project, prunes one hour and notifies only on threshold cross
     { project: 'web', cpu: 30, memMB: 100 },
     { project: 'web', cpu: 30, memMB: 100 }
   ] as Proc[]
-  const settings = { resourceThresholds: { web: { cpu: 50 } } } as Settings
+  const settings = { resourceThresholds: { web: { cpu: 50 } } } as unknown as Settings
   history.observe(procs, settings)
   now += 3000
   history.observe(procs, settings)

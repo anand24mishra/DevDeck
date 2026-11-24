@@ -6,6 +6,8 @@ import { dialog } from 'electron'
 import { settingsService } from './settings'
 import { validProfile } from '../../shared/profiles'
 import type { StackProfile, RepoConfigPreview, Result } from '../../shared/types'
+type RawMember = { name: string; command: string; cwd?: string }
+
 export function parseRepoConfig(
   raw: string,
   root: string
@@ -24,7 +26,7 @@ export function parseRepoConfig(
     value.start.length > 50 ||
     !Array.isArray(value.expectedPorts) ||
     value.expectedPorts.length > 50 ||
-    !value.expectedPorts.every((p) => Number.isInteger(p) && p > 0 && p <= 65535)
+    !value.expectedPorts.every((p: number) => Number.isInteger(p) && p > 0 && p <= 65535)
   )
     throw new Error('Invalid config')
   const hash = createHash('sha256')
@@ -34,7 +36,7 @@ export function parseRepoConfig(
     id: 'repo-' + createHash('sha256').update(root).digest('hex').slice(0, 20),
     name: value.profile ?? value.name,
     repo: { path: root, hash },
-    members: value.start.map((m) => {
+    members: value.start.map((m: RawMember | null) => {
       if (
         !m ||
         Object.keys(m).some((k) => !['name', 'command', 'cwd'].includes(k)) ||
