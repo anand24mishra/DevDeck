@@ -14,7 +14,7 @@ export interface UseDockerResult {
 
 export type ActionOutcome = { ok: true } | { ok: false; message: string }
 
-export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
+export function useDocker(pollIntervalSec: number = 3, active: boolean = true): UseDockerResult {
   const [containers, setContainers] = useState<Container[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -69,13 +69,16 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
       void fetchContainers(true)
     }, 0)
 
+    // Poll only while the Docker tab is showing; Docker's own change events still arrive.
     const intervalMs = Math.max(1000, pollIntervalSec * 1000)
-    const timer = setInterval(() => {
-      void fetchContainers(false)
-    }, intervalMs)
+    const timer = active
+      ? setInterval(() => {
+          void fetchContainers(false)
+        }, intervalMs)
+      : null
 
     const visible = (): void => {
-      if (!document.hidden) void fetchContainers(false)
+      if (active && !document.hidden) void fetchContainers(false)
     }
     document.addEventListener('visibilitychange', visible)
     const unsubscribe = window.api?.onDockerChanged?.(() => {
@@ -85,11 +88,11 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
     return () => {
       isMountedRef.current = false
       clearTimeout(initialTimer)
-      clearInterval(timer)
+      if (timer) clearInterval(timer)
       unsubscribe?.()
       document.removeEventListener('visibilitychange', visible)
     }
-  }, [fetchContainers, pollIntervalSec])
+  }, [fetchContainers, pollIntervalSec, active])
 
   const containerAction = useCallback(
     async (id: string, action: 'start' | 'stop' | 'restart'): Promise<ActionOutcome> => {

@@ -7,6 +7,7 @@ import { openContainerShell } from './services/containerShell'
 import { projectContext } from './services/context'
 import { readEnvironment } from './services/environment'
 import { buildProcessTree, descendantsChildrenFirst } from '../shared/processTree'
+import { trayService } from './services/tray'
 import { notificationService } from './services/notifications'
 import { hotkeyService } from './services/hotkey'
 import { explainPortOwner } from './services/ports'
@@ -26,14 +27,15 @@ import {
   ProcessIdentity,
   ProcessSignalAction
 } from '../shared/types'
-import { DarwinProcessProvider } from './providers/process.darwin'
+import { sharedProcessProvider } from './providers/process.darwin'
 import { settingsService } from './services/settings'
 import { dockerService, detectDockerApps, resolveDockerSocket } from './services/docker'
 import { terminate, defaultKillDeps, validIdentities, sendControlSignal } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
 
 let latestPortProcesses: Proc[] = []
-const processProvider = new DarwinProcessProvider()
+const logCleanups = new Map<string, () => void>()
+const processProvider = sharedProcessProvider
 
 function isSenderAuthorized(event: IpcMainInvokeEvent): boolean {
   const window = BrowserWindow.fromWebContents(event.sender)
@@ -44,6 +46,35 @@ function isSenderAuthorized(event: IpcMainInvokeEvent): boolean {
       ? new URL(devUrl).href
       : pathToFileURL(join(__dirname, '../renderer/index.html')).href
   return isExpectedPage(event.senderFrame?.url, expected)
+}
+
+/** Feeds one scan to alerts, history and the menu-bar count, whoever asked for it. */
+function observeScan(
+  procs: Proc[],
+  settings: ReturnType<typeof settingsService.getSettings>
+): void {
+  resourceHistory.observe(procs, settings)
+  latestPortProcesses = procs
+  notificationService.observe(procs, settings)
+  trayService.updateProcessCount(procs.filter((p) => p.manageable !== false).length)
+}
+
+/**
+ * Keeps alerts, history and the tray count current while the window is hidden.
+ * Reuses a recent scan, so it costs nothing when the window is also polling.
+ */
+export async function observeInBackground(): Promise<void> {
+  const settings = settingsService.getSettings()
+  const procs = await processProvider.listProcesses(
+    {
+      userIgnoreList: settings.ignoreList,
+      customAllowlist: settings.customAllowlist,
+      hintsEnabled: settings.hintsEnabled,
+      showUnmanageable: settings.showUnmanageable || !!settings.reservedPorts?.length
+    },
+    { maxAgeMs: 5_000 }
+  )
+  observeScan(procs, settings)
 }
 
 export function registerIpcHandlers(): void {
@@ -93,9 +124,7 @@ export function registerIpcHandlers(): void {
         hintsEnabled: settings.hintsEnabled,
         showUnmanageable: settings.showUnmanageable || !!settings.reservedPorts?.length
       })
-      resourceHistory.observe(procs, settings)
-      latestPortProcesses = procs
-      notificationService.observe(procs, settings)
+      observeScan(procs, settings)
       return {
         ok: true,
         data: settings.showUnmanageable ? procs : procs.filter((p) => p.manageable !== false)
@@ -526,11 +555,15 @@ export function registerIpcHandlers(): void {
 
   handle('project:context', async (_event, { path }: { path: string }) => {
     const settings = settingsService.getSettings()
-    const procs = await processProvider.listProcesses({
-      userIgnoreList: settings.ignoreList,
-      customAllowlist: settings.customAllowlist,
-      hintsEnabled: settings.hintsEnabled
-    })
+    // Many project headings ask at once; a scan up to 15s old is safe for this read-only check.
+    const procs = await processProvider.listProcesses(
+      {
+        userIgnoreList: settings.ignoreList,
+        customAllowlist: settings.customAllowlist,
+        hintsEnabled: settings.hintsEnabled
+      },
+      { maxAgeMs: 15_000 }
+    )
     const root = verifyProjectPath(
       path,
       procs.flatMap((proc) => (proc.projectPath ? [proc.projectPath] : []))
@@ -835,10 +868,15 @@ export function registerIpcHandlers(): void {
     const settings = settingsService.getSettings()
     const sender = event.sender
 
-    // Clean up if sender is destroyed
-    sender.once('destroyed', () => {
+    // Clean up if sender is destroyed. Replace any earlier listener for this container so
+    // repeated opens do not pile up listeners.
+    logCleanups.get(id)?.()
+    const onDestroyed = (): void => {
+      logCleanups.delete(id)
       dockerService.stopContainerLogs(id)
-    })
+    }
+    sender.once('destroyed', onDestroyed)
+    logCleanups.set(id, () => sender.removeListener('destroyed', onDestroyed))
 
     return await dockerService.startContainerLogs(
       id,
@@ -862,6 +900,8 @@ export function registerIpcHandlers(): void {
         error: { code: 'INVALID_INPUT', message: 'Invalid container ID format' }
       }
     }
+    logCleanups.get(id)?.()
+    logCleanups.delete(id)
     return dockerService.stopContainerLogs(id)
   })
 

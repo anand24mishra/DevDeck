@@ -68,6 +68,9 @@ export function useProcesses(): UseProcessesResult {
     }
   }, [])
 
+  // Main tells us when it changed the process list itself (for example a menu-bar stop).
+  useEffect(() => window.api?.onProcessesChanged?.(() => void fetchProcesses()), [fetchProcesses])
+
   // Manage auto-refresh timer with window visibility awareness
   useEffect(() => {
     // Run initial fetch asynchronously after render

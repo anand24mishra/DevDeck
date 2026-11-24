@@ -71,21 +71,17 @@ it('redacts errors returned by legacy handlers as well as thrown failures', asyn
 
 it('does not return details when the identity changed after the scan', async () => {
   const { defaultKillDeps } = await import('../../src/main/services/kill')
-  const read = vi
-    .spyOn(DarwinProcessProvider.prototype, 'listProcesses')
-    .mockResolvedValue([
-      {
-        pid: 123,
-        startTime: 'old',
-        command: 'node --token SECRET'
-      } as import('../../src/shared/types').Proc
-    ])
-  const verify = vi
-    .spyOn(defaultKillDeps, 'revalidate')
-    .mockResolvedValue({
-      ok: [{ pid: 123, startTime: 'new', command: 'node other.js' }],
-      refused: []
-    })
+  const read = vi.spyOn(DarwinProcessProvider.prototype, 'listProcesses').mockResolvedValue([
+    {
+      pid: 123,
+      startTime: 'old',
+      command: 'node --token SECRET'
+    } as import('../../src/shared/types').Proc
+  ])
+  const verify = vi.spyOn(defaultKillDeps, 'revalidate').mockResolvedValue({
+    ok: [{ pid: 123, startTime: 'new', command: 'node other.js' }],
+    refused: []
+  })
   const event = { sender: state.sender, senderFrame: state.sender.mainFrame }
   const result = await state.handlers.get('proc:details')!(event, { pid: 123, startTime: 'old' })
   expect(result.ok).toBe(false)

@@ -143,6 +143,8 @@ export function parseDockerContainers(rawContainers: Docker.ContainerInfo[]): Co
   })
 }
 
+const MAX_PENDING_LOG_CHARS = 1_000_000
+
 export class DockerService {
   private statsService = new DockerStatsService()
   constructor(private readonly injectedClient?: Docker) {}
@@ -586,6 +588,9 @@ export class DockerService {
 
       const append = (data: Buffer | string): void => {
         state.buffer += data.toString()
+        // A chatty container must not grow memory between flushes; keep the newest text.
+        if (state.buffer.length > MAX_PENDING_LOG_CHARS)
+          state.buffer = state.buffer.slice(-MAX_PENDING_LOG_CHARS)
         if (!state.timer) {
           state.timer = setTimeout(flush, 100)
         }

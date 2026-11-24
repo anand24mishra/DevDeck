@@ -77,7 +77,7 @@ const App: React.FC = () => {
     refresh: refreshDocker,
     containerAction,
     stopAllContainers
-  } = useDocker(settings.refreshIntervalSec)
+  } = useDocker(settings.refreshIntervalSec, activeTab === 'docker')
 
   const [socketProtocol, setSocketProtocol] = useState<'all' | 'TCP' | 'UDP'>('all')
   const [socketState, setSocketState] = useState<'all' | 'LISTEN' | 'ESTABLISHED'>('all')

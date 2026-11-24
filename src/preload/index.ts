@@ -106,6 +106,13 @@ const api: DevDeckApi = {
       ipcRenderer.removeListener('docker:log', handler)
     }
   },
+  onProcessesChanged: (callback) => {
+    const handler = (): void => callback()
+    ipcRenderer.on('procs:changed', handler)
+    return () => {
+      ipcRenderer.removeListener('procs:changed', handler)
+    }
+  },
   onDockerChanged: (callback) => {
     const handler = (): void => callback()
     ipcRenderer.on('docker:changed', handler)

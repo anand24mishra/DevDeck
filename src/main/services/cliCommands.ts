@@ -1,12 +1,12 @@
 import { dialog } from 'electron'
 import type { CliRequest } from './cliServer'
-import { DarwinProcessProvider } from '../providers/process.darwin'
+import { sharedProcessProvider } from '../providers/process.darwin'
 import { settingsService } from './settings'
 import { terminate, defaultKillDeps } from './kill'
 import { notificationService } from './notifications'
 import { recentlyStoppedService } from './recentlyStopped'
 import { launches } from './launcher'
-const provider = new DarwinProcessProvider()
+const provider = sharedProcessProvider
 let stopping = false
 export async function cliCommand(request: CliRequest): Promise<unknown> {
   if (request.command === 'logs') {

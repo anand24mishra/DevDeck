@@ -14,7 +14,7 @@ export function ReservedPorts(): React.ReactElement | null {
     read()
     const timer = setInterval(() => {
       if (!document.hidden) read()
-    }, 3000)
+    }, 5000)
     window.addEventListener('devdeck:reserved-changed', read)
     return () => {
       clearInterval(timer)

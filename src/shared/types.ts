@@ -177,6 +177,7 @@ export interface DevDeckApi {
   stopContainerLogs: (id: string) => Promise<Result<null>>
   onDockerLog: (callback: (msg: DockerLogMessage) => void) => () => void
   onDockerChanged: (callback: () => void) => () => void
+  onProcessesChanged: (callback: () => void) => () => void
 }
 
 export interface ListeningSocket {

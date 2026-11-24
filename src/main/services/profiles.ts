@@ -4,12 +4,12 @@ import { randomUUID, createHash } from 'crypto'
 import { settingsService } from './settings'
 import { dockerService } from './docker'
 import { launchMember, launches } from './launcher'
-import { DarwinProcessProvider } from '../providers/process.darwin'
+import { sharedProcessProvider } from '../providers/process.darwin'
 import { terminate, defaultKillDeps } from './kill'
 import { notificationService } from './notifications'
 import { profileProcesses } from '../../shared/profiles'
 import type { StackProfile, ProfileStatus, MemberReport, Result } from '../../shared/types'
-const provider = new DarwinProcessProvider()
+const provider = sharedProcessProvider
 let busy = false
 const read = async (): Promise<Awaited<ReturnType<typeof provider.listProcesses>>> => {
   const s = settingsService.getSettings()

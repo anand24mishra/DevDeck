@@ -10,10 +10,10 @@ import { app, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { registerIpcHandlers } from './ipc'
+import { registerIpcHandlers, observeInBackground } from './ipc'
 import { windowStateManager } from './services/windowState'
 import { trayService, confirmTrayStopAll } from './services/tray'
-import { DarwinProcessProvider } from './providers/process.darwin'
+import { sharedProcessProvider } from './providers/process.darwin'
 import { terminate, defaultKillDeps } from './services/kill'
 import { recentlyStoppedService } from './services/recentlyStopped'
 import { checkForUpdates } from './services/updater'
@@ -46,7 +46,7 @@ app.on('open-url', (event, input) => {
 
 let mainWindow: BrowserWindow | null = null
 for (const arg of process.argv) if (arg.startsWith('devdeck://')) focusLink(arg)
-const processProvider = new DarwinProcessProvider()
+const processProvider = sharedProcessProvider
 
 async function handleStopAllFromTray(): Promise<void> {
   try {
@@ -220,11 +220,16 @@ app.whenReady().then(() => {
   // Initialize menu bar tray
   trayService.init(win, handleStopAllFromTray)
 
-  // Initial process count check for tray
-  processProvider
-    .listProcesses()
-    .then((procs) => trayService.updateProcessCount(procs.length))
-    .catch(() => {})
+  // Keep alerts, history and the tray count current while the window is hidden. A visible window
+  // already polls, and a scan shared within 5s makes the extra tick free.
+  const heartbeat = (): void => {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) return
+    observeInBackground().catch(() => {})
+  }
+  heartbeat()
+  const heartbeatTimer = setInterval(heartbeat, 30_000)
+  heartbeatTimer.unref()
+  app.once('before-quit', () => clearInterval(heartbeatTimer))
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {

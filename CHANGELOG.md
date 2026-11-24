@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Share one process scan between callers and reuse recent scans for read-only requests; alerts, history and the menu-bar count keep updating while the window is hidden; Docker polls only on its tab; cap pending Docker log text; stop piling up log listeners.
 - Show errors for failed container actions, fix the restart wording, show the real process state in each row, disable copying a masked command, queue toasts so Undo is kept, and flag a failed refresh.
 - Add a detailed codebase/function audit and a curated AI-assisted development history for evaluation.
 - Align CI and package engines with the locked Node-compatible test toolchain; keep persistence recovery errors from logging command excerpts.

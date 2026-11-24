@@ -18,9 +18,19 @@ import { resolveProjectFromCwd } from '../services/project'
 
 const execFileAsync = promisify(execFile)
 
-export interface ProcessProvider {
-  listProcesses(options?: FilterProcessOptions): Promise<Proc[]>
+export interface ScanReuse {
+  /**
+   * Reuse a scan that finished (or is still running) at most this many ms ago.
+   * The default is 0: always scan fresh. Anything that decides what may be signalled must keep it.
+   */
+  maxAgeMs?: number
 }
+
+export interface ProcessProvider {
+  listProcesses(options?: FilterProcessOptions, reuse?: ScanReuse): Promise<Proc[]>
+}
+
+type ScanResult = { processes: Proc[]; listeners: Map<number, ListeningSocket[]> }
 
 export function parseEtime(etime: string): number {
   const trimmed = etime.trim()
@@ -60,6 +70,7 @@ interface RawProcess {
 
 export class DarwinProcessProvider implements ProcessProvider {
   private previousParents = new Map<number, { ppid: number; startTime: string }>()
+  private cache: { key: string; at: number; result: Promise<ScanResult> } | null = null
   constructor(private readonly self: ProcessContext = { pid: process.pid, ppid: process.ppid }) {}
 
   /**
@@ -118,8 +129,11 @@ export class DarwinProcessProvider implements ProcessProvider {
   /**
    * Lists and enriches all allowlisted processes.
    */
-  public async listProcesses(options: FilterProcessOptions = {}): Promise<Proc[]> {
-    return (await this.scan(options)).processes
+  public async listProcesses(
+    options: FilterProcessOptions = {},
+    reuse: ScanReuse = {}
+  ): Promise<Proc[]> {
+    return (await this.scan(options, reuse.maxAgeMs ?? 0)).processes
   }
 
   public async lookupPort(port: number, options: FilterProcessOptions = {}): Promise<PortOwner[]> {
@@ -131,10 +145,28 @@ export class DarwinProcessProvider implements ProcessProvider {
       .map((socket) => ({ ...socket, process: owners.get(socket.pid) || null }))
   }
 
-  private async scan(
-    options: FilterProcessOptions
-  ): Promise<{ processes: Proc[]; listeners: Map<number, ListeningSocket[]> }> {
+  /** Shares one ps+lsof run between callers that explicitly accept a recent result. */
+  private scan(options: FilterProcessOptions, maxAgeMs = 0): Promise<ScanResult> {
+    const key = JSON.stringify(options)
+    const now = Date.now()
+    if (maxAgeMs > 0 && this.cache && this.cache.key === key && now - this.cache.at <= maxAgeMs) {
+      return this.cache.result
+    }
+    const result = this.runScan(options)
+    const entry = { key, at: now, result }
+    this.cache = entry
+    // A failed scan must not be served to later callers.
+    result.catch(() => {
+      if (this.cache === entry) this.cache = null
+    })
+    return result
+  }
+
+  private async runScan(options: FilterProcessOptions): Promise<ScanResult> {
+    const { username, uid } = os.userInfo()
+    const rawByPid = new Map<number, RawProcess>()
     const rawProcesses = await this.getRawProcesses()
+    for (const raw of rawProcesses) rawByPid.set(raw.pid, raw)
     const currentPid = this.self.pid
     const protectedPids = protectedProcessTree(rawProcesses, this.self)
 
@@ -172,6 +204,7 @@ export class DarwinProcessProvider implements ProcessProvider {
           ? ('zombie' as const)
           : ('running' as const)
       const tunnel = detectTunnel(proc.command)
+      const uptimeSec = parseEtime(proc.etime)
       const hint = leftoverHint(
         { ppid: proc.ppid, startTime: proc.startTime, status, cwd },
         this.previousParents.get(proc.pid),
@@ -180,10 +213,9 @@ export class DarwinProcessProvider implements ProcessProvider {
       return {
         pid: proc.pid,
         startTime: proc.startTime,
-        user: os.userInfo().username,
+        user: username,
         parentName:
-          extractBinaryName(rawProcesses.find((parent) => parent.pid === proc.ppid)?.command || '')
-            .binaryName || 'Unavailable',
+          extractBinaryName(rawByPid.get(proc.ppid)?.command || '').binaryName || 'Unavailable',
         ppid: proc.ppid,
         pgid: proc.pgid,
         status,
@@ -205,7 +237,7 @@ export class DarwinProcessProvider implements ProcessProvider {
         command: proc.command,
         cpu: proc.cpu,
         memMB: Math.round(proc.rssKB / 1024),
-        uptimeSec: parseEtime(proc.etime),
+        uptimeSec,
         cwd,
         project: project.name,
         projectPath: project.root,
@@ -216,9 +248,9 @@ export class DarwinProcessProvider implements ProcessProvider {
         idleHint:
           options.hintsEnabled !== false &&
           ports.length > 0 &&
-          parseEtime(proc.etime) >= 3 * 86400 &&
+          uptimeSec >= 3 * 86400 &&
           !openFiles.connections.get(proc.pid)
-            ? `Running ${Math.floor(parseEtime(proc.etime) / 86400)} days, no active connections seen`
+            ? `Running ${Math.floor(uptimeSec / 86400)} days, no active connections seen`
             : undefined
       }
     })
@@ -234,7 +266,7 @@ export class DarwinProcessProvider implements ProcessProvider {
       result.push(
         ...readOnlyPortProcesses(
           openFiles,
-          String(os.userInfo().uid),
+          String(uid),
           new Set([...result.map((proc) => proc.pid), ...ignored]),
           options.userIgnoreList
         )
@@ -257,3 +289,6 @@ export class DarwinProcessProvider implements ProcessProvider {
     return { processes: result, listeners: portsMap }
   }
 }
+
+/** One provider for the whole main process, so scans and leftover tracking are shared. */
+export const sharedProcessProvider = new DarwinProcessProvider()
