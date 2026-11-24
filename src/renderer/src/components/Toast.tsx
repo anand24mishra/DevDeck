@@ -13,16 +13,30 @@ interface ToastProps {
   onDismiss: () => void
 }
 
-export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
-  const dismiss = useRef(onDismiss)
+const MAX_QUEUED = 3
+
+export const Toast: React.FC<ToastProps> = ({ toast: incoming, onDismiss }) => {
+  // Queue incoming toasts so a new message never replaces one that is still showing (e.g. Undo).
+  const [queue, setQueue] = useState<ToastMessage[]>([])
+  const [seen, setSeen] = useState<ToastMessage | null>(null)
+  if (incoming !== seen) {
+    setSeen(incoming)
+    if (incoming) setQueue((q) => [...q, incoming].slice(-MAX_QUEUED))
+  }
+  const toast = queue[0] ?? null
+  const showNext = (): void => {
+    if (queue.length <= 1) onDismiss()
+    setQueue((q) => q.slice(1))
+  }
+  const dismiss = useRef(showNext)
   const root = useRef<HTMLDivElement>(null),
     previousFocus = useRef<HTMLElement | null>(null)
   const [focused, setFocused] = useState(false),
     [expiredId, setExpiredId] = useState('')
   const [busy, setBusy] = useState(false)
   useEffect(() => {
-    dismiss.current = onDismiss
-  }, [onDismiss])
+    dismiss.current = showNext
+  })
   useEffect(() => {
     if (!toast) return
     if (!root.current?.contains(document.activeElement))
@@ -47,9 +61,9 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
         if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false)
       }}
       className={`toast-container toast-${toast.type || 'success'}`}
-      role="status"
+      role={toast.type === 'error' ? 'alert' : 'status'}
     >
-      <span className="toast-text mono">{toast.text}</span>
+      <span className="toast-text">{toast.text}</span>
       {toast.action && (
         <button
           className="quiet-btn"
@@ -71,7 +85,7 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
             if (previousFocus.current?.isConnected) previousFocus.current.focus()
             else document.querySelector<HTMLElement>('main')?.focus()
           }
-          onDismiss()
+          showNext()
         }}
         aria-label="Close notification"
       >

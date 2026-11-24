@@ -30,7 +30,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <p className="state-title">Nothing matches your search: &ldquo;{searchQuery}&rdquo;</p>
-        <p className="state-description">Check for typos in process name, port, or project name.</p>
+        <p className="state-description">Check the spelling, or search by name, port or project.</p>
         {onClearSearch && (
           <button className="state-btn" onClick={onClearSearch}>
             Clear search

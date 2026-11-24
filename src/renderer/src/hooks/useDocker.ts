@@ -8,9 +8,11 @@ export interface UseDockerResult {
   errorCode: string | null
   actionLoadingId: string | null
   refresh: () => Promise<void>
-  containerAction: (id: string, action: 'start' | 'stop' | 'restart') => Promise<boolean>
-  stopAllContainers: () => Promise<boolean>
+  containerAction: (id: string, action: 'start' | 'stop' | 'restart') => Promise<ActionOutcome>
+  stopAllContainers: () => Promise<ActionOutcome>
 }
+
+export type ActionOutcome = { ok: true } | { ok: false; message: string }
 
 export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
   const [containers, setContainers] = useState<Container[]>([])
@@ -90,22 +92,22 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
   }, [fetchContainers, pollIntervalSec])
 
   const containerAction = useCallback(
-    async (id: string, action: 'start' | 'stop' | 'restart'): Promise<boolean> => {
-      if (!window.api?.containerAction) return false
+    async (id: string, action: 'start' | 'stop' | 'restart'): Promise<ActionOutcome> => {
+      if (!window.api?.containerAction) return { ok: false, message: 'Docker is not available.' }
       setActionLoadingId(id)
       try {
         const res = await window.api.containerAction(id, action)
         if (res.ok) {
           await fetchContainers(false)
-          return true
+          return { ok: true }
         } else {
           setError(res.error.message)
-          return false
+          return { ok: false, message: res.error.message }
         }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : `Failed to ${action} container`
+        const msg = err instanceof Error ? err.message : `Could not ${action} the container.`
         setError(msg)
-        return false
+        return { ok: false, message: msg }
       } finally {
         setActionLoadingId(null)
       }
@@ -113,22 +115,22 @@ export function useDocker(pollIntervalSec: number = 3): UseDockerResult {
     [fetchContainers]
   )
 
-  const stopAllContainers = useCallback(async (): Promise<boolean> => {
-    if (!window.api?.stopAllContainers) return false
+  const stopAllContainers = useCallback(async (): Promise<ActionOutcome> => {
+    if (!window.api?.stopAllContainers) return { ok: false, message: 'Docker is not available.' }
     setLoading(true)
     try {
       const res = await window.api.stopAllContainers()
       if (res.ok) {
         await fetchContainers(false)
-        return true
+        return { ok: true }
       } else {
         setError(res.error.message)
-        return false
+        return { ok: false, message: res.error.message }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to stop all containers'
+      const msg = err instanceof Error ? err.message : 'Could not stop all containers.'
       setError(msg)
-      return false
+      return { ok: false, message: msg }
     } finally {
       setLoading(false)
     }

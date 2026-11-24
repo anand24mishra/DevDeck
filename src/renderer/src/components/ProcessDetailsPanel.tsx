@@ -3,7 +3,15 @@ import { useEffect, useState } from 'react'
 import type { Proc, ProcessDetails } from '../../../shared/types'
 import { isNetworkExposed } from '../../../shared/ports'
 
-function CopyField({ name, value }: { name: string; value: string }): React.JSX.Element {
+function CopyField({
+  name,
+  value,
+  copyDisabledReason
+}: {
+  name: string
+  value: string
+  copyDisabledReason?: string
+}): React.JSX.Element {
   const [status, setStatus] = useState('')
   return (
     <div className="detail-item detail-item-wide">
@@ -12,6 +20,8 @@ function CopyField({ name, value }: { name: string; value: string }): React.JSX.
       <button
         className="quiet-btn"
         aria-label={`Copy ${name}`}
+        disabled={!!copyDisabledReason}
+        title={copyDisabledReason}
         onClick={() => {
           void navigator.clipboard
             .writeText(value)
@@ -182,7 +192,11 @@ export function ProcessDetailsPanel({ proc }: { proc: Proc }): React.JSX.Element
             value={`${socket.address}:${socket.port}`}
           />
         ))}
-        <CopyField name="Command" value={revealed ? current.command : '••••••••'} />
+        <CopyField
+          name="Command"
+          value={revealed ? current.command : '••••••••'}
+          copyDisabledReason={revealed ? undefined : 'Reveal the command to copy it'}
+        />
       </div>
       <button className="quiet-btn" aria-pressed={revealed} onClick={() => setRevealed(!revealed)}>
         {revealed ? 'Mask command' : 'Reveal command'}

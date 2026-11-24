@@ -370,6 +370,28 @@
   background-color: var(--accent);
 }
 
+.status-dot.paused,
+.status-dot.zombie {
+  background-color: var(--warn);
+}
+
+.status-dot.readonly {
+  background-color: var(--muted-dim);
+}
+
+.stale-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 6px var(--space-4);
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid var(--warn);
+  background-color: var(--surface);
+  font-size: 12px;
+  color: var(--text);
+}
+
 .status-text {
   font-size: 11px;
   color: var(--text);
@@ -810,6 +832,22 @@
   border: 1px solid var(--danger);
   color: #ffffff;
   font-weight: 600;
+}
+
+.dialog-confirm-btn {
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.dialog-confirm-btn:hover {
+  filter: brightness(1.1);
+}
+
+.dialog-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .dialog-danger-btn:hover {

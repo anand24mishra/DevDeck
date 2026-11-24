@@ -41,6 +41,7 @@ interface DialogState {
   confirmLabel?: string
   description?: string
   targetList?: string[]
+  variant?: 'danger' | 'default'
   action: () => Promise<void>
 }
 
@@ -58,6 +59,7 @@ const App: React.FC = () => {
     settings,
     loading: procsLoading,
     error: procsError,
+    lastUpdated: procsUpdated,
     refresh: refreshProcs,
     changeInterval,
     updateSettings,
@@ -440,19 +442,23 @@ const App: React.FC = () => {
           isOpen: true,
           title: `${action === 'restart' ? 'Restart' : 'Stop'} container ${name}?`,
           confirmLabel: action === 'restart' ? 'Restart' : 'Stop',
-          description: `This will send a stop signal to the container with a 10s graceful shutdown timeout.`,
+          description:
+            action === 'restart'
+              ? 'The container stops, then starts again. It has up to 10 seconds to shut down cleanly.'
+              : 'The container has up to 10 seconds to shut down cleanly.',
+          variant: action === 'restart' ? 'default' : 'danger',
           targetList: [`${name} (${container?.image || 'unknown image'})`],
           action: async () => {
             setIsBusy(true)
             try {
-              const ok = await containerAction(id, action)
-              if (ok) {
-                setToast({
-                  id: Date.now().toString(),
-                  text: `Stopped container ${name}`,
-                  type: 'success'
-                })
-              }
+              const outcome = await containerAction(id, action)
+              setToast({
+                id: Date.now().toString(),
+                text: outcome.ok
+                  ? `${action === 'restart' ? 'Restarted' : 'Stopped'} ${name}`
+                  : `Couldn’t ${action} ${name}. ${outcome.message}`,
+                type: outcome.ok ? 'success' : 'error'
+              })
             } finally {
               setIsBusy(false)
               setDialogState((prev) => ({ ...prev, isOpen: false }))
@@ -460,15 +466,12 @@ const App: React.FC = () => {
           }
         })
       } else {
-        containerAction(id, action).then((ok) => {
-          if (ok) {
-            const verb = action === 'start' ? 'Started' : 'Restarted'
-            setToast({
-              id: Date.now().toString(),
-              text: `${verb} container ${name}`,
-              type: 'success'
-            })
-          }
+        void containerAction(id, action).then((outcome) => {
+          setToast({
+            id: Date.now().toString(),
+            text: outcome.ok ? `Started ${name}` : `Couldn’t start ${name}. ${outcome.message}`,
+            type: outcome.ok ? 'success' : 'error'
+          })
         })
       }
     },
@@ -553,14 +556,14 @@ const App: React.FC = () => {
       action: async () => {
         setIsBusy(true)
         try {
-          const ok = await stopAllContainers()
-          if (ok) {
-            setToast({
-              id: Date.now().toString(),
-              text: `Stopped all running containers`,
-              type: 'success'
-            })
-          }
+          const outcome = await stopAllContainers()
+          setToast({
+            id: Date.now().toString(),
+            text: outcome.ok
+              ? 'Stopped all running containers'
+              : `Couldn’t stop all containers. ${outcome.message}`,
+            type: outcome.ok ? 'success' : 'error'
+          })
         } finally {
           setIsBusy(false)
           setDialogState((prev) => ({ ...prev, isOpen: false }))
@@ -751,6 +754,25 @@ const App: React.FC = () => {
             containers={containers}
           />
         </div>
+        {activeTab === 'processes' && procsError && procs.length > 0 && (
+          <div className="stale-bar" role="status">
+            <span>
+              Couldn’t refresh the list
+              {procsUpdated ? `. Showing data from ${procsUpdated.toLocaleTimeString()}` : ''}.
+            </span>
+            <button type="button" className="quiet-btn" onClick={() => void refreshProcs()}>
+              Retry
+            </button>
+          </div>
+        )}
+        {activeTab === 'docker' && dockerError && containers.length > 0 && (
+          <div className="stale-bar" role="status">
+            <span>Docker reported a problem: {dockerError}</span>
+            <button type="button" className="quiet-btn" onClick={() => void refreshDocker()}>
+              Retry
+            </button>
+          </div>
+        )}
         {activeTab === 'profiles' ? null : activeTab === 'processes' ? (
           /* Processes View */
           procsLoading && procs.length === 0 ? (
@@ -879,6 +901,7 @@ const App: React.FC = () => {
         confirmLabel={dialogState.confirmLabel}
         description={dialogState.description}
         targetList={dialogState.targetList}
+        variant={dialogState.variant}
         isBusy={isBusy}
         onConfirm={dialogState.action}
         onCancel={() => setDialogState((prev) => ({ ...prev, isOpen: false }))}

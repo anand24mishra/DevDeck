@@ -8,6 +8,7 @@ export interface ConfirmDialogProps {
   targetList?: string[]
   confirmLabel?: string
   isBusy?: boolean
+  variant?: 'danger' | 'default'
   onConfirm: () => void
   onCancel: () => void
 }
@@ -19,6 +20,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   targetList = [],
   confirmLabel = 'Stop',
   isBusy = false,
+  variant = 'danger',
   onConfirm,
   onCancel
 }) => {
@@ -84,7 +86,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <button
             ref={confirmBtnRef}
             type="button"
-            className="dialog-btn dialog-danger-btn"
+            className={`dialog-btn ${variant === 'danger' ? 'dialog-danger-btn' : 'dialog-confirm-btn'}`}
             onClick={onConfirm}
             disabled={isBusy}
           >

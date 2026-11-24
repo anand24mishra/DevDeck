@@ -34,6 +34,7 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
   onClear
 }) => {
   const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set())
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const dialogRef = useRef<HTMLDivElement>(null)
   useDialogFocus(dialogRef, isOpen, onClose)
@@ -81,10 +82,18 @@ export const RecentlyStoppedDrawer: React.FC<RecentlyStoppedDrawerProps> = ({
               <button
                 type="button"
                 className="btn btn-quiet"
-                onClick={onClear}
+                onClick={() => {
+                  if (!confirmClear) {
+                    setConfirmClear(true)
+                    return
+                  }
+                  setConfirmClear(false)
+                  void onClear()
+                }}
+                onBlur={() => setConfirmClear(false)}
                 title="Clear recently stopped processes"
               >
-                Clear history
+                {confirmClear ? 'Clear all? Click again' : 'Clear history'}
               </button>
             )}
             <button

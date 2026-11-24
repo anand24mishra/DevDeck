@@ -15,6 +15,7 @@ export function ProfilesPanel({
   const [profiles, setProfiles] = useState<ProfileStatus[]>([]),
     [error, setError] = useState(''),
     [loadError, setLoadError] = useState(''),
+    [loaded, setLoaded] = useState(false),
     [editing, setEditing] = useState<StackProfile | null>(null)
   const [busy, setBusy] = useState<{ id: string; action: string } | null>(null),
     [reports, setReports] = useState<Record<string, MemberReport[]>>({}),
@@ -31,6 +32,7 @@ export function ProfilesPanel({
         } else setLoadError(r.error.message)
       })
       .catch(() => setLoadError('Could not load profiles. Try again.'))
+      .finally(() => setLoaded(true))
   }
   useEffect(() => {
     if (!active) return
@@ -123,7 +125,7 @@ export function ProfilesPanel({
           onCancel={() => setEditing(null)}
         />
       )}
-      {!profiles.length && !editing && (
+      {loaded && !profiles.length && !editing && (
         <div className="profiles-empty">
           <h3>No saved profiles yet</h3>
           <p>

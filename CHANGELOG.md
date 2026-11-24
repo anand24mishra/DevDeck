@@ -2,6 +2,7 @@
 Format: Keep a Changelog. Versions follow semver. Update on every release (docs-writer role).
 
 ## [Unreleased]
+- Show errors for failed container actions, fix the restart wording, show the real process state in each row, disable copying a masked command, queue toasts so Undo is kept, and flag a failed refresh.
 - Add a detailed codebase/function audit and a curated AI-assisted development history for evaluation.
 - Align CI and package engines with the locked Node-compatible test toolchain; keep persistence recovery errors from logging command excerpts.
 - Reverify publication: 178 tests and four Electron scenarios pass; generated files and local agent notes remain excluded.
